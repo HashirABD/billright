@@ -104,6 +104,17 @@ const letterContent = document.getElementById('letter-content');
 const btnCopyLetter = document.getElementById('btn-copy-letter');
 const copyFeedback = document.getElementById('copy-feedback');
 
+// Multimodal Dropzone DOM
+const billDropzone = document.getElementById('bill-dropzone');
+const fileInput = document.getElementById('file-input');
+const dropzonePrompt = document.getElementById('dropzone-prompt');
+const dropzoneProcessing = document.getElementById('dropzone-processing');
+const processingFilename = document.getElementById('processing-filename');
+const dropzoneSuccess = document.getElementById('dropzone-success');
+const successFilename = document.getElementById('success-filename');
+const successSummary = document.getElementById('success-summary');
+const btnClearFile = document.getElementById('btn-clear-file');
+
 /**
  * Creates a table row element for a billing period
  */
@@ -517,9 +528,163 @@ if (btnCopyLetter) {
   });
 }
 
-// Initialize toggles
+function resetDropzone() {
+  if (fileInput) fileInput.value = '';
+  if (dropzonePrompt) dropzonePrompt.style.display = 'block';
+  if (dropzoneProcessing) dropzoneProcessing.style.display = 'none';
+  if (dropzoneSuccess) dropzoneSuccess.style.display = 'none';
+}
+
+async function processFile(file) {
+  if (!file) return;
+
+  // Validate file type
+  const validTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+  if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpe?g|webp)$/i)) {
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = 'Unsupported file format. Please upload a PDF, PNG, JPG, or WebP bill.';
+    return;
+  }
+
+  // Validate size (10MB max)
+  if (file.size > 10 * 1024 * 1024) {
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = 'File too large. Maximum supported size is 10MB.';
+    return;
+  }
+
+  // UI state: Processing
+  validationErrorBanner.classList.remove('visible');
+  dropzonePrompt.style.display = 'none';
+  dropzoneSuccess.style.display = 'none';
+  dropzoneProcessing.style.display = 'flex';
+  processingFilename.textContent = `Extracting ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`;
+
+  try {
+    // Read file as base64
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    const res = await fetch('/api/extract-bill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileData: base64Data,
+        mimeType: file.type || 'application/pdf'
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    // Populate form with extracted data
+    if (data.billDate) {
+      billDateInput.value = data.billDate;
+    }
+
+    if (typeof data.isEstimated === 'boolean') {
+      setToggleValue(groupEstimated, inputEstimated, data.isEstimated);
+    }
+
+    // Auto-select jurisdiction if currency gives a clear cue
+    if (data.currency === 'A$' || (data.notes && data.notes.includes('Australia'))) {
+      countrySelect.value = 'Australia';
+    } else if (data.currency === '$' && countrySelect.value === 'United Kingdom') {
+      countrySelect.value = 'United States (California)';
+    }
+
+    // Update header currency
+    const symbol = getCurrencySymbol(countrySelect.value);
+    const header = document.getElementById('currency-symbol-header');
+    if (header) header.textContent = symbol;
+
+    // Populate billing periods table
+    periodsTbody.innerHTML = '';
+    if (Array.isArray(data.billingPeriods) && data.billingPeriods.length > 0) {
+      data.billingPeriods.forEach(p => addRow(p));
+    } else {
+      addRow();
+    }
+
+    validateAndRecalculate();
+    resultsSection.classList.remove('visible');
+
+    // UI state: Success
+    dropzoneProcessing.style.display = 'none';
+    dropzoneSuccess.style.display = 'flex';
+    successFilename.textContent = file.name;
+    successSummary.textContent = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. Review details below and click 'Analyze Bill'.`;
+
+  } catch (err) {
+    console.error('Extraction error:', err);
+    resetDropzone();
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = `Document extraction failed: ${err.message}`;
+  }
+}
+
+function setupDropzone() {
+  if (!billDropzone || !fileInput) return;
+
+  billDropzone.addEventListener('click', (e) => {
+    if (e.target === btnClearFile || (btnClearFile && btnClearFile.contains(e.target))) return;
+    fileInput.click();
+  });
+
+  billDropzone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    billDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      billDropzone.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    billDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      billDropzone.classList.remove('drag-over');
+    });
+  });
+
+  billDropzone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFile(files[0]);
+    }
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      processFile(fileInput.files[0]);
+    }
+  });
+
+  if (btnClearFile) {
+    btnClearFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetDropzone();
+    });
+  }
+}
+
+// Initialize toggles & dropzone
 setupToggle(groupEstimated, inputEstimated);
 setupToggle(groupObstructed, inputObstructed);
+setupDropzone();
 
 // Initial bootstrap with Preset A loaded for instant demo readiness
 loadPreset('A');

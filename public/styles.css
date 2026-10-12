@@ -796,6 +796,117 @@ body {
   outline: 2px solid var(--color-brand-accent);
 }
 
+/* ==========================================================================
+   Multimodal Bill Upload & Dropzone
+   ========================================================================== */
+
+.upload-card {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #6366f1;
+}
+
+.dropzone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  background-color: #fafaf9;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  position: relative;
+  outline: none;
+}
+
+.dropzone:hover,
+.dropzone.drag-over {
+  border-color: #6366f1;
+  background-color: #f5f3ff;
+}
+
+.dropzone:focus-visible {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.file-input-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.dropzone-icon {
+  color: #6366f1;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.dropzone-text {
+  font-size: 0.95rem;
+  color: var(--color-text-main);
+  margin-bottom: 0.25rem;
+}
+
+.dropzone-browse {
+  color: #6366f1;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.dropzone-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-subtle);
+}
+
+.dropzone-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.processing-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.processing-subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.dropzone-success {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  background-color: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .site-header {

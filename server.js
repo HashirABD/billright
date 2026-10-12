@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { calculateBackBilling } from './src/calculateBackBilling.js';
 import { searchRegulations } from './src/tavilyClient.js';
 import { evaluateExceptionsAndFormatLetter } from './src/llmClient.js';
+import { extractBillData } from './src/billExtractor.js';
 
 dotenv.config();
 
@@ -15,7 +16,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check endpoint
@@ -36,6 +37,27 @@ const JURISDICTION_CONFIGS = {
   'United States (Texas)': { lookbackMonths: 6, currency: '$', label: 'United States - Texas (PUCT §25.28)' },
   'Other Country': { lookbackMonths: 12, currency: '$', label: 'Other Country (Statutory Window)' }
 };
+
+// Multimodal bill extraction endpoint using Gemini Vision
+app.post('/api/extract-bill', async (req, res) => {
+  try {
+    const { fileData, mimeType } = req.body;
+    if (!fileData || !mimeType) {
+      return res.status(400).json({
+        error: 'fileData (base64) and mimeType are required'
+      });
+    }
+
+    const extracted = await extractBillData({ fileData, mimeType });
+    return res.json(extracted);
+
+  } catch (err) {
+    console.error('Error handling /api/extract-bill:', err.message);
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+});
 
 // Single unified analysis endpoint coordinating the 3-stage engine
 app.post('/api/analyze', async (req, res) => {
