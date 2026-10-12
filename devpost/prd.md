@@ -1,6 +1,6 @@
 ---
 doc: prd
-status: draft
+status: approved
 ---
 
 # BillRight — Product Requirements Document
