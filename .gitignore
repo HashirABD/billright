@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Devpost Learn personal context
+/devpost/learner-profile.md
