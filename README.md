@@ -1,60 +1,104 @@
 # BillRight ⚡
 
-> An AI-assisted consumer protection web application that verifies whether electricity catch-up charges violate statutory back-billing limits and arms consumers with an exact disputed calculation and ready-to-send dispute letter.
+> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal document auto-extraction, interactive SVG timeline visualization, deterministic pro-rata math, and formal dispute drafting.
 
-![BillRight](https://img.shields.io/badge/status-ready-emerald)
+![BillRight](https://img.shields.io/badge/status-production--ready-emerald)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Anti--Hallucination%20Hybrid-purple)
+![Multimodal](https://img.shields.io/badge/Multimodal-Gemini%20Vision-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
-## Overview
+## The Problem
 
-In many jurisdictions, energy regulators legally restrict how far back suppliers can bill consumers for past energy consumption. Under **Ofgem Standard Licence Condition 21BA** in Great Britain, energy suppliers generally cannot demand payment for electricity or gas consumed more than **12 months** prior to the bill date.
+In many countries and states, energy utility regulators legally restrict how far back suppliers can bill consumers for historical energy consumption:
+- **United Kingdom**: Under **Ofgem Standard Licence Condition 21BA**, energy suppliers cannot demand payment for energy consumed more than **12 months** prior to the bill date.
+- **Australia**: Under **AER National Energy Retail Rules (NERR Rule 30)**, retailers recovering historical undercharges are strictly capped at a maximum of **9 months**.
+- **United States (e.g., California CPUC Rule 17.1)**: Adjustment of residential bills for billing errors where the customer is not at fault is restricted to **3 months** (or **6 months** in states like Texas under PUCT §25.28).
 
-Despite these protections, thousands of households, tenants, and small microbusinesses receive intimidating catch-up bills spanning 18 to 24 months. Most either panic and pay or struggle to dispute them because regulatory clauses are dense and hiring legal assistance costs more than the bill.
-
-**BillRight** bridges this power asymmetry through a **three-layer anti-hallucination hybrid architecture**:
-1. **Deterministic Calculation**: A pure, isolated JavaScript engine calculates lookback cut-off dates and daily pro-rata billing apportionment down to the penny. The AI is never allowed to calculate math or dates.
-2. **Live Regulatory Retrieval**: The server calls the **Tavily Search API** to retrieve current, authoritative regulator rules directly from official sources (such as Ofgem), ensuring legal rules are grounded rather than hallucinated.
-3. **Constrained LLM Reasoning**: **Google Gemini (gemini-3.8-flash)** evaluates factual exception conditions (such as customer meter obstruction) and formats a formal, polite dispute letter referencing the two-step escalation ladder (supplier complaints department &rarr; Energy Ombudsman).
+Despite these protections, millions of households, tenants, and small business owners receive sudden, intimidating multi-year catch-up bills. Most either panic and pay or struggle to dispute them because utility regulations are dense and hiring a lawyer costs more than the bill itself.
 
 ---
 
-## Key Features
+## The Anti-Hallucination Solution
 
-- **3 Instant UK Presets**:
-  - **Case A (£1,400 Catch-up Bill)**: Billed energy exceeds 12 months; produces an emerald *"Likely not recoverable under the rule"* verdict, calculates £1,000.00 disputable charges, cites Ofgem SLC 21BA, and generates a dispute letter.
-  - **Case B (£650 Recent Charge)**: Charges fall strictly within the permitted 12-month window; produces a slate *"Rule does not apply"* verdict.
-  - **Case C (Missing Data)**: Incomplete dates trigger client-side validation prompting complete information.
-- **Dynamic Billing Breakdown Table**: Add, edit, or delete billing period rows with real-time validation and automatic currency totals.
-- **Accurate Pro-Rata Math**: For billing periods straddling the 12-month boundary, charges are apportioned using exact calendar days (`(disputableDays / totalDays) * rowAmount`).
-- **One-Click Dispute Letter**: Generates a courteous, legally sound dispute letter ready to paste into supplier complaint portals, equipped with one-click clipboard copying.
-- **Fail-Safe Reliability**: Built-in 4-second API race timeouts that fall back to deterministic templates if external AI endpoints experience latency spikes.
+Most AI applications attempt to solve legal and financial problems by feeding documents into a raw prompt, risking dangerous mathematical inaccuracies and hallucinated case law.
+
+**BillRight** enforces a strict **four-pillar anti-hallucination architecture**:
+
+1. **Multimodal Document Extraction (Gemini Vision)**: Users can drop PDF or image bills into an upload zone. Gemini Vision extracts statement dates, billing periods, amounts, and reading types (actual vs. estimated) with structured JSON schemas, auto-populating the form while leaving the user in full control to inspect or edit.
+2. **100% Deterministic Arithmetic**: A pure, zero-dependency JavaScript engine calculates regional statutory cut-off dates and daily pro-rata billing apportionment down to the penny. The AI is **never** permitted to calculate numbers or dates.
+3. **Interactive Dispute Timeline Visualizer**: A dynamic SVG visualizer maps each consumption period against the statutory cut-off barrier line, color-coding periods into the *Permissible Billing Window* (green) and *Disputable Back-Billing Zone* (red), with straddling periods visually split into exact pro-rata segments with interactive hover tooltips.
+4. **Live Regulatory Grounding (Tavily Search API)**: The server calls Tavily to retrieve current, official regulatory clauses directly from regulator authorities (`ofgem.gov.uk`, `aer.gov.au`, `cpuc.ca.gov`), ensuring legal facts are grounded in live statutory reality.
+5. **Constrained Exception Evaluation & Letter Drafting (Gemini)**: The LLM evaluates statutory exceptions (such as customer meter obstruction) and drafts a courteous, formal complaint letter tailored to the regional statutory escalation ladder (supplier dispute &rarr; Energy Ombudsman / Utilities Commission).
 
 ---
 
-## Anti-Hallucination Hybrid Architecture
+## System Architecture
 
 ```
-┌──────────────────┐
-│  Client Browser  │ (public/app.js & index.html)
-└────────┬─────────┘
-         │ POST /api/analyze
-         ▼
-┌──────────────────┐
-│    server.js     │ (Express API Coordinator)
-└────────┬─────────┘
-         ├───► 1. Deterministic Math (src/calculateBackBilling.js)
-         │        └── Computes 12-month cut-off date & pro-rata calendar days
-         │
-         ├───► 2. Live Search Retrieval (src/tavilyClient.js)
-         │        └── Fetches verified Ofgem SLC 21BA regulatory text
-         │
-         └───► 3. Constrained Gemini Evaluation (src/llmClient.js)
-                  └── Evaluates meter obstruction exception & formats dispute letter
+                          USER INTERACTION
+    ┌───────────────────────┬───────────────────────────────┐
+    │  PDF / Image Dropzone │  Manual / Preset Input Form   │
+    └───────────┬───────────┴───────────────┬───────────────┘
+                │                           │
+                ▼                           │
+    ┌───────────────────────────┐           │
+    │  POST /api/extract-bill   │           │
+    │  Gemini 2.5/3.8 Vision    │           │
+    │  (Structured JSON parser) │           │
+    └───────────┬───────────────┘           │
+                │ (Auto-populates fields)   │
+                └──────────────────────────►▼
+                                ┌───────────────────────────┐
+                                │     POST /api/analyze     │
+                                └─────────────┬─────────────┘
+                                              │
+    ┌─────────────────────────────────────────┼────────────────────────────────────────┐
+    ▼                                         ▼                                        ▼
+[Stage 1: Deterministic Math]        [Stage 2: Live Search]                  [Stage 3: Constrained LLM]
+calculateBackBilling.js              tavilyClient.js                         llmClient.js
+- Regional lookback:                 - UK: Ofgem SLC 21BA                    - Exception evaluation
+  • UK: 12 months                    - AU: AER NERR Rule 30 (9 mos)          - Multi-currency letter
+  • AU: 9 months                     - US: CPUC Rule 17.1 (3 mos)            - Localized ombudsman
+  • US: 3 / 6 months                 - Dynamic query builder                   escalation pathways
+- Daily pro-rata apportionment
+                                              │
+                                              ▼
+                                 UNIFIED CLIENT RESPONSE
+                                              │
+       ┌──────────────────────────────────────┴──────────────────────────────────────┐
+       ▼                                                                             ▼
+[Interactive SVG Timeline]                                              [Results & Action Deck]
+- Color-coded zones (Permissible vs Disputable)                         - Semantic Badges
+- Cut-off barrier line with exact date                                  - Itemized pro-rata table
+- Straddling period split segments                                      - Live citation cards
+- Hover tooltips & interactive highlights                               - One-click copyable letter
 ```
+
+---
+
+## Supported Jurisdictions
+
+| Jurisdiction | Regulatory Authority | Statutory Instrument | Lookback Limit | Currency | Escalation Ladder |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **United Kingdom** | Ofgem | Standard Licence Condition 21BA | **12 months** | £ (GBP) | Supplier complaint (8 wks) &rarr; Energy Ombudsman |
+| **Australia** | AER | National Energy Retail Rules (Rule 30) | **9 months** | A$ (AUD) | Retailer dispute &rarr; Energy & Water Ombudsman (EWON/EWOV/EWOQ) |
+| **US (California)** | CPUC | Tariff Rule 17.1 (Underbilling) | **3 months** | $ (USD) | Utility complaint &rarr; California Public Utilities Commission |
+| **US (Texas)** | PUCT | Substantive Rule §25.28(h) | **6 months** | $ (USD) | Utility dispute &rarr; Public Utility Commission of Texas |
+
+---
+
+## Instant Sample Presets
+
+BillRight includes instant presets for one-click demonstration:
+
+- **UK Case A (£1,400 Catch-up Bill)**: Billed energy exceeds 12 months; produces an emerald *"Likely not recoverable under the rule"* badge, £1,000.00 disputable charges, Ofgem SLC 21BA citation, and a formal dispute letter.
+- **UK Case B (£650 Recent Charge)**: Charges fall strictly within the permitted 12-month window; produces a slate *"Rule does not apply"* badge.
+- **AU Case D (A$1,800 AER Catch-up Bill)**: 18-month catch-up bill in Australia; enforces AER 9-month limit, isolating A$900.00 disputable charges and drafting an Ombudsman escalation letter.
+- **US CA Case E ($900 CPUC Underbilling)**: 9-month billing adjustment in California; enforces CPUC 3-month limit, isolating $600.00 in disputable charges.
+- **Case C (Incomplete Data)**: Missing dates trigger inline validation prompting complete information.
 
 ---
 
@@ -76,7 +120,7 @@ npm install
 ```
 
 ### 3. Configure environment variables
-Copy the sample environment file and add your API keys:
+Copy the sample environment file:
 ```bash
 cp .env.example .env
 ```
@@ -98,11 +142,11 @@ Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 ## Testing & Verification
 
-Run the deterministic mathematical test suite:
+Run the deterministic mathematical unit test suite:
 ```bash
 npm run test:math
 ```
-Verifies cut-off dates, day counting, full lookback, straddling daily pro-rata math, and validation edge cases with 100% precision.
+Verifies cut-off dates, calendar day counting, multi-period composite math, straddling pro-rata formulas, leap year clamps, and Australian/US lookback windows with 100% precision.
 
 ---
 
