@@ -173,7 +173,7 @@ Return strictly a JSON object with this shape:
   "disputeLetter": "The complete formatted letter text..."
 }`;
 
-    const response = await ai.models.generateContent({
+    const generatePromise = ai.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
@@ -181,6 +181,12 @@ Return strictly a JSON object with this shape:
         responseMimeType: 'application/json'
       }
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini API call timed out after 4 seconds')), 4000)
+    );
+
+    const response = await Promise.race([generatePromise, timeoutPromise]);
 
     const parsed = JSON.parse(response.text);
     return {

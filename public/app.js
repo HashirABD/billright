@@ -1,6 +1,7 @@
 /**
  * BillRight — Frontend Application Logic
- * Manages presets, dynamic billing rows, client-side validation, and UI states.
+ * End-to-end integration: Presets, table management, live API analysis,
+ * verdict rendering, itemized calculation tables, and copyable letters.
  */
 
 // Preset definitions conforming to PRD specification
@@ -105,7 +106,6 @@ function createRowElement(data = { startDate: '', endDate: '', amount: '' }) {
   const btnDelete = tr.querySelector('.btn-delete-row');
   btnDelete.addEventListener('click', () => {
     tr.remove();
-    // Ensure at least one row exists
     if (periodsTbody.querySelectorAll('tr').length === 0) {
       addRow();
     }
@@ -272,13 +272,162 @@ btnAddRow.addEventListener('click', () => {
 
 btnResetAll.addEventListener('click', resetForm);
 
-// Form submission handler (Slice 4 will complete backend wire-up)
+/**
+ * Renders the returned analysis results into the DOM
+ */
+function renderResults(data) {
+  // 1. Verdict Badge & Explanation
+  verdictBadgeContainer.innerHTML = '';
+  const badge = document.createElement('div');
+
+  if (data.badgeType === 'consumer_protected') {
+    badge.className = 'verdict-badge protected';
+    badge.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+      <span>${data.verdict}</span>
+    `;
+    verdictExplanation.textContent = 'Under statutory back-billing protections, energy suppliers cannot demand payment for energy consumed more than 12 months before the date of the bill.';
+  } else if (data.badgeType === 'rule_does_not_apply') {
+    badge.className = 'verdict-badge valid';
+    badge.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span>${data.verdict}</span>
+    `;
+    verdictExplanation.textContent = data.exceptionNotes || 'All billing periods fall within the permitted statutory 12-month billing window.';
+  } else {
+    badge.className = 'verdict-badge incomplete';
+    badge.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span>${data.verdict}</span>
+    `;
+    verdictExplanation.textContent = data.exceptionNotes || 'Official regulatory rules could not be verified for this jurisdiction. Analysis paused to avoid guesswork.';
+  }
+
+  verdictBadgeContainer.appendChild(badge);
+
+  // 2. Financial Totals
+  verdictDisputableSum.textContent = `£${data.disputableTotal.toFixed(2)}`;
+  verdictCutoffDate.textContent = data.cutOffDate;
+
+  // 3. Itemized Mathematical Breakdown Table
+  breakdownTbody.innerHTML = '';
+  data.itemizedBreakdown.forEach(item => {
+    const tr = document.createElement('tr');
+    let statusBadge = '';
+
+    if (item.status === 'fully_before_cutoff') {
+      statusBadge = '<span class="preset-badge protected">100% Pre-Cutoff</span>';
+    } else if (item.status === 'straddles_cutoff') {
+      statusBadge = '<span class="preset-badge protected">Pro-Rata Apportioned</span>';
+    } else {
+      statusBadge = '<span class="preset-badge valid">Within Window</span>';
+    }
+
+    tr.innerHTML = `
+      <td>${item.startDate} &rarr; ${item.endDate}</td>
+      <td class="tabular-nums">${item.totalDays} days</td>
+      <td class="tabular-nums">${item.disputableDays} days</td>
+      <td class="tabular-nums">£${item.amount.toFixed(2)}</td>
+      <td class="tabular-nums"><strong>£${item.disputableAmount.toFixed(2)}</strong></td>
+      <td>${statusBadge}</td>
+    `;
+    breakdownTbody.appendChild(tr);
+  });
+
+  // 4. Retrieved Regulatory Authority
+  sourcesContainer.innerHTML = '';
+  const reg = data.regulation || {};
+  const sourceDiv = document.createElement('div');
+  sourceDiv.className = 'source-item';
+  sourceDiv.innerHTML = `
+    <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
+    <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.35rem 0;">
+      ${reg.summary || 'Suppliers cannot back-bill customers for energy used more than 12 months ago.'}
+    </p>
+    ${reg.sourceUrl ? `<a href="${reg.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url">${reg.sourceUrl} &nearr;</a>` : '<span style="font-size: 0.8125rem; color: #b45309;">Live search unverified</span>'}
+  `;
+  sourcesContainer.appendChild(sourceDiv);
+
+  // 5. Dispute Letter Box
+  if (data.disputeLetter) {
+    letterContent.textContent = data.disputeLetter;
+    btnCopyLetter.style.display = 'inline-flex';
+  } else {
+    letterContent.textContent = `[Formal Dispute Letter Not Applicable]
+
+Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter access was obstructed. A formal back-billing dispute cannot be issued.'}`;
+    btnCopyLetter.style.display = 'none';
+  }
+
+  // Reveal results
+  resultsSection.classList.add('visible');
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Form submission handler
 billForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!validateAndRecalculate()) return;
 
-  // Placeholder for Slice 4 full execution
-  console.log('Submitting bill for analysis...');
+  // Gather payload
+  const rows = periodsTbody.querySelectorAll('tr');
+  const billingPeriods = [];
+
+  rows.forEach(row => {
+    const startDate = row.querySelector('.row-start-date').value;
+    const endDate = row.querySelector('.row-end-date').value;
+    const amount = parseFloat(row.querySelector('.row-amount').value);
+    billingPeriods.push({ startDate, endDate, amount });
+  });
+
+  const payload = {
+    country: countrySelect.value,
+    billDate: billDateInput.value,
+    isEstimated: inputEstimated.value === 'true',
+    isMeterObstructed: inputObstructed.value === 'true',
+    billingPeriods
+  };
+
+  // Button loading state
+  btnAnalyze.disabled = true;
+  btnAnalyzeText.textContent = 'Verifying with Live Regulations...';
+
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    renderResults(data);
+
+  } catch (err) {
+    console.error('Analysis failed:', err);
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = `Analysis error: ${err.message}`;
+  } finally {
+    btnAnalyze.disabled = false;
+    btnAnalyzeText.textContent = 'Analyze Bill';
+  }
 });
 
 // Copy letter button handler

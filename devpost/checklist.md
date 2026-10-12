@@ -29,7 +29,7 @@ Build mode: fast
   Learner check: Open `http://localhost:3000`, test clicking Preset A, B, and C, dynamically add/delete billing rows, and test inline validation on reversed dates.
   Commit: `feat: add editorial web interface, sample presets, and dynamic billing table`
 
-- [ ] **3. Live Regulatory Retrieval (Tavily) & Constrained Gemini Exception / Letter Formatter**
+- [x] **3. Live Regulatory Retrieval (Tavily) & Constrained Gemini Exception / Letter Formatter**
   Becomes usable: The backend pipeline is complete: `tavilyClient.js` searches official regulator rules (Ofgem SLC 21BA), `llmClient.js` evaluates meter access obstruction exceptions and formats the polite dispute letter with the two-step escalation ladder, and `server.js` exposes `POST /api/analyze` combining math + retrieval + AI with robust fallbacks.
   Why now: Completes the backend engine, connecting search and LLM logic with strict error handling so API outages gracefully degrade to "More evidence needed".
   PRD ref: `prd.md > Features and Behavior (3. Dynamic Regulatory Retrieval, 4. Constrained Exception Evaluation, 5. Dispute Letter Generation)`, `prd.md > States and Boundaries`
