@@ -28,6 +28,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Multi-jurisdiction statutory configurations
+const JURISDICTION_CONFIGS = {
+  'United Kingdom': { lookbackMonths: 12, currency: '£', label: 'United Kingdom (Ofgem SLC 21BA)' },
+  'Australia': { lookbackMonths: 9, currency: 'A$', label: 'Australia (AER Rule 30)' },
+  'United States (California)': { lookbackMonths: 3, currency: '$', label: 'United States - California (CPUC Rule 17.1)' },
+  'United States (Texas)': { lookbackMonths: 6, currency: '$', label: 'United States - Texas (PUCT §25.28)' },
+  'Other Country': { lookbackMonths: 12, currency: '$', label: 'Other Country (Statutory Window)' }
+};
+
 // Single unified analysis endpoint coordinating the 3-stage engine
 app.post('/api/analyze', async (req, res) => {
   try {
@@ -36,7 +45,9 @@ app.post('/api/analyze', async (req, res) => {
       billDate,
       billingPeriods,
       isEstimated = false,
-      isMeterObstructed = false
+      isMeterObstructed = false,
+      lookbackMonths: customLookbackMonths,
+      currency: customCurrency
     } = req.body;
 
     // 1. Client input validation
@@ -52,10 +63,21 @@ app.post('/api/analyze', async (req, res) => {
       });
     }
 
+    const config = JURISDICTION_CONFIGS[country] || {
+      lookbackMonths: 12,
+      currency: '$',
+      label: country
+    };
+
+    const lookbackMonths = typeof customLookbackMonths === 'number' ? customLookbackMonths : config.lookbackMonths;
+    const currency = customCurrency || config.currency;
+
     // 2. Stage 1: Deterministic Mathematical Calculation
     const mathResult = calculateBackBilling({
       billDate,
-      billingPeriods
+      billingPeriods,
+      lookbackMonths,
+      currency
     });
 
     // 3. Stage 2: Live Regulatory Retrieval (Tavily)
@@ -69,7 +91,9 @@ app.post('/api/analyze', async (req, res) => {
       totalBilled: mathResult.totalBilled,
       billDate: mathResult.billDate,
       cutOffDate: mathResult.cutOffDate,
-      regulation
+      regulation,
+      currency,
+      lookbackMonths
     });
 
     // 5. Final unified response payload matching spec.md
@@ -79,6 +103,8 @@ app.post('/api/analyze', async (req, res) => {
       disputableTotal: mathResult.disputableTotal,
       totalBilled: mathResult.totalBilled,
       cutOffDate: mathResult.cutOffDate,
+      lookbackMonths,
+      currency,
       itemizedBreakdown: mathResult.itemizedBreakdown,
       regulation,
       exceptionTriggered: evaluation.exceptionTriggered,

@@ -5,12 +5,14 @@
  */
 
 /**
- * Calculates the 12-month lookback cut-off date.
- * Exactly 12 calendar months before the bill date.
+ * Calculates the lookback cut-off date based on statutory months.
+ * Handles month subtraction and leap year day clamping.
+ * 
  * @param {string} billDateStr - YYYY-MM-DD
+ * @param {number} [lookbackMonths=12] - Number of statutory lookback months
  * @returns {string} - YYYY-MM-DD
  */
-export function getCutOffDate(billDateStr) {
+export function getCutOffDate(billDateStr, lookbackMonths = 12) {
   const parts = billDateStr.split('-');
   if (parts.length !== 3) {
     throw new Error(`Invalid bill date format: ${billDateStr}`);
@@ -19,15 +21,21 @@ export function getCutOffDate(billDateStr) {
   const month = parseInt(parts[1], 10);
   const day = parseInt(parts[2], 10);
 
-  // 12 months prior: year - 1, keeping day and month
-  // Handles leap year edge cases (e.g. Feb 29 -> Feb 28)
-  const prevYear = year - 1;
-  const daysInMonth = new Date(Date.UTC(prevYear, month, 0)).getUTCDate();
+  let targetYear = year;
+  let targetMonth = month - lookbackMonths;
+
+  while (targetMonth <= 0) {
+    targetMonth += 12;
+    targetYear -= 1;
+  }
+
+  // Handles month length and leap year edge cases (e.g. Feb 29 -> Feb 28)
+  const daysInMonth = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
   const adjustedDay = Math.min(day, daysInMonth);
 
-  const mm = String(month).padStart(2, '0');
+  const mm = String(targetMonth).padStart(2, '0');
   const dd = String(adjustedDay).padStart(2, '0');
-  return `${prevYear}-${mm}-${dd}`;
+  return `${targetYear}-${mm}-${dd}`;
 }
 
 /**
@@ -44,14 +52,16 @@ export function getDaysBetween(startStr, endStr) {
 }
 
 /**
- * Analyzes billing periods against the 12-month back-billing cut-off date.
+ * Analyzes billing periods against the statutory back-billing cut-off date.
  * 
  * @param {Object} params
  * @param {string} params.billDate - YYYY-MM-DD
  * @param {Array<{ startDate: string, endDate: string, amount: number }>} params.billingPeriods
+ * @param {number} [params.lookbackMonths=12] - Lookback window in months (UK=12, AU=9, US CA=3, US TX=6)
+ * @param {string} [params.currency='£'] - Currency symbol
  * @returns {Object} itemized breakdown and totals
  */
-export function calculateBackBilling({ billDate, billingPeriods }) {
+export function calculateBackBilling({ billDate, billingPeriods, lookbackMonths = 12, currency = '£' }) {
   if (!billDate) {
     throw new Error('billDate is required');
   }
@@ -59,7 +69,7 @@ export function calculateBackBilling({ billDate, billingPeriods }) {
     throw new Error('billingPeriods must be a non-empty array');
   }
 
-  const cutOffDate = getCutOffDate(billDate);
+  const cutOffDate = getCutOffDate(billDate, lookbackMonths);
   let totalBilled = 0;
   let disputableTotal = 0;
 
@@ -128,6 +138,8 @@ export function calculateBackBilling({ billDate, billingPeriods }) {
   return {
     billDate,
     cutOffDate,
+    lookbackMonths,
+    currency,
     totalBilled,
     disputableTotal,
     itemizedBreakdown

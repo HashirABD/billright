@@ -4,10 +4,10 @@
  * verdict rendering, itemized calculation tables, and copyable letters.
  */
 
-// Preset definitions conforming to PRD specification
+// Preset definitions conforming to PRD specification and multi-jurisdiction rules
 const PRESETS = {
   A: {
-    name: 'Preset A (Exceeds 12 Months)',
+    name: 'UK Preset A (Exceeds 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
     isEstimated: true,
@@ -18,13 +18,35 @@ const PRESETS = {
     ]
   },
   B: {
-    name: 'Preset B (Within 12 Months)',
+    name: 'UK Preset B (Within 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
     isEstimated: false,
     isMeterObstructed: false,
     periods: [
       { startDate: '2025-10-01', endDate: '2026-09-30', amount: 650.00 }
+    ]
+  },
+  D: {
+    name: 'AU Preset D (AER Rule 30 - 9 Months)',
+    country: 'Australia',
+    billDate: '2026-10-01',
+    isEstimated: true,
+    isMeterObstructed: false,
+    periods: [
+      { startDate: '2025-04-01', endDate: '2025-12-31', amount: 900.00 },
+      { startDate: '2026-01-01', endDate: '2026-09-30', amount: 900.00 }
+    ]
+  },
+  E: {
+    name: 'US CA Preset E (CPUC Rule 17.1 - 3 Months)',
+    country: 'United States (California)',
+    billDate: '2026-10-01',
+    isEstimated: false,
+    isMeterObstructed: false,
+    periods: [
+      { startDate: '2026-01-01', endDate: '2026-06-30', amount: 600.00 },
+      { startDate: '2026-07-01', endDate: '2026-09-30', amount: 300.00 }
     ]
   },
   C: {
@@ -38,6 +60,16 @@ const PRESETS = {
     ]
   }
 };
+
+/**
+ * Returns currency symbol based on country name
+ */
+function getCurrencySymbol(country = '') {
+  if (country === 'Australia') return 'A$';
+  if (country && country.includes('United States')) return '$';
+  if (country === 'United Kingdom') return '£';
+  return '$';
+}
 
 // DOM references
 const billForm = document.getElementById('bill-form');
@@ -197,7 +229,8 @@ function validateAndRecalculate() {
     }
   });
 
-  displayTotalBilled.textContent = `£${totalBilled.toFixed(2)}`;
+  const currencySymbol = getCurrencySymbol(countrySelect.value);
+  displayTotalBilled.textContent = `${currencySymbol}${totalBilled.toFixed(2)}`;
 
   if (hasErrors) {
     validationErrorBanner.classList.add('visible');
@@ -231,6 +264,12 @@ function loadPreset(presetKey) {
   setToggleValue(groupEstimated, inputEstimated, preset.isEstimated);
   setToggleValue(groupObstructed, inputObstructed, preset.isMeterObstructed);
 
+  // Update table header currency
+  const currencyHeader = document.getElementById('currency-symbol-header');
+  if (currencyHeader) {
+    currencyHeader.textContent = getCurrencySymbol(preset.country);
+  }
+
   // Clear and populate rows
   periodsTbody.innerHTML = '';
   preset.periods.forEach(period => {
@@ -252,6 +291,9 @@ function resetForm() {
   setToggleValue(groupEstimated, inputEstimated, false);
   setToggleValue(groupObstructed, inputObstructed, false);
 
+  const currencyHeader = document.getElementById('currency-symbol-header');
+  if (currencyHeader) currencyHeader.textContent = '£';
+
   periodsTbody.innerHTML = '';
   addRow();
   resultsSection.classList.remove('visible');
@@ -266,6 +308,14 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
   });
 });
 
+// Update currency on country change
+countrySelect.addEventListener('change', () => {
+  const symbol = getCurrencySymbol(countrySelect.value);
+  const currencyHeader = document.getElementById('currency-symbol-header');
+  if (currencyHeader) currencyHeader.textContent = symbol;
+  validateAndRecalculate();
+});
+
 btnAddRow.addEventListener('click', () => {
   addRow();
 });
@@ -276,6 +326,9 @@ btnResetAll.addEventListener('click', resetForm);
  * Renders the returned analysis results into the DOM
  */
 function renderResults(data) {
+  const currency = data.currency || getCurrencySymbol(countrySelect.value);
+  const lookbackMonths = data.lookbackMonths || 12;
+
   // 1. Verdict Badge & Explanation
   verdictBadgeContainer.innerHTML = '';
   const badge = document.createElement('div');
@@ -289,7 +342,7 @@ function renderResults(data) {
       </svg>
       <span>${data.verdict}</span>
     `;
-    verdictExplanation.textContent = 'Under statutory back-billing protections, energy suppliers cannot demand payment for energy consumed more than 12 months before the date of the bill.';
+    verdictExplanation.textContent = `Under statutory back-billing protections in ${data.regulation?.jurisdiction || 'this jurisdiction'}, energy suppliers cannot demand payment for charges older than ${lookbackMonths} calendar months prior to the bill date.`;
   } else if (data.badgeType === 'rule_does_not_apply') {
     badge.className = 'verdict-badge valid';
     badge.innerHTML = `
@@ -300,7 +353,7 @@ function renderResults(data) {
       </svg>
       <span>${data.verdict}</span>
     `;
-    verdictExplanation.textContent = data.exceptionNotes || 'All billing periods fall within the permitted statutory 12-month billing window.';
+    verdictExplanation.textContent = data.exceptionNotes || `All billing periods fall within the permitted statutory ${lookbackMonths}-month billing window.`;
   } else {
     badge.className = 'verdict-badge incomplete';
     badge.innerHTML = `
@@ -317,7 +370,12 @@ function renderResults(data) {
   verdictBadgeContainer.appendChild(badge);
 
   // 2. Financial Totals
-  verdictDisputableSum.textContent = `£${data.disputableTotal.toFixed(2)}`;
+  const cutoffTitle = document.getElementById('verdict-cutoff-title');
+  if (cutoffTitle) {
+    cutoffTitle.textContent = `${lookbackMonths}-Month Lookback Cut-off:`;
+  }
+
+  verdictDisputableSum.textContent = `${currency}${data.disputableTotal.toFixed(2)}`;
   verdictCutoffDate.textContent = data.cutOffDate;
 
   // 3. Itemized Mathematical Breakdown Table
@@ -338,10 +396,12 @@ function renderResults(data) {
       <td>${item.startDate} &rarr; ${item.endDate}</td>
       <td class="tabular-nums">${item.totalDays} days</td>
       <td class="tabular-nums">${item.disputableDays} days</td>
-      <td class="tabular-nums">£${item.amount.toFixed(2)}</td>
-      <td class="tabular-nums"><strong>£${item.disputableAmount.toFixed(2)}</strong></td>
+      <td class="tabular-nums">${currency}${item.amount.toFixed(2)}</td>
+      <td class="tabular-nums"><strong>${currency}${item.disputableAmount.toFixed(2)}</strong></td>
       <td>${statusBadge}</td>
     `;
+    breakdownTbody.appendChild(tr);
+  });
     breakdownTbody.appendChild(tr);
   });
 

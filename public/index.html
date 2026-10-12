@@ -50,18 +50,28 @@
           <line x1="12" y1="16" x2="12" y2="12"/>
           <line x1="12" y1="8" x2="12.01" y2="8"/>
         </svg>
-        Try a UK Sample Case (Instant Presets)
+        Sample Regulatory Cases (Instant Presets)
       </h2>
       <div class="presets-grid">
         <button type="button" class="preset-btn" id="preset-a" data-preset="A">
-          <span class="preset-badge protected">Case A: Exceeds 12 Mos</span>
+          <span class="preset-badge protected">UK: Exceeds 12 Mos</span>
           <span class="preset-name">£1,400 Catch-up Bill</span>
-          <span class="preset-desc">Includes £1,000 from 2024–2025. Rule protects consumer.</span>
+          <span class="preset-desc">Includes £1,000 from 2024–2025. Protected by Ofgem SLC 21BA.</span>
         </button>
         <button type="button" class="preset-btn" id="preset-b" data-preset="B">
-          <span class="preset-badge valid">Case B: Within 12 Mos</span>
+          <span class="preset-badge valid">UK: Within 12 Mos</span>
           <span class="preset-name">£650 Recent Charge</span>
           <span class="preset-desc">All charges accrued within permitted 12-month window.</span>
+        </button>
+        <button type="button" class="preset-btn" id="preset-d" data-preset="D">
+          <span class="preset-badge protected">AU: Exceeds 9 Mos</span>
+          <span class="preset-name">A$1,800 Catch-up Bill</span>
+          <span class="preset-desc">Includes A$900 older than 9 months. Protected by AER Rule 30.</span>
+        </button>
+        <button type="button" class="preset-btn" id="preset-e" data-preset="E">
+          <span class="preset-badge protected">US CA: Exceeds 3 Mos</span>
+          <span class="preset-name">$900 Undercharge</span>
+          <span class="preset-desc">Includes $600 older than 3 months. Protected by CPUC Rule 17.1.</span>
         </button>
         <button type="button" class="preset-btn" id="preset-c" data-preset="C">
           <span class="preset-badge incomplete">Case C: Missing Data</span>
@@ -87,10 +97,13 @@
           <div class="form-group">
             <label for="input-country" class="form-label">Country / Jurisdiction</label>
             <select id="input-country" class="form-select">
-              <option value="United Kingdom" selected>United Kingdom (Ofgem SLC 21BA)</option>
-              <option value="Other Country">Other Country (Best Effort Search)</option>
+              <option value="United Kingdom" selected>United Kingdom (Ofgem SLC 21BA — 12 Mos)</option>
+              <option value="Australia">Australia (AER NERR Rule 30 — 9 Mos)</option>
+              <option value="United States (California)">United States - California (CPUC Rule 17.1 — 3 Mos)</option>
+              <option value="United States (Texas)">United States - Texas (PUCT §25.28 — 6 Mos)</option>
+              <option value="Other Country">Other Country (Statutory Window)</option>
             </select>
-            <span class="form-hint">Governs which regulatory standard is retrieved.</span>
+            <span class="form-hint">Governs which regulatory standard and lookback limit apply.</span>
           </div>
 
           <div class="form-group">
@@ -136,7 +149,7 @@
               <tr>
                 <th scope="col" style="width: 32%;">Period Start Date</th>
                 <th scope="col" style="width: 32%;">Period End Date</th>
-                <th scope="col" style="width: 26%;">Amount (£)</th>
+                <th scope="col" style="width: 26%;">Amount (<span id="currency-symbol-header">£</span>)</th>
                 <th scope="col" style="width: 10%; text-align: center;">Action</th>
               </tr>
             </thead>
@@ -207,7 +220,7 @@
             <div class="verdict-amount-value tabular-nums" id="verdict-disputable-sum">£0.00</div>
           </div>
           <div style="text-align: right;">
-            <div class="verdict-amount-title">12-Month Lookback Cut-off:</div>
+            <div class="verdict-amount-title" id="verdict-cutoff-title">Statutory Lookback Cut-off:</div>
             <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-brand-secondary);" class="tabular-nums" id="verdict-cutoff-date">--</div>
           </div>
         </div>

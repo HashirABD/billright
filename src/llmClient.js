@@ -7,6 +7,25 @@
 import { GoogleGenAI } from '@google/genai';
 
 /**
+ * Localized statutory ombudsman escalation paths by jurisdiction.
+ */
+function getEscalationPath(jurisdiction = '') {
+  if (jurisdiction === 'Australia') {
+    return 'State Energy and Water Ombudsman (e.g. EWON, EWOV, EWOQ) in accordance with the National Energy Retail Law';
+  }
+  if (jurisdiction.includes('California')) {
+    return 'California Public Utilities Commission (CPUC) Consumer Affairs Branch (www.cpuc.ca.gov)';
+  }
+  if (jurisdiction.includes('Texas')) {
+    return 'Public Utility Commission of Texas (PUCT) Customer Protection Division';
+  }
+  if (jurisdiction === 'United Kingdom') {
+    return 'Energy Ombudsman (www.energyombudsman.org) after the standard 8-week period or upon receipt of a deadlock letter';
+  }
+  return 'relevant statutory utility ombudsman or Public Utilities Commission';
+}
+
+/**
  * Deterministic fallback letter generator if AI API is unavailable.
  */
 function generateDeterministicLetter({
@@ -15,10 +34,13 @@ function generateDeterministicLetter({
   billDate,
   cutOffDate,
   regulation,
-  isEstimated
+  isEstimated,
+  currency = '£',
+  lookbackMonths = 12
 }) {
-  const formattedDisputable = `£${disputableTotal.toFixed(2)}`;
-  const formattedTotal = `£${totalBilled.toFixed(2)}`;
+  const formattedDisputable = `${currency}${disputableTotal.toFixed(2)}`;
+  const formattedTotal = `${currency}${totalBilled.toFixed(2)}`;
+  const escalation = getEscalationPath(regulation.jurisdiction);
 
   return `[Your Name]
 [Your Address]
@@ -29,7 +51,7 @@ Complaints Handling Team
 [Energy Supplier Name]
 [Supplier Address]
 
-FORMAL COMPLAINT: Back-billing Dispute under ${regulation.clauseReference || 'Ofgem Standard Licence Condition 21BA'}
+FORMAL COMPLAINT: Back-billing Dispute under ${regulation.clauseReference || 'Statutory Utility Code'}
 
 Dear Complaints Team,
 
@@ -38,18 +60,18 @@ Supply Address: [Insert Address]
 
 I am writing to formally raise a complaint regarding my recent energy bill dated ${billDate} for the total amount of ${formattedTotal}.
 
-Upon reviewing the itemized breakdown against statutory regulatory standards, I have identified that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than 12 calendar months before the bill date).
+Upon reviewing the itemized breakdown against statutory regulatory standards, I have identified that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
 
-Under ${regulation.title || 'Ofgem Standard Licence Condition 21BA (the Back-billing Principle)'}, energy suppliers in Great Britain are prohibited from recovering charges for electricity or gas consumed more than 12 months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.
+Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are prohibited from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.
 
 I confirm that I have not acted obstructively or prevented meter access at any time${isEstimated ? ', and earlier bills were based on estimated rather than actual readings' : ''}.
 
-In light of the statutory back-billing rules, I formally request that you:
+In light of these statutory back-billing rules, I formally request that you:
 1. Revise the bill to remove the ${formattedDisputable} accrued prior to ${cutOffDate}.
-2. Issue an updated statement showing only charges legitimately recoverable within the 12-month permitted window.
+2. Issue an updated statement showing only charges legitimately recoverable within the statutory ${lookbackMonths}-month permitted window.
 3. Place a temporary hold on collection action for the disputed sum while this complaint is investigated.
 
-Please treat this as a formal complaint in accordance with your statutory complaint handling procedure. As per regulatory rules, should we not reach an agreed resolution within 8 weeks, or should you issue a final deadlock letter, I reserve the right to escalate this matter to the Energy Ombudsman (www.energyombudsman.org).
+Please treat this as a formal complaint in accordance with your statutory complaint handling procedure. As per regulatory rules, should we not reach an agreed resolution, I reserve the right to escalate this matter to the ${escalation}.
 
 I look forward to your prompt written response within 10 working days.
 
@@ -80,7 +102,9 @@ export async function evaluateExceptionsAndFormatLetter({
   totalBilled,
   billDate,
   cutOffDate,
-  regulation
+  regulation,
+  currency = '£',
+  lookbackMonths = 12
 }) {
   // Case A: Meter obstruction triggered -> statutory exception overrides protections
   if (isMeterObstructed) {
@@ -88,7 +112,7 @@ export async function evaluateExceptionsAndFormatLetter({
       verdict: 'Rule does not apply',
       badgeType: 'rule_does_not_apply',
       exceptionTriggered: true,
-      exceptionNotes: 'Under energy regulatory rules (such as Ofgem SLC 21BA), statutory back-billing protections do not apply when a consumer has behaved obstructively or prevented the supplier or meter reader from inspecting or reading the meter.',
+      exceptionNotes: `Under energy regulatory rules (such as ${regulation.clauseReference || 'statutory utility codes'}), statutory back-billing protections do not apply when a consumer has behaved obstructively or prevented the supplier or meter reader from inspecting or reading the meter.`,
       disputeLetter: null,
       disputeLetterReason: 'Dispute letter suppressed because meter access obstruction was indicated.'
     };
@@ -112,9 +136,9 @@ export async function evaluateExceptionsAndFormatLetter({
       verdict: 'Rule does not apply',
       badgeType: 'rule_does_not_apply',
       exceptionTriggered: false,
-      exceptionNotes: 'All charges on this bill fall within the statutory 12-month permitted billing window. The back-billing limit does not restrict charges accrued within the last 12 months.',
+      exceptionNotes: `All charges on this bill fall within the statutory ${lookbackMonths}-month permitted billing window. The back-billing limit does not restrict charges accrued within the last ${lookbackMonths} months.`,
       disputeLetter: null,
-      disputeLetterReason: 'All billing periods are within the permitted 12-month window.'
+      disputeLetterReason: `All billing periods are within the permitted ${lookbackMonths}-month window.`
     };
   }
 
@@ -130,7 +154,9 @@ export async function evaluateExceptionsAndFormatLetter({
       billDate,
       cutOffDate,
       regulation,
-      isEstimated
+      isEstimated,
+      currency,
+      lookbackMonths
     });
     return {
       verdict: 'Likely not recoverable under the rule',
@@ -143,17 +169,19 @@ export async function evaluateExceptionsAndFormatLetter({
 
   try {
     const ai = new GoogleGenAI({ apiKey });
+    const escalation = getEscalationPath(regulation.jurisdiction);
+
     const prompt = `You are an expert consumer advocacy assistant specializing in energy utility regulations.
 Generate a structured JSON response evaluating a back-billing complaint.
 
 FACTS:
 - Country/Jurisdiction: ${regulation.jurisdiction}
-- Regulation: ${regulation.title} (${regulation.clauseReference || 'SLC 21BA'})
+- Regulation: ${regulation.title} (${regulation.clauseReference || 'Statutory Code'})
 - Regulation Summary: ${regulation.summary}
 - Bill Issue Date: ${billDate}
-- 12-Month Lookback Cut-off: ${cutOffDate}
-- Total Billed: £${totalBilled.toFixed(2)}
-- Disputable Sum Accrued Before Cut-off: £${disputableTotal.toFixed(2)}
+- Statutory ${lookbackMonths}-Month Lookback Cut-off: ${cutOffDate}
+- Total Billed: ${currency}${totalBilled.toFixed(2)}
+- Disputable Sum Accrued Before Cut-off: ${currency}${disputableTotal.toFixed(2)}
 - Meter Reading Status: ${isEstimated ? 'Previously estimated readings' : 'Actual readings'}
 - Customer Obstruction: No (Meter access was never denied)
 
@@ -161,11 +189,11 @@ INSTRUCTIONS:
 1. Verdict must be "Likely not recoverable under the rule".
 2. exceptionTriggered must be false.
 3. Formulate a polite, professional, formal complaint letter to the energy supplier's complaints department.
-   - Reference the exact regulation name and clause.
+   - Reference the exact regulation name and clause (${regulation.clauseReference}).
    - Include placeholders for user details ([Your Name], [Account Number], [Supplier Name]).
-   - Insert the exact pre-calculated disputable sum of £${disputableTotal.toFixed(2)}.
-   - Explicitly detail the UK two-step escalation ladder: (1) internal formal supplier complaint (8-week resolution period), followed by (2) the Energy Ombudsman.
-   - Do NOT declare the charge "illegal"; frame it as an unrecoverable back-billing charge under the statutory licence condition.
+   - Insert the exact pre-calculated disputable sum of ${currency}${disputableTotal.toFixed(2)}.
+   - Explicitly cite the statutory escalation path: internal supplier dispute followed by ${escalation}.
+   - Do NOT declare the charge "illegal"; frame it as an unrecoverable back-billing charge under the statutory rule.
 
 Return strictly a JSON object with this shape:
 {
@@ -200,7 +228,9 @@ Return strictly a JSON object with this shape:
         billDate,
         cutOffDate,
         regulation,
-        isEstimated
+        isEstimated,
+        currency,
+        lookbackMonths
       })
     };
 
@@ -212,7 +242,9 @@ Return strictly a JSON object with this shape:
       billDate,
       cutOffDate,
       regulation,
-      isEstimated
+      isEstimated,
+      currency,
+      lookbackMonths
     });
     return {
       verdict: 'Likely not recoverable under the rule',

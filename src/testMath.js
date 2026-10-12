@@ -84,5 +84,41 @@ assert.throws(() => {
   });
 }, /Amount must be a positive number/, 'Should throw on negative amounts');
 
+// Test 8: Multi-jurisdiction lookback calculations
+// Australia (AER Rule 30): 9 months lookback
+assert.equal(getCutOffDate('2026-10-01', 9), '2026-01-01', 'AU 9-month cut-off from Oct 1 2026 should be Jan 1 2026');
+const auCase = calculateBackBilling({
+  billDate: '2026-10-01',
+  billingPeriods: [
+    { startDate: '2025-04-01', endDate: '2025-12-31', amount: 900.00 }, // before 2026-01-01 -> 100% disputable
+    { startDate: '2026-01-01', endDate: '2026-09-30', amount: 900.00 }  // within window -> 0% disputable
+  ],
+  lookbackMonths: 9,
+  currency: 'A$'
+});
+assert.equal(auCase.cutOffDate, '2026-01-01');
+assert.equal(auCase.disputableTotal, 900.00);
+assert.equal(auCase.currency, 'A$');
+assert.equal(auCase.itemizedBreakdown[0].status, 'fully_before_cutoff');
+assert.equal(auCase.itemizedBreakdown[1].status, 'within_allowed_window');
+console.log('✔ Australia (AER 9-month) calculations verified.');
+
+// US - California (CPUC Rule 17.1): 3 months lookback
+assert.equal(getCutOffDate('2026-10-01', 3), '2026-07-01', 'US CA 3-month cut-off from Oct 1 2026 should be Jul 1 2026');
+const usCaCase = calculateBackBilling({
+  billDate: '2026-10-01',
+  billingPeriods: [
+    { startDate: '2026-01-01', endDate: '2026-06-30', amount: 600.00 }, // before 2026-07-01 -> 100% disputable
+    { startDate: '2026-07-01', endDate: '2026-09-30', amount: 300.00 }  // within window -> 0% disputable
+  ],
+  lookbackMonths: 3,
+  currency: '$'
+});
+assert.equal(usCaCase.cutOffDate, '2026-07-01');
+assert.equal(usCaCase.disputableTotal, 600.00);
+assert.equal(usCaCase.currency, '$');
+console.log('✔ US California (CPUC 3-month) calculations verified.');
+
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');
+

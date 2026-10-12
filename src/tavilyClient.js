@@ -28,10 +28,35 @@ export async function searchRegulations(country = 'United Kingdom') {
 
   // Construct query targeted at official energy regulatory bodies
   let query;
+  let defaultTitle;
+  let defaultClause;
+  let fallbackUrl;
+
   if (country === 'United Kingdom') {
     query = 'Ofgem Standard Licence Condition 21BA back-billing electricity 12 months rule site:ofgem.gov.uk OR site:citizensadvice.org.uk OR site:legislation.gov.uk';
+    defaultTitle = 'Ofgem Standard Licence Condition 21BA (Back-billing Principle)';
+    defaultClause = 'SLC 21BA';
+    fallbackUrl = 'https://www.ofgem.gov.uk/information-consumers/energy-advice-households/check-energy-back-billing-rules';
+  } else if (country === 'Australia') {
+    query = 'Australian Energy Regulator AER Rule 30 undercharging 9 months energy retail rules site:aer.gov.au OR site:energyombudsman.com.au';
+    defaultTitle = 'AER National Energy Retail Rules (Rule 30: Undercharging)';
+    defaultClause = 'NERR Rule 30';
+    fallbackUrl = 'https://www.aer.gov.au/consumers/energy-bills-and-charges/billing-problems-and-disputes';
+  } else if (country.includes('California')) {
+    query = 'California Public Utilities Commission CPUC Rule 17 underbilling 3 months electricity tariff site:cpuc.ca.gov';
+    defaultTitle = 'CPUC Tariff Rule 17.1 (Adjustment of Bills for Underbilling)';
+    defaultClause = 'CPUC Rule 17.1';
+    fallbackUrl = 'https://www.cpuc.ca.gov/consumer-support/file-a-complaint/utility-complaint-process';
+  } else if (country.includes('Texas')) {
+    query = 'Public Utility Commission of Texas PUCT Rule 25.28 underbilling 6 months electricity meter';
+    defaultTitle = 'PUCT Substantive Rule §25.28 (Bill Payment and Adjustments)';
+    defaultClause = 'PUCT §25.28(h)';
+    fallbackUrl = 'https://www.puc.texas.gov/consumer/complaints/complaint.aspx';
   } else {
     query = `${country} energy regulator back-billing limit electricity utility law`;
+    defaultTitle = `${country} Statutory Utility Regulation`;
+    defaultClause = 'Statutory Utility Code';
+    fallbackUrl = null;
   }
 
   try {
@@ -83,17 +108,14 @@ export async function searchRegulations(country = 'United Kingdom') {
 
     // Best matching result
     const topResult = results[0];
-    const isUK = country === 'United Kingdom';
 
     return {
       verified: true,
       jurisdiction: country,
-      title: isUK 
-        ? 'Ofgem Standard Licence Condition 21BA (Back-billing Principle)'
-        : topResult.title || `${country} Energy Regulatory Guideline`,
-      summary: data.answer || topResult.content || 'Suppliers cannot bill domestic or microbusiness customers for energy consumed more than 12 months prior to the bill date unless the customer behaved obstructively.',
-      clauseReference: isUK ? 'SLC 21BA' : 'Statutory Utility Code',
-      sourceUrl: topResult.url || 'https://www.ofgem.gov.uk/information-consumers/energy-advice-households/check-energy-back-billing-rules'
+      title: defaultTitle,
+      summary: data.answer || topResult.content || `Statutory protections restrict the recovery of unbilled historical charges beyond the statutory window.`,
+      clauseReference: defaultClause,
+      sourceUrl: topResult.url || fallbackUrl
     };
 
   } catch (err) {
