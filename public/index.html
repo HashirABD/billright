@@ -4,9 +4,281 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BillRight — Energy Back-Billing Verification</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>BillRight</h1>
-  <p>Loading application...</p>
+
+  <!-- Persistent Disclaimer Banner -->
+  <aside class="disclaimer-banner" role="complementary" aria-label="Legal Disclaimer">
+    <div class="disclaimer-content">
+      <svg class="disclaimer-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span><strong>Notice:</strong> BillRight is an informational utility tool and does not provide formal legal advice. Never treat regulatory assessments as formal judicial rulings.</span>
+    </div>
+  </aside>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <div>
+        <span class="brand-badge">Consumer Protection Utility</span>
+        <h1 class="brand-title">BillRight</h1>
+        <p class="brand-tagline">Verify electricity catch-up charges against statutory back-billing limits.</p>
+      </div>
+      <div>
+        <button type="button" id="btn-reset-all" class="btn-secondary" title="Reset all inputs">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="1 4 1 10 7 10"/>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+          Reset Form
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-container">
+
+    <!-- Sample Presets Section -->
+    <section class="presets-card" aria-labelledby="presets-heading">
+      <h2 id="presets-heading" class="presets-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        Try a UK Sample Case (Instant Presets)
+      </h2>
+      <div class="presets-grid">
+        <button type="button" class="preset-btn" id="preset-a" data-preset="A">
+          <span class="preset-badge protected">Case A: Exceeds 12 Mos</span>
+          <span class="preset-name">£1,400 Catch-up Bill</span>
+          <span class="preset-desc">Includes £1,000 from 2024–2025. Rule protects consumer.</span>
+        </button>
+        <button type="button" class="preset-btn" id="preset-b" data-preset="B">
+          <span class="preset-badge valid">Case B: Within 12 Mos</span>
+          <span class="preset-name">£650 Recent Charge</span>
+          <span class="preset-desc">All charges accrued within permitted 12-month window.</span>
+        </button>
+        <button type="button" class="preset-btn" id="preset-c" data-preset="C">
+          <span class="preset-badge incomplete">Case C: Missing Data</span>
+          <span class="preset-name">Incomplete Period</span>
+          <span class="preset-desc">Missing dates prompt "More evidence needed".</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Bill Input Form -->
+    <form id="bill-form" novalidate>
+      
+      <!-- Card 1: Bill Metadata -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">1. Bill Details & Customer Factors</h2>
+            <p class="card-subtitle">Specify your jurisdiction and relevant account factors.</p>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="input-country" class="form-label">Country / Jurisdiction</label>
+            <select id="input-country" class="form-select">
+              <option value="United Kingdom" selected>United Kingdom (Ofgem SLC 21BA)</option>
+              <option value="Other Country">Other Country (Best Effort Search)</option>
+            </select>
+            <span class="form-hint">Governs which regulatory standard is retrieved.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="input-bill-date" class="form-label">Bill Issue Date</label>
+            <input type="date" id="input-bill-date" class="form-input" value="2026-10-01" required>
+            <span class="form-hint">The date printed on your catch-up bill.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Estimated Meter Readings?</label>
+            <div class="toggle-group" id="group-estimated">
+              <button type="button" class="toggle-btn active" data-value="false">No (Actual)</button>
+              <button type="button" class="toggle-btn" data-value="true">Yes (Estimated)</button>
+            </div>
+            <input type="hidden" id="input-estimated" value="false">
+            <span class="form-hint">Did the supplier bill on estimates previously?</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Meter Access Denied / Obstructed?</label>
+            <div class="toggle-group" id="group-obstructed">
+              <button type="button" class="toggle-btn active" data-value="false">No</button>
+              <button type="button" class="toggle-btn" data-value="true">Yes</button>
+            </div>
+            <input type="hidden" id="input-obstructed" value="false">
+            <span class="form-hint">Did you ever prevent meter inspection access?</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 2: Billing Line Items -->
+      <section class="card" style="margin-top: 1.5rem;">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">2. Billing Period Breakdown</h2>
+            <p class="card-subtitle">List the specific energy consumption periods included on the bill.</p>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="table-periods">
+            <thead>
+              <tr>
+                <th scope="col" style="width: 32%;">Period Start Date</th>
+                <th scope="col" style="width: 32%;">Period End Date</th>
+                <th scope="col" style="width: 26%;">Amount (£)</th>
+                <th scope="col" style="width: 10%; text-align: center;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="periods-tbody">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-actions">
+          <button type="button" id="btn-add-row" class="btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Billing Period
+          </button>
+
+          <div class="table-totals">
+            Total Billed: <strong class="tabular-nums" id="display-total-billed">£0.00</strong>
+          </div>
+        </div>
+
+        <!-- Inline Validation Error -->
+        <div id="validation-error" class="error-banner" role="alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="validation-error-msg">Please correct errors in your billing periods.</span>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+          <button type="submit" id="btn-analyze" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <span id="btn-analyze-text">Analyze Bill</span>
+          </button>
+        </div>
+      </section>
+
+    </form>
+
+    <!-- Results Section -->
+    <section id="results-section" class="results-container" aria-live="polite">
+      
+      <!-- Verdict Card -->
+      <article class="card">
+        <div class="card-header">
+          <h2 class="card-title">Analysis Verdict</h2>
+          <span class="card-subtitle">Based on statutory back-billing limits</span>
+        </div>
+
+        <div id="verdict-badge-container">
+          <!-- Semantic Badge injected via JS -->
+        </div>
+
+        <p id="verdict-explanation" style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+          <!-- Summary explanation text -->
+        </p>
+
+        <div class="verdict-amount-banner">
+          <div>
+            <div class="verdict-amount-title">Calculated Disputable Sum:</div>
+            <div class="verdict-amount-value tabular-nums" id="verdict-disputable-sum">£0.00</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="verdict-amount-title">12-Month Lookback Cut-off:</div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-brand-secondary);" class="tabular-nums" id="verdict-cutoff-date">--</div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Itemized Math Breakdown Table -->
+      <article class="card">
+        <div class="card-header">
+          <h2 class="card-title">Mathematical Lookback Apportionment</h2>
+          <span class="card-subtitle">Deterministic pro-rata calculations by calendar day</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                <th scope="col">Total Days</th>
+                <th scope="col">Days Pre-Cutoff</th>
+                <th scope="col">Period Amount</th>
+                <th scope="col">Disputable Amount</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="breakdown-tbody">
+              <!-- Itemized calculation rows -->
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <!-- Retrieved Regulatory Sources -->
+      <article class="card">
+        <div class="card-header">
+          <h2 class="card-title">Verified Regulatory Authority</h2>
+          <span class="card-subtitle">Retrieved live from official regulator databases</span>
+        </div>
+
+        <div id="sources-container">
+          <!-- Injected regulatory citation -->
+        </div>
+      </article>
+
+      <!-- Complaint Letter Box -->
+      <article class="card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Actionable Dispute Letter</h2>
+            <p class="card-subtitle">Ready-to-send dispute referencing official regulations and statutory escalation ladder.</p>
+          </div>
+          <div>
+            <button type="button" id="btn-copy-letter" class="btn-secondary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Letter
+            </button>
+            <span id="copy-feedback" class="copy-feedback">Copied to clipboard!</span>
+          </div>
+        </div>
+
+        <pre class="letter-box" id="letter-content" tabindex="0">
+<!-- Dispute letter injected here -->
+        </pre>
+      </article>
+
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
 </body>
 </html>

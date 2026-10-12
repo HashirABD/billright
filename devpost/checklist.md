@@ -9,7 +9,7 @@ Build mode: fast
 
 ## Slices
 
-- [ ] **1. Scaffolding, Deterministic Math Engine & Interactive Verification**
+- [x] **1. Scaffolding, Deterministic Math Engine & Interactive Verification**
   Becomes usable: The project is scaffolded with `package.json`, `server.js`, `calculateBackBilling.js`, and `testMath.js`. The deterministic back-billing math engine calculates 12-month lookback cut-offs, daily pro-rata apportionment, and itemized rows down to the penny with verified unit tests passing.
   Why now: Risk first and unique kernel early. Proves the deterministic mathematical foundation before introducing search or AI APIs, ensuring zero hallucinations in calculation.
   PRD ref: `prd.md > Features and Behavior (2. Deterministic Mathematical Apportionment)`
