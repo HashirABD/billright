@@ -19,7 +19,7 @@ Build mode: fast
   Learner check: Run `node src/testMath.js` in terminal and confirm the daily pro-rata math and cut-off dates compute correctly.
   Commit: `feat: scaffold server and implement deterministic back-billing math engine`
 
-- [ ] **2. Frontend Interactive UI with Presets, Dynamic Billing Table & Validation**
+- [x] **2. Frontend Interactive UI with Presets, Dynamic Billing Table & Validation**
   Becomes usable: A running web UI at `http://localhost:3000` with the complete editorial design system, persistent disclaimer banner, 3 UK instant sample presets (A, B, C) that auto-populate the table, dynamic row addition/deletion, and client-side validation for dates and amounts.
   Why now: Creates the visual interaction surface early so the user journey can be tested hands-on before connecting external APIs.
   PRD ref: `prd.md > The Core Journey`, `prd.md > Screens and Layout`, `prd.md > Look and Feel`, `prd.md > Features and Behavior (1. Sample Presets Management)`
@@ -51,7 +51,7 @@ Build mode: fast
 
 ## Hands-on Checkpoints
 
-- [ ] Early usable behavior explored — Slice 2 (interactive UI with presets, dynamic table, and validation)
+- [x] Early usable behavior explored — Slice 2 (interactive UI with presets, dynamic table, and validation)
 - [ ] Final kick-the-tires exploration and feedback completed — Slice 4 (complete end-to-end application)
 
 ## Final Review
