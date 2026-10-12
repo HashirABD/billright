@@ -613,6 +613,189 @@ body {
   opacity: 1;
 }
 
+/* ==========================================================================
+   Interactive Timeline Visualizer
+   ========================================================================== */
+
+.timeline-legend {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-disputable {
+  background-color: #ef4444;
+}
+
+.dot-permissible {
+  background-color: #10b981;
+}
+
+.dot-barrier {
+  background-color: #0f172a;
+}
+
+.timeline-container {
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  overflow-x: auto;
+  position: relative;
+}
+
+.timeline-svg {
+  width: 100%;
+  height: auto;
+  min-width: 650px;
+  display: block;
+}
+
+.zone-disputable {
+  fill: #fff5f5;
+  stroke: #fee2e2;
+  stroke-width: 1;
+}
+
+.zone-permissible {
+  fill: #f0fdf4;
+  stroke: #dcfce7;
+  stroke-width: 1;
+}
+
+.zone-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.disputable-label {
+  fill: #b91c1c;
+}
+
+.permissible-label {
+  fill: #047857;
+}
+
+.period-bar {
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.period-bar:hover {
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.bar-disputable {
+  fill: #ef4444;
+}
+
+.bar-permissible {
+  fill: #10b981;
+}
+
+.bar-text {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #ffffff;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.cutoff-barrier-line {
+  stroke: #0f172a;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.cutoff-pill-rect {
+  fill: #0f172a;
+}
+
+.cutoff-pill-text {
+  fill: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-axis-line {
+  stroke: #cbd5e1;
+  stroke-width: 1.5;
+}
+
+.axis-tick {
+  stroke: #94a3b8;
+  stroke-width: 1.5;
+}
+
+.axis-label-text {
+  fill: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-tooltip {
+  display: none;
+  position: fixed;
+  background-color: #0f172a;
+  color: #f8fafc;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+.tooltip-header {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 0.25rem;
+}
+
+.tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.tooltip-status {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+
+.table-row-highlight {
+  background-color: #f1f5f9 !important;
+  outline: 2px solid var(--color-brand-accent);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .site-header {
@@ -623,5 +806,9 @@ body {
   }
   .presets-grid {
     grid-template-columns: 1fr;
+  }
+  .timeline-legend {
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
 }

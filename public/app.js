@@ -4,6 +4,8 @@
  * verdict rendering, itemized calculation tables, and copyable letters.
  */
 
+import { renderTimeline } from './timeline.js';
+
 // Preset definitions conforming to PRD specification and multi-jurisdiction rules
 const PRESETS = {
   A: {
@@ -378,7 +380,18 @@ function renderResults(data) {
   verdictDisputableSum.textContent = `${currency}${data.disputableTotal.toFixed(2)}`;
   verdictCutoffDate.textContent = data.cutOffDate;
 
-  // 3. Itemized Mathematical Breakdown Table
+  // 3. Interactive Dispute Timeline Visualizer
+  renderTimeline({
+    containerId: 'timeline-container',
+    tooltipId: 'timeline-tooltip',
+    billDate: data.billDate || billDateInput.value,
+    cutOffDate: data.cutOffDate,
+    itemizedBreakdown: data.itemizedBreakdown,
+    currency,
+    lookbackMonths
+  });
+
+  // 4. Itemized Mathematical Breakdown Table
   breakdownTbody.innerHTML = '';
   data.itemizedBreakdown.forEach(item => {
     const tr = document.createElement('tr');
@@ -400,8 +413,6 @@ function renderResults(data) {
       <td class="tabular-nums"><strong>${currency}${item.disputableAmount.toFixed(2)}</strong></td>
       <td>${statusBadge}</td>
     `;
-    breakdownTbody.appendChild(tr);
-  });
     breakdownTbody.appendChild(tr);
   });
 

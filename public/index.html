@@ -226,6 +226,27 @@
         </div>
       </article>
 
+      <!-- Interactive Dispute Timeline Card -->
+      <article class="card" id="timeline-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Interactive Statutory Lookback Timeline</h2>
+            <p class="card-subtitle">Visual mapping of billing periods against statutory cut-off barrier</p>
+          </div>
+          <div class="timeline-legend">
+            <span class="legend-item"><span class="legend-dot dot-disputable"></span>Disputable Window</span>
+            <span class="legend-item"><span class="legend-dot dot-permissible"></span>Permissible Window</span>
+            <span class="legend-item"><span class="legend-dot dot-barrier"></span>Cut-off Barrier</span>
+          </div>
+        </div>
+
+        <div class="timeline-container" id="timeline-container">
+          <!-- Dynamically generated SVG timeline -->
+        </div>
+
+        <div class="timeline-tooltip" id="timeline-tooltip" role="tooltip" aria-hidden="true"></div>
+      </article>
+
       <!-- Itemized Math Breakdown Table -->
       <article class="card">
         <div class="card-header">
@@ -292,6 +313,6 @@
 
   </main>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
