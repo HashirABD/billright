@@ -923,3 +923,155 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* ==========================================================================
+   Upload Tab Navigation (Bill vs Meter Photo)
+   ========================================================================== */
+
+.upload-tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.upload-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.upload-tab-btn:hover {
+  color: var(--color-brand-primary);
+  background-color: var(--color-surface-subtle);
+}
+
+.upload-tab-btn.active {
+  color: #4338ca;
+  background-color: #e0e7ff;
+  border-color: #c7d2fe;
+}
+
+/* Meter Verification Evidence Card */
+.meter-evidence-card {
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #86efac;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.meter-evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+/* ==========================================================================
+   Statutory Escalation & Ombudsman Timeline Tracker Card
+   ========================================================================== */
+
+.escalation-tracker-card {
+  margin-top: 1.5rem;
+  background-color: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.escalation-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.escalation-step-card {
+  background-color: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  position: relative;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.escalation-step-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+}
+
+.escalation-step-card.active-step {
+  border-color: #f87171;
+  background-color: #fff5f5;
+}
+
+.step-number-pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.step-number-pill.today {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.step-number-pill.deadline {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.step-number-pill.ombudsman {
+  background-color: #ede9fe;
+  color: #5b21b6;
+}
+
+.step-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-brand-primary);
+  margin-bottom: 0.25rem;
+}
+
+.step-date {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 0.5rem;
+}
+
+.step-desc {
+  font-size: 0.78125rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .escalation-steps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

@@ -8,6 +8,8 @@ import { searchRegulations } from './src/tavilyClient.js';
 import { evaluateExceptionsAndFormatLetter } from './src/llmClient.js';
 import { extractBillData } from './src/billExtractor.js';
 import { generateLegalPacketPdf } from './src/pdfGenerator.js';
+import { getSupplierContact } from './src/supplierDirectory.js';
+import { extractMeterReading } from './src/meterExtractor.js';
 
 dotenv.config();
 
@@ -54,6 +56,27 @@ app.post('/api/extract-bill', async (req, res) => {
 
   } catch (err) {
     console.error('Error handling /api/extract-bill:', err.message);
+    return res.status(400).json({
+      error: err.message
+    });
+  }
+});
+
+// Physical meter photo OCR & inspection endpoint using Gemini Vision
+app.post('/api/extract-meter', async (req, res) => {
+  try {
+    const { fileData, mimeType } = req.body;
+    if (!fileData) {
+      return res.status(400).json({
+        error: 'fileData (base64) is required'
+      });
+    }
+
+    const meterData = await extractMeterReading({ fileData, mimeType });
+    return res.json(meterData);
+
+  } catch (err) {
+    console.error('Error handling /api/extract-meter:', err.message);
     return res.status(400).json({
       error: err.message
     });
@@ -128,6 +151,8 @@ app.post('/api/analyze', async (req, res) => {
     });
 
     // 5. Final unified response payload matching spec.md
+    const supplierContact = getSupplierContact(supplierName, country);
+
     return res.json({
       verdict: evaluation.verdict,
       badgeType: evaluation.badgeType,
@@ -144,7 +169,8 @@ app.post('/api/analyze', async (req, res) => {
       consumerName,
       supplierName,
       accountNumber,
-      supplyAddress
+      supplyAddress,
+      supplierContact
     });
 
   } catch (err) {
@@ -174,7 +200,8 @@ app.post('/api/generate-pdf', async (req, res) => {
       regulation = {},
       isEstimated = false,
       isMeterObstructed = false,
-      disputeLetter = ''
+      disputeLetter = '',
+      meterEvidence = null
     } = req.body;
 
     if (!billDate || !cutOffDate) {
@@ -199,7 +226,8 @@ app.post('/api/generate-pdf', async (req, res) => {
       regulation,
       isEstimated,
       isMeterObstructed,
-      disputeLetter
+      disputeLetter,
+      meterEvidence
     });
 
     const safeRef = (accountNumber || 'Reference').replace(/[^a-zA-Z0-9_-]/g, '_');

@@ -1,12 +1,13 @@
 # BillRight ⚡
 
-> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal document auto-extraction, interactive SVG timeline visualization, deterministic pro-rata math, dynamic party personalization, and multi-page vector legal dispute packet generation (.pdf).
+> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal bill & physical meter dial OCR, interactive SVG timeline visualization, deterministic pro-rata math, direct supplier email dispatch, statutory escalation calendar reminders (.ics), dynamic party personalization, and multi-page vector legal dispute packet generation (.pdf).
 
 ![BillRight](https://img.shields.io/badge/status-production--ready-emerald)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Anti--Hallucination%20Hybrid-purple)
-![Multimodal](https://img.shields.io/badge/Multimodal-Gemini%20Vision-orange)
+![Multimodal](https://img.shields.io/badge/Multimodal-Gemini%20Vision%20OCR-orange)
 ![PDF Engine](https://img.shields.io/badge/PDF%20Engine-PDFKit%20Vector%20Packet-navy)
+![Calendar Engine](https://img.shields.io/badge/Calendar-RFC%205545%20.ics-teal)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -18,7 +19,7 @@ In many countries and states, energy utility regulators legally restrict how far
 - **Australia**: Under **AER National Energy Retail Rules (NERR Rule 30)**, retailers recovering historical undercharges are strictly capped at a maximum of **9 months**.
 - **United States (e.g., California CPUC Rule 17.1)**: Adjustment of residential bills for billing errors where the customer is not at fault is restricted to **3 months** (or **6 months** in states like Texas under PUCT §25.28).
 
-Despite these protections, millions of households, tenants, and small business owners receive sudden, intimidating multi-year catch-up bills. Most either panic and pay or struggle to dispute them because utility regulations are dense and hiring a lawyer costs more than the bill itself.
+Despite these protections, millions of households, tenants, and small business owners receive sudden, intimidating multi-year catch-up bills. Most either panic and pay or struggle to dispute them because utility regulations are dense, suppliers provide estimated meter readings that inflate charges, and consumers miss critical statutory escalation deadlines.
 
 ---
 
@@ -26,14 +27,17 @@ Despite these protections, millions of households, tenants, and small business o
 
 Most AI applications attempt to solve legal and financial problems by feeding documents into a raw prompt, risking dangerous mathematical inaccuracies and hallucinated case law.
 
-**BillRight** enforces a strict **five-pillar anti-hallucination architecture**:
+**BillRight** enforces a strict **anti-hallucination hybrid architecture** with end-to-end consumer advocacy:
 
-1. **Multimodal Document Extraction (Gemini Vision)**: Users can drop PDF or image bills into an upload zone. Gemini Vision extracts statement dates, billing periods, amounts, energy supplier names, and account references with structured JSON schemas, auto-populating the form while leaving the user in full control to inspect or edit.
-2. **100% Deterministic Arithmetic**: A pure, zero-dependency JavaScript engine calculates regional statutory cut-off dates and daily pro-rata billing apportionment down to the penny. The AI is **never** permitted to calculate numbers or dates.
-3. **Interactive Dispute Timeline Visualizer**: A dynamic SVG visualizer maps each consumption period against the statutory cut-off barrier line, color-coding periods into the *Permissible Billing Window* (green) and *Disputable Back-Billing Zone* (red), with straddling periods visually split into exact pro-rata segments with interactive hover tooltips.
-4. **Live Regulatory Grounding (Tavily Search API)**: The server calls Tavily to retrieve current, official regulatory clauses directly from regulator authorities (`ofgem.gov.uk`, `aer.gov.au`, `cpuc.ca.gov`), ensuring legal facts are grounded in live statutory reality.
-5. **Consumer Personalization & Formal Legal Packet Generator (PDF Engine)**: Fully personalizes the formal dispute with real consumer and supplier identities (zero generic bracket placeholders), and compiles a publication-grade, 3-page vector PDF Legal Dispute Packet containing:
-   - **Page 1**: Formal Notice of Dispute with metadata cards and statutory 14-day escalation warning.
+1. **Multimodal Document Extraction (Gemini Vision)**: Users drop PDF or image bills into an upload zone. Gemini Vision extracts statement dates, billing periods, amounts, energy supplier names, and account references with structured JSON schemas, auto-populating the form while leaving the user in full control to inspect or edit.
+2. **Physical Meter Dial OCR & Discrepancy Verifier (Gemini Vision)**: Consumers can upload a photo of their physical electricity/gas meter dial or LCD screen. Gemini Vision extracts the physical index reading (kWh/m³), serial number, and meter type, automatically verifying whether the supplier billed against an inaccurate inflated estimate!
+3. **100% Deterministic Arithmetic**: A pure, zero-dependency JavaScript engine calculates regional statutory cut-off dates and daily pro-rata billing apportionment down to the penny. The AI is **never** permitted to calculate numbers or dates.
+4. **Interactive Dispute Timeline Visualizer**: A dynamic SVG visualizer maps each consumption period against the statutory cut-off barrier line, color-coding periods into the *Permissible Billing Window* (green) and *Disputable Back-Billing Zone* (red), with straddling periods visually split into exact pro-rata segments with interactive hover tooltips.
+5. **Live Regulatory Grounding (Tavily Search API)**: The server calls Tavily to retrieve current, official regulatory clauses directly from regulator authorities (`ofgem.gov.uk`, `aer.gov.au`, `cpuc.ca.gov`), ensuring legal facts are grounded in live statutory reality.
+6. **Statutory 14-Day Escalation Tracker & Calendar Generator (.ics)**: Renders a visual Ombudsman escalation timeline card (Day 1: Dispute Sent &rarr; Day 14: Statutory Response Breach &rarr; Day 56: Ombudsman Escalation). Includes a 1-click **"Add Deadlines to Calendar (.ics)"** button generating standard RFC 5545 calendar entries with alarm triggers for Apple Calendar, Google Calendar, and Outlook.
+7. **Direct Supplier Email Launcher**: Eliminates the final consumer friction hurdle with a **"Email Dispute to Supplier"** launcher. Pre-fetches the supplier's verified statutory complaints inbox from our built-in directory (e.g., `complaints@britishgas.co.uk`, `disputes@originenergy.com.au`), populating a complete `mailto:` link with statutory reference, account details, and pre-formatted body ready to send.
+8. **Consumer Personalization & Formal Legal Packet Generator (PDF Engine)**: Personalizes the formal dispute with real consumer and supplier identities (zero generic bracket placeholders), embeds physical meter reading evidence, and compiles a publication-grade, 3-page vector PDF Legal Dispute Packet containing:
+   - **Page 1**: Formal Notice of Dispute with metadata cards, meter reading audit, and statutory 14-day escalation warning.
    - **Page 2**: Schedule of Mathematical Evidence with clean vector tables, lookback barrier diagram, and pro-rata formulas.
    - **Page 3**: Statutory Authority Annexure with live retrieved sources, clickable citations, compliance audit, and official Ombudsman directory.
 

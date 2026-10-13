@@ -5,6 +5,7 @@
  */
 
 import { renderTimeline } from './timeline.js';
+import { downloadCalendarEvent } from './calendarHelper.js';
 
 // Preset definitions conforming to PRD specification and multi-jurisdiction rules
 const PRESETS = {
@@ -131,11 +132,27 @@ const btnCopyLetter = document.getElementById('btn-copy-letter');
 const copyFeedback = document.getElementById('copy-feedback');
 const btnDownloadPdf = document.getElementById('btn-download-pdf');
 const btnDownloadPdfText = document.getElementById('btn-download-pdf-text');
+const btnEmailSupplier = document.getElementById('btn-email-supplier');
+const btnEmailSupplierText = document.getElementById('btn-email-supplier-text');
 
-// Active analysis cache for PDF packet export
+// Statutory Escalation & Calendar DOM
+const escalationTrackerCard = document.getElementById('escalation-tracker-card');
+const btnAddCalendar = document.getElementById('btn-add-calendar');
+const dateStep1 = document.getElementById('date-step-1');
+const dateStep2 = document.getElementById('date-step-2');
+const dateStep3 = document.getElementById('date-step-3');
+
+// Active analysis cache for PDF packet export & email dispatch
 let currentAnalysisResult = null;
+let currentMeterEvidence = null;
 
-// Multimodal Dropzone DOM
+// Multimodal Upload Switcher Tabs DOM
+const tabBtnBill = document.getElementById('tab-btn-bill');
+const tabBtnMeter = document.getElementById('tab-btn-meter');
+const paneBillUpload = document.getElementById('pane-bill-upload');
+const paneMeterUpload = document.getElementById('pane-meter-upload');
+
+// Multimodal Bill Dropzone DOM
 const billDropzone = document.getElementById('bill-dropzone');
 const fileInput = document.getElementById('file-input');
 const dropzonePrompt = document.getElementById('dropzone-prompt');
@@ -145,6 +162,22 @@ const dropzoneSuccess = document.getElementById('dropzone-success');
 const successFilename = document.getElementById('success-filename');
 const successSummary = document.getElementById('success-summary');
 const btnClearFile = document.getElementById('btn-clear-file');
+
+// Physical Meter Dropzone DOM
+const meterDropzone = document.getElementById('meter-dropzone');
+const meterFileInput = document.getElementById('meter-file-input');
+const meterDropzonePrompt = document.getElementById('meter-dropzone-prompt');
+const meterDropzoneProcessing = document.getElementById('meter-dropzone-processing');
+const meterProcessingFilename = document.getElementById('meter-processing-filename');
+const meterDropzoneSuccess = document.getElementById('meter-dropzone-success');
+const meterSuccessFilename = document.getElementById('meter-success-filename');
+const meterSuccessSummary = document.getElementById('meter-success-summary');
+const btnClearMeter = document.getElementById('btn-clear-meter');
+const meterEvidenceContainer = document.getElementById('meter-evidence-container');
+const meterTypeBadge = document.getElementById('meter-type-badge');
+const meterReadingVal = document.getElementById('meter-reading-val');
+const meterSerialVal = document.getElementById('meter-serial-val');
+const meterNotesText = document.getElementById('meter-notes-text');
 
 /**
  * Creates a table row element for a billing period
@@ -488,20 +521,59 @@ function renderResults(data) {
     letterContent.textContent = data.disputeLetter;
     btnCopyLetter.style.display = 'inline-flex';
     if (btnDownloadPdf) btnDownloadPdf.style.display = 'inline-flex';
+
+    // Direct Supplier Email Launcher Button
+    if (btnEmailSupplier) {
+      btnEmailSupplier.style.display = 'inline-flex';
+      const contact = data.supplierContact || {};
+      if (contact.email) {
+        btnEmailSupplier.title = `Launch pre-filled formal dispute email directly to ${contact.email}`;
+        if (btnEmailSupplierText) {
+          btnEmailSupplierText.textContent = `Email Dispute (${contact.email})`;
+        }
+      } else {
+        if (btnEmailSupplierText) {
+          btnEmailSupplierText.textContent = 'Email Dispute to Supplier';
+        }
+      }
+    }
+
+    // Statutory Escalation & Ombudsman Timeline Tracker
+    if (escalationTrackerCard) {
+      escalationTrackerCard.style.display = 'block';
+      updateEscalationDates();
+    }
+
   } else {
     letterContent.textContent = `[Formal Dispute Letter Not Applicable]
 
 Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter access was obstructed. A formal back-billing dispute cannot be issued.'}`;
     btnCopyLetter.style.display = 'none';
     if (btnDownloadPdf) btnDownloadPdf.style.display = 'none';
+    if (btnEmailSupplier) btnEmailSupplier.style.display = 'none';
+    if (escalationTrackerCard) escalationTrackerCard.style.display = 'none';
   }
 
-  // Cache current analysis result for PDF export
+  // Cache current analysis result for PDF export & email dispatch
   currentAnalysisResult = data;
 
   // Reveal results
   resultsSection.classList.add('visible');
   resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Calculates dynamic dates for Day 1, Day 14, and Day 56 (8 Weeks).
+ */
+function updateEscalationDates() {
+  const now = new Date();
+  const day14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const day56 = new Date(now.getTime() + 56 * 24 * 60 * 60 * 1000);
+
+  const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (dateStep1) dateStep1.textContent = fmt(now);
+  if (dateStep2) dateStep2.textContent = fmt(day14);
+  if (dateStep3) dateStep3.textContent = fmt(day56);
 }
 
 // Form submission handler
@@ -579,6 +651,46 @@ if (btnCopyLetter) {
   });
 }
 
+// Direct Supplier Email Launcher (mailto: with pre-populated fields)
+if (btnEmailSupplier) {
+  btnEmailSupplier.addEventListener('click', () => {
+    if (!currentAnalysisResult || !currentAnalysisResult.disputeLetter) {
+      alert('Please analyze a bill with disputable charges first.');
+      return;
+    }
+
+    const contact = currentAnalysisResult.supplierContact || {};
+    const targetEmail = contact.email || 'complaints@energy-supplier.co.uk';
+    const accNum = currentAnalysisResult.accountNumber || (accountNumberInput ? accountNumberInput.value.trim() : 'Reference');
+    const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
+
+    const subject = `FORMAL DISPUTE: Back-billing catch-up charges (${clause}) - Account ${accNum}`;
+    const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Legal Dossier attached as a PDF.]\n\n`;
+    const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
+
+    const mailtoUrl = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
+    window.location.href = mailtoUrl;
+  });
+}
+
+// Add Deadlines to Calendar (.ics) button handler
+if (btnAddCalendar) {
+  btnAddCalendar.addEventListener('click', () => {
+    if (!currentAnalysisResult) {
+      alert('Please analyze a bill first.');
+      return;
+    }
+
+    downloadCalendarEvent({
+      supplierName: currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier'),
+      accountNumber: currentAnalysisResult.accountNumber || (accountNumberInput ? accountNumberInput.value.trim() : 'Reference'),
+      disputableTotal: currentAnalysisResult.disputableTotal || 0,
+      currency: currentAnalysisResult.currency || '£',
+      startDate: new Date()
+    });
+  });
+}
+
 // Download Formal Legal Packet (.pdf) button handler
 if (btnDownloadPdf) {
   btnDownloadPdf.addEventListener('click', async () => {
@@ -608,7 +720,8 @@ if (btnDownloadPdf) {
         regulation: currentAnalysisResult.regulation,
         isEstimated: inputEstimated.value === 'true',
         isMeterObstructed: inputObstructed.value === 'true',
-        disputeLetter: currentAnalysisResult.disputeLetter
+        disputeLetter: currentAnalysisResult.disputeLetter,
+        meterEvidence: currentMeterEvidence
       };
 
       const response = await fetch('/api/generate-pdf', {
@@ -806,10 +919,156 @@ function setupDropzone() {
   }
 }
 
-// Initialize toggles & dropzone
+function resetMeterDropzone() {
+  if (meterFileInput) meterFileInput.value = '';
+  if (meterDropzonePrompt) meterDropzonePrompt.style.display = 'block';
+  if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'none';
+  if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'none';
+  if (meterEvidenceContainer) meterEvidenceContainer.style.display = 'none';
+  currentMeterEvidence = null;
+}
+
+async function processMeterFile(file) {
+  if (!file) return;
+
+  // Validate image file type
+  const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+  if (!validTypes.includes(file.type) && !file.name.match(/\.(png|jpe?g|webp)$/i)) {
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = 'Please upload a photo of your meter faceplate (PNG, JPG, or WebP).';
+    return;
+  }
+
+  // Validate size (10MB max)
+  if (file.size > 10 * 1024 * 1024) {
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = 'File too large. Maximum supported size is 10MB.';
+    return;
+  }
+
+  validationErrorBanner.classList.remove('visible');
+  if (meterDropzonePrompt) meterDropzonePrompt.style.display = 'none';
+  if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'none';
+  if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'flex';
+  if (meterProcessingFilename) meterProcessingFilename.textContent = `Analyzing ${file.name} with Gemini Vision...`;
+
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    const res = await fetch('/api/extract-meter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileData: base64Data,
+        mimeType: file.type || 'image/jpeg'
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    currentMeterEvidence = data;
+
+    // UI state: Success
+    if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'none';
+    if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'flex';
+    if (meterSuccessFilename) meterSuccessFilename.textContent = file.name;
+    if (meterSuccessSummary) meterSuccessSummary.textContent = `Verified ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}).`;
+
+    // Render Evidence Card
+    if (meterEvidenceContainer) meterEvidenceContainer.style.display = 'block';
+    if (meterTypeBadge) meterTypeBadge.textContent = data.meterType || 'Digital LCD';
+    if (meterReadingVal) meterReadingVal.textContent = `${data.readingValue} ${data.unit || 'kWh'}`;
+    if (meterSerialVal) meterSerialVal.textContent = data.serialNumber || 'Verified on Photo';
+    if (meterNotesText) meterNotesText.textContent = data.notes || 'Physical reading confirms actual discrepancy against supplier estimates.';
+
+    // Meter photo upload confirms supplier billed on estimates
+    setToggleValue(groupEstimated, inputEstimated, true);
+    validateAndRecalculate();
+
+  } catch (err) {
+    console.error('Meter OCR error:', err);
+    resetMeterDropzone();
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = `Meter OCR failed: ${err.message}`;
+  }
+}
+
+function setupMeterDropzone() {
+  if (!meterDropzone || !meterFileInput) return;
+
+  meterDropzone.addEventListener('click', (e) => {
+    if (e.target === btnClearMeter || (btnClearMeter && btnClearMeter.contains(e.target))) return;
+    meterFileInput.click();
+  });
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    meterDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      meterDropzone.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    meterDropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      meterDropzone.classList.remove('drag-over');
+    });
+  });
+
+  meterDropzone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processMeterFile(files[0]);
+    }
+  });
+
+  meterFileInput.addEventListener('change', () => {
+    if (meterFileInput.files && meterFileInput.files.length > 0) {
+      processMeterFile(meterFileInput.files[0]);
+    }
+  });
+
+  if (btnClearMeter) {
+    btnClearMeter.addEventListener('click', (e) => {
+      e.stopPropagation();
+      resetMeterDropzone();
+    });
+  }
+}
+
+function setupUploadTabs() {
+  if (!tabBtnBill || !tabBtnMeter) return;
+
+  tabBtnBill.addEventListener('click', () => {
+    tabBtnBill.classList.add('active');
+    tabBtnMeter.classList.remove('active');
+    if (paneBillUpload) paneBillUpload.style.display = 'block';
+    if (paneMeterUpload) paneMeterUpload.style.display = 'none';
+  });
+
+  tabBtnMeter.addEventListener('click', () => {
+    tabBtnMeter.classList.add('active');
+    tabBtnBill.classList.remove('active');
+    if (paneMeterUpload) paneMeterUpload.style.display = 'block';
+    if (paneBillUpload) paneBillUpload.style.display = 'none';
+  });
+}
+
+// Initialize toggles, dropzones & tabs
 setupToggle(groupEstimated, inputEstimated);
 setupToggle(groupObstructed, inputObstructed);
 setupDropzone();
+setupMeterDropzone();
+setupUploadTabs();
 
 // Initial bootstrap with Preset A loaded for instant demo readiness
 loadPreset('A');

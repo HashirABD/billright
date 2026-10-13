@@ -109,7 +109,8 @@ export async function generateLegalPacketPdf(data) {
         regulation = {},
         isEstimated = false,
         isMeterObstructed = false,
-        disputeLetter = ''
+        disputeLetter = '',
+        meterEvidence = null
       } = data;
 
       const escalation = getEscalationDirectory(regulation.jurisdiction || country);
@@ -513,6 +514,7 @@ Should you fail to adjust the bill or reach a mutually agreed resolution within 
       const auditLines = [
         `• Physical Meter Obstruction: ${isMeterObstructed ? 'EXCEPTION TRIGGERED (Access denied by consumer)' : 'COMPLIANT: No obstruction; customer permitted full physical access at all times.'}`,
         `• Historical Billing Basis: ${isEstimated ? 'ESTIMATED: Supplier failed to obtain or record actual meter indices during the lookback period.' : 'ACTUAL: Readings recorded normally.'}`,
+        ...(meterEvidence ? [`• Meter Photo Evidence: Serial ${meterEvidence.serialNumber || 'Verified'} (${meterEvidence.meterType || 'Digital'}). Physical reading ${meterEvidence.readingValue} ${meterEvidence.unit || 'kWh'} confirms over-billing on phantom estimates.`] : []),
         `• Statutory Legal Standing: Consumer is entitled to complete protection under ${regulation.clauseReference || 'statutory back-billing rules'}.`,
         `• Debt Recovery Status: Supplier is legally precluded from demanding the unbilled balance of ${fmtCurr(disputableTotal, currency)} accrued prior to ${cutOffDate}.`
       ];
