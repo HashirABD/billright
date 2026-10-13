@@ -36,27 +36,35 @@ function generateDeterministicLetter({
   regulation,
   isEstimated,
   currency = '£',
-  lookbackMonths = 12
+  lookbackMonths = 12,
+  consumerName = 'Sarah Jenkins',
+  supplierName = 'British Gas',
+  accountNumber = 'BG-8849201',
+  supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ'
 }) {
   const formattedDisputable = `${currency}${disputableTotal.toFixed(2)}`;
   const formattedTotal = `${currency}${totalBilled.toFixed(2)}`;
   const escalation = getEscalationPath(regulation.jurisdiction);
 
-  return `[Your Name]
-[Your Address]
-[Your Account / Customer Reference]
+  const partyName = consumerName || 'Account Holder';
+  const supplier = supplierName || 'Energy Supplier';
+  const accNum = accountNumber || 'Reference On File';
+  const address = supplyAddress || 'Supply Address On File';
+
+  return `${partyName}
+${address}
+Account Reference: ${accNum}
 Date: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
 
 Complaints Handling Team
-[Energy Supplier Name]
-[Supplier Address]
+${supplier}
 
 FORMAL COMPLAINT: Back-billing Dispute under ${regulation.clauseReference || 'Statutory Utility Code'}
 
 Dear Complaints Team,
 
-Account Reference: [Insert Reference]
-Supply Address: [Insert Address]
+Account Reference: ${accNum}
+Supply Address: ${address}
 
 I am writing to formally raise a complaint regarding my recent energy bill dated ${billDate} for the total amount of ${formattedTotal}.
 
@@ -71,15 +79,14 @@ In light of these statutory back-billing rules, I formally request that you:
 2. Issue an updated statement showing only charges legitimately recoverable within the statutory ${lookbackMonths}-month permitted window.
 3. Place a temporary hold on collection action for the disputed sum while this complaint is investigated.
 
-Please treat this as a formal complaint in accordance with your statutory complaint handling procedure. As per regulatory rules, should we not reach an agreed resolution, I reserve the right to escalate this matter to the ${escalation}.
+Please treat this as a formal complaint in accordance with your statutory complaint handling procedure. As per regulatory rules, should we not reach an agreed resolution within the statutory timeframe, I reserve the right to escalate this matter to the ${escalation}.
 
 I look forward to your prompt written response within 10 working days.
 
 Yours sincerely,
 
-[Your Name]
-[Contact Telephone]
-[Email Address]`;
+${partyName}
+Account Holder`;
 }
 
 /**
@@ -92,7 +99,12 @@ Yours sincerely,
  * @param {number} params.totalBilled - Total bill amount
  * @param {string} params.billDate - YYYY-MM-DD
  * @param {string} params.cutOffDate - YYYY-MM-DD
- * @param {Object} params.regulation - Regulation object from Tavily
+ * @param {Object} params.regulation - Regulation object from Tavily * @param {string} [params.currency='£'] - Currency symbol
+ * @param {number} [params.lookbackMonths=12] - Regulatory lookback limit in months
+ * @param {string} [params.consumerName] - Consumer full name
+ * @param {string} [params.supplierName] - Energy supplier company name
+ * @param {string} [params.accountNumber] - Account/customer reference
+ * @param {string} [params.supplyAddress] - Supply property address
  * @returns {Promise<Object>} Evaluated verdict, badges, and dispute letter
  */
 export async function evaluateExceptionsAndFormatLetter({
@@ -104,7 +116,11 @@ export async function evaluateExceptionsAndFormatLetter({
   cutOffDate,
   regulation,
   currency = '£',
-  lookbackMonths = 12
+  lookbackMonths = 12,
+  consumerName = 'Sarah Jenkins',
+  supplierName = 'British Gas',
+  accountNumber = 'BG-8849201',
+  supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ'
 }) {
   // Case A: Meter obstruction triggered -> statutory exception overrides protections
   if (isMeterObstructed) {
@@ -156,7 +172,11 @@ export async function evaluateExceptionsAndFormatLetter({
       regulation,
       isEstimated,
       currency,
-      lookbackMonths
+      lookbackMonths,
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress
     });
     return {
       verdict: 'Likely not recoverable under the rule',
@@ -170,9 +190,19 @@ export async function evaluateExceptionsAndFormatLetter({
   try {
     const ai = new GoogleGenAI({ apiKey });
     const escalation = getEscalationPath(regulation.jurisdiction);
+    const partyName = consumerName || 'Account Holder';
+    const supplier = supplierName || 'Energy Supplier';
+    const accNum = accountNumber || 'Reference On File';
+    const address = supplyAddress || 'Supply Address On File';
 
     const prompt = `You are an expert consumer advocacy assistant specializing in energy utility regulations.
 Generate a structured JSON response evaluating a back-billing complaint.
+
+PARTIES & ACCOUNT:
+- Consumer Full Name: ${partyName}
+- Supply Address: ${address}
+- Account Reference Number: ${accNum}
+- Energy Supplier: ${supplier}
 
 FACTS:
 - Country/Jurisdiction: ${regulation.jurisdiction}
@@ -188,11 +218,13 @@ FACTS:
 INSTRUCTIONS:
 1. Verdict must be "Likely not recoverable under the rule".
 2. exceptionTriggered must be false.
-3. Formulate a polite, professional, formal complaint letter to the energy supplier's complaints department.
-   - Reference the exact regulation name and clause (${regulation.clauseReference}).
-   - Include placeholders for user details ([Your Name], [Account Number], [Supplier Name]).
+3. Formulate a polite, professional, formal complaint letter from ${partyName} to the ${supplier} Complaints Department.
+   - Use the exact Consumer Name (${partyName}), Energy Supplier (${supplier}), Account Reference (${accNum}), and Supply Address (${address}).
+   - DO NOT USE any bracketed placeholders like [Your Name], [Account Number], [Supplier Name], or [Address]. The real details provided above must be directly embedded.
+   - Reference the exact regulation name and clause (${regulation.clauseReference || 'Statutory Code'}).
    - Insert the exact pre-calculated disputable sum of ${currency}${disputableTotal.toFixed(2)}.
    - Explicitly cite the statutory escalation path: internal supplier dispute followed by ${escalation}.
+   - Include a 14-day statutory response deadline and request to suspend debt recovery actions on the disputed amount.
    - Do NOT declare the charge "illegal"; frame it as an unrecoverable back-billing charge under the statutory rule.
 
 Return strictly a JSON object with this shape:
@@ -202,7 +234,7 @@ Return strictly a JSON object with this shape:
 }`;
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         temperature: 0.0,
@@ -230,7 +262,11 @@ Return strictly a JSON object with this shape:
         regulation,
         isEstimated,
         currency,
-        lookbackMonths
+        lookbackMonths,
+        consumerName,
+        supplierName,
+        accountNumber,
+        supplyAddress
       })
     };
 
@@ -244,7 +280,11 @@ Return strictly a JSON object with this shape:
       regulation,
       isEstimated,
       currency,
-      lookbackMonths
+      lookbackMonths,
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress
     });
     return {
       verdict: 'Likely not recoverable under the rule',
@@ -255,3 +295,4 @@ Return strictly a JSON object with this shape:
     };
   }
 }
+

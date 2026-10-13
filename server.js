@@ -7,6 +7,7 @@ import { calculateBackBilling } from './src/calculateBackBilling.js';
 import { searchRegulations } from './src/tavilyClient.js';
 import { evaluateExceptionsAndFormatLetter } from './src/llmClient.js';
 import { extractBillData } from './src/billExtractor.js';
+import { generateLegalPacketPdf } from './src/pdfGenerator.js';
 
 dotenv.config();
 
@@ -69,7 +70,11 @@ app.post('/api/analyze', async (req, res) => {
       isEstimated = false,
       isMeterObstructed = false,
       lookbackMonths: customLookbackMonths,
-      currency: customCurrency
+      currency: customCurrency,
+      consumerName = 'Sarah Jenkins',
+      supplierName = 'British Gas',
+      accountNumber = 'BG-8849201',
+      supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ'
     } = req.body;
 
     // 1. Client input validation
@@ -115,7 +120,11 @@ app.post('/api/analyze', async (req, res) => {
       cutOffDate: mathResult.cutOffDate,
       regulation,
       currency,
-      lookbackMonths
+      lookbackMonths,
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress
     });
 
     // 5. Final unified response payload matching spec.md
@@ -131,13 +140,81 @@ app.post('/api/analyze', async (req, res) => {
       regulation,
       exceptionTriggered: evaluation.exceptionTriggered,
       exceptionNotes: evaluation.exceptionNotes,
-      disputeLetter: evaluation.disputeLetter
+      disputeLetter: evaluation.disputeLetter,
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress
     });
 
   } catch (err) {
     console.error('Error handling /api/analyze request:', err.message);
     return res.status(400).json({
       error: err.message
+    });
+  }
+});
+
+// Official Multi-Page Legal Dispute Packet Generator Endpoint (PDF Engine)
+app.post('/api/generate-pdf', async (req, res) => {
+  try {
+    const {
+      consumerName = 'Sarah Jenkins',
+      supplierName = 'British Gas',
+      accountNumber = 'BG-8849201',
+      supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ',
+      country = 'United Kingdom',
+      billDate,
+      cutOffDate,
+      lookbackMonths = 12,
+      currency = '£',
+      disputableTotal = 0,
+      totalBilled = 0,
+      itemizedBreakdown = [],
+      regulation = {},
+      isEstimated = false,
+      isMeterObstructed = false,
+      disputeLetter = ''
+    } = req.body;
+
+    if (!billDate || !cutOffDate) {
+      return res.status(400).json({
+        error: 'billDate and cutOffDate are required to generate legal packet'
+      });
+    }
+
+    const pdfBuffer = await generateLegalPacketPdf({
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress,
+      country,
+      billDate,
+      cutOffDate,
+      lookbackMonths,
+      currency,
+      disputableTotal,
+      totalBilled,
+      itemizedBreakdown,
+      regulation,
+      isEstimated,
+      isMeterObstructed,
+      disputeLetter
+    });
+
+    const safeRef = (accountNumber || 'Reference').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `BillRight_Legal_Dispute_Packet_${safeRef}.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    return res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('Error generating PDF packet:', err.message);
+    return res.status(500).json({
+      error: `Failed to generate PDF legal packet: ${err.message}`
     });
   }
 });

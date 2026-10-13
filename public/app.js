@@ -12,6 +12,10 @@ const PRESETS = {
     name: 'UK Preset A (Exceeds 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
+    consumerName: 'Sarah Jenkins',
+    supplierName: 'British Gas',
+    accountNumber: 'BG-8849201',
+    supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -23,6 +27,10 @@ const PRESETS = {
     name: 'UK Preset B (Within 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
+    consumerName: 'James Wood',
+    supplierName: 'Octopus Energy',
+    accountNumber: 'OCT-552109',
+    supplyAddress: '22 Richmond Way, London, SW15 2RF',
     isEstimated: false,
     isMeterObstructed: false,
     periods: [
@@ -33,6 +41,10 @@ const PRESETS = {
     name: 'AU Preset D (AER Rule 30 - 9 Months)',
     country: 'Australia',
     billDate: '2026-10-01',
+    consumerName: 'David Miller',
+    supplierName: 'Origin Energy',
+    accountNumber: 'ORG-992140',
+    supplyAddress: '45 St Kilda Road, Melbourne, VIC 3004',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -44,6 +56,10 @@ const PRESETS = {
     name: 'US CA Preset E (CPUC Rule 17.1 - 3 Months)',
     country: 'United States (California)',
     billDate: '2026-10-01',
+    consumerName: 'Elena Rodriguez',
+    supplierName: 'Pacific Gas and Electric (PG&E)',
+    accountNumber: 'PGE-7740129',
+    supplyAddress: '108 Mission Street, San Francisco, CA 94105',
     isEstimated: false,
     isMeterObstructed: false,
     periods: [
@@ -55,6 +71,10 @@ const PRESETS = {
     name: 'Preset C (Missing Data)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
+    consumerName: 'Sarah Jenkins',
+    supplierName: 'British Gas',
+    accountNumber: 'BG-8849201',
+    supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -92,6 +112,12 @@ const inputEstimated = document.getElementById('input-estimated');
 const groupObstructed = document.getElementById('group-obstructed');
 const inputObstructed = document.getElementById('input-obstructed');
 
+// Party details DOM
+const consumerNameInput = document.getElementById('input-consumer-name');
+const supplierNameInput = document.getElementById('input-supplier-name');
+const accountNumberInput = document.getElementById('input-account-number');
+const supplyAddressInput = document.getElementById('input-supply-address');
+
 // Results DOM
 const resultsSection = document.getElementById('results-section');
 const verdictBadgeContainer = document.getElementById('verdict-badge-container');
@@ -103,6 +129,11 @@ const sourcesContainer = document.getElementById('sources-container');
 const letterContent = document.getElementById('letter-content');
 const btnCopyLetter = document.getElementById('btn-copy-letter');
 const copyFeedback = document.getElementById('copy-feedback');
+const btnDownloadPdf = document.getElementById('btn-download-pdf');
+const btnDownloadPdfText = document.getElementById('btn-download-pdf-text');
+
+// Active analysis cache for PDF packet export
+let currentAnalysisResult = null;
 
 // Multimodal Dropzone DOM
 const billDropzone = document.getElementById('bill-dropzone');
@@ -277,6 +308,12 @@ function loadPreset(presetKey) {
   setToggleValue(groupEstimated, inputEstimated, preset.isEstimated);
   setToggleValue(groupObstructed, inputObstructed, preset.isMeterObstructed);
 
+  // Fill party identity details
+  if (consumerNameInput && preset.consumerName) consumerNameInput.value = preset.consumerName;
+  if (supplierNameInput && preset.supplierName) supplierNameInput.value = preset.supplierName;
+  if (accountNumberInput && preset.accountNumber) accountNumberInput.value = preset.accountNumber;
+  if (supplyAddressInput && preset.supplyAddress) supplyAddressInput.value = preset.supplyAddress;
+
   // Update table header currency
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) {
@@ -303,6 +340,11 @@ function resetForm() {
   billDateInput.value = '2026-10-01';
   setToggleValue(groupEstimated, inputEstimated, false);
   setToggleValue(groupObstructed, inputObstructed, false);
+
+  if (consumerNameInput) consumerNameInput.value = 'Sarah Jenkins';
+  if (supplierNameInput) supplierNameInput.value = 'British Gas';
+  if (accountNumberInput) accountNumberInput.value = 'BG-8849201';
+  if (supplyAddressInput) supplyAddressInput.value = '14 Windsor Gardens, Bristol, BS8 4UQ';
 
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) currencyHeader.textContent = '£';
@@ -445,12 +487,17 @@ function renderResults(data) {
   if (data.disputeLetter) {
     letterContent.textContent = data.disputeLetter;
     btnCopyLetter.style.display = 'inline-flex';
+    if (btnDownloadPdf) btnDownloadPdf.style.display = 'inline-flex';
   } else {
     letterContent.textContent = `[Formal Dispute Letter Not Applicable]
 
 Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter access was obstructed. A formal back-billing dispute cannot be issued.'}`;
     btnCopyLetter.style.display = 'none';
+    if (btnDownloadPdf) btnDownloadPdf.style.display = 'none';
   }
+
+  // Cache current analysis result for PDF export
+  currentAnalysisResult = data;
 
   // Reveal results
   resultsSection.classList.add('visible');
@@ -478,6 +525,10 @@ billForm.addEventListener('submit', async (e) => {
     billDate: billDateInput.value,
     isEstimated: inputEstimated.value === 'true',
     isMeterObstructed: inputObstructed.value === 'true',
+    consumerName: consumerNameInput ? consumerNameInput.value.trim() : 'Sarah Jenkins',
+    supplierName: supplierNameInput ? supplierNameInput.value.trim() : 'British Gas',
+    accountNumber: accountNumberInput ? accountNumberInput.value.trim() : 'BG-8849201',
+    supplyAddress: supplyAddressInput ? supplyAddressInput.value.trim() : '14 Windsor Gardens, Bristol, BS8 4UQ',
     billingPeriods
   };
 
@@ -524,6 +575,72 @@ if (btnCopyLetter) {
       }, 2500);
     } catch (err) {
       console.error('Failed to copy to clipboard', err);
+    }
+  });
+}
+
+// Download Formal Legal Packet (.pdf) button handler
+if (btnDownloadPdf) {
+  btnDownloadPdf.addEventListener('click', async () => {
+    if (!currentAnalysisResult) {
+      alert('Please analyze a bill before downloading the legal dispute packet.');
+      return;
+    }
+
+    const originalBtnText = btnDownloadPdfText ? btnDownloadPdfText.textContent : 'Download Formal Legal Packet (.pdf)';
+    if (btnDownloadPdfText) btnDownloadPdfText.textContent = 'Generating PDF Packet...';
+    btnDownloadPdf.disabled = true;
+
+    try {
+      const pdfPayload = {
+        consumerName: consumerNameInput ? consumerNameInput.value.trim() : currentAnalysisResult.consumerName || 'Sarah Jenkins',
+        supplierName: supplierNameInput ? supplierNameInput.value.trim() : currentAnalysisResult.supplierName || 'British Gas',
+        accountNumber: accountNumberInput ? accountNumberInput.value.trim() : currentAnalysisResult.accountNumber || 'BG-8849201',
+        supplyAddress: supplyAddressInput ? supplyAddressInput.value.trim() : currentAnalysisResult.supplyAddress || '14 Windsor Gardens, Bristol, BS8 4UQ',
+        country: countrySelect.value,
+        billDate: currentAnalysisResult.billDate || billDateInput.value,
+        cutOffDate: currentAnalysisResult.cutOffDate,
+        lookbackMonths: currentAnalysisResult.lookbackMonths,
+        currency: currentAnalysisResult.currency,
+        disputableTotal: currentAnalysisResult.disputableTotal,
+        totalBilled: currentAnalysisResult.totalBilled,
+        itemizedBreakdown: currentAnalysisResult.itemizedBreakdown,
+        regulation: currentAnalysisResult.regulation,
+        isEstimated: inputEstimated.value === 'true',
+        isMeterObstructed: inputObstructed.value === 'true',
+        disputeLetter: currentAnalysisResult.disputeLetter
+      };
+
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(pdfPayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to generate PDF (HTTP ${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = blobUrl;
+      const safeRef = (pdfPayload.accountNumber || 'Reference').replace(/[^a-zA-Z0-9_-]/g, '_');
+      downloadLink.download = `BillRight_Legal_Dispute_Packet_${safeRef}.pdf`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      window.URL.revokeObjectURL(blobUrl);
+
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      alert(`Could not generate PDF packet: ${err.message}`);
+    } finally {
+      btnDownloadPdf.disabled = false;
+      if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;
     }
   });
 }
@@ -588,6 +705,14 @@ async function processFile(file) {
     // Populate form with extracted data
     if (data.billDate) {
       billDateInput.value = data.billDate;
+    }
+
+    if (data.supplierName && supplierNameInput) {
+      supplierNameInput.value = data.supplierName;
+    }
+
+    if (data.accountNumber && accountNumberInput) {
+      accountNumberInput.value = data.accountNumber;
     }
 
     if (typeof data.isEstimated === 'boolean') {

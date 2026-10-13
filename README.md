@@ -1,11 +1,12 @@
 # BillRight ⚡
 
-> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal document auto-extraction, interactive SVG timeline visualization, deterministic pro-rata math, and formal dispute drafting.
+> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal document auto-extraction, interactive SVG timeline visualization, deterministic pro-rata math, dynamic party personalization, and multi-page vector legal dispute packet generation (.pdf).
 
 ![BillRight](https://img.shields.io/badge/status-production--ready-emerald)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Anti--Hallucination%20Hybrid-purple)
 ![Multimodal](https://img.shields.io/badge/Multimodal-Gemini%20Vision-orange)
+![PDF Engine](https://img.shields.io/badge/PDF%20Engine-PDFKit%20Vector%20Packet-navy)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
@@ -25,13 +26,16 @@ Despite these protections, millions of households, tenants, and small business o
 
 Most AI applications attempt to solve legal and financial problems by feeding documents into a raw prompt, risking dangerous mathematical inaccuracies and hallucinated case law.
 
-**BillRight** enforces a strict **four-pillar anti-hallucination architecture**:
+**BillRight** enforces a strict **five-pillar anti-hallucination architecture**:
 
-1. **Multimodal Document Extraction (Gemini Vision)**: Users can drop PDF or image bills into an upload zone. Gemini Vision extracts statement dates, billing periods, amounts, and reading types (actual vs. estimated) with structured JSON schemas, auto-populating the form while leaving the user in full control to inspect or edit.
+1. **Multimodal Document Extraction (Gemini Vision)**: Users can drop PDF or image bills into an upload zone. Gemini Vision extracts statement dates, billing periods, amounts, energy supplier names, and account references with structured JSON schemas, auto-populating the form while leaving the user in full control to inspect or edit.
 2. **100% Deterministic Arithmetic**: A pure, zero-dependency JavaScript engine calculates regional statutory cut-off dates and daily pro-rata billing apportionment down to the penny. The AI is **never** permitted to calculate numbers or dates.
 3. **Interactive Dispute Timeline Visualizer**: A dynamic SVG visualizer maps each consumption period against the statutory cut-off barrier line, color-coding periods into the *Permissible Billing Window* (green) and *Disputable Back-Billing Zone* (red), with straddling periods visually split into exact pro-rata segments with interactive hover tooltips.
 4. **Live Regulatory Grounding (Tavily Search API)**: The server calls Tavily to retrieve current, official regulatory clauses directly from regulator authorities (`ofgem.gov.uk`, `aer.gov.au`, `cpuc.ca.gov`), ensuring legal facts are grounded in live statutory reality.
-5. **Constrained Exception Evaluation & Letter Drafting (Gemini)**: The LLM evaluates statutory exceptions (such as customer meter obstruction) and drafts a courteous, formal complaint letter tailored to the regional statutory escalation ladder (supplier dispute &rarr; Energy Ombudsman / Utilities Commission).
+5. **Consumer Personalization & Formal Legal Packet Generator (PDF Engine)**: Fully personalizes the formal dispute with real consumer and supplier identities (zero generic bracket placeholders), and compiles a publication-grade, 3-page vector PDF Legal Dispute Packet containing:
+   - **Page 1**: Formal Notice of Dispute with metadata cards and statutory 14-day escalation warning.
+   - **Page 2**: Schedule of Mathematical Evidence with clean vector tables, lookback barrier diagram, and pro-rata formulas.
+   - **Page 3**: Statutory Authority Annexure with live retrieved sources, clickable citations, compliance audit, and official Ombudsman directory.
 
 ---
 
