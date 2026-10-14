@@ -1,117 +1,153 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BillRight — Energy Back-Billing Verification</title>
+  <title>BillRight — Statutory Energy Back-Billing Verification Engine</title>
+  <meta name="description" content="Verify whether utility catch-up bills violate statutory back-billing limits across UK (Ofgem), Australia (AER), California (CPUC), and Texas (PUCT). Free, deterministic consumer advocacy tool.">
+  <meta name="keywords" content="back-billing, utility dispute, ofgem, AER, energy bill error, electricity overcharge">
+  <meta name="theme-color" content="#0f172a">
+  
+  <!-- Open Graph / Social Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BillRight — Energy Back-Billing Verification">
+  <meta property="og:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with court-admissible legal dossiers.">
+  <meta property="og:site_name" content="BillRight">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="BillRight — Energy Back-Billing Verification">
+  <meta name="twitter:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with court-admissible legal dossiers.">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
   <link rel="stylesheet" href="styles.css">
+
+  <!-- Zero-Flash Theme Initialization Script -->
+  <script>
+    (function() {
+      try {
+        const stored = localStorage.getItem('billright-theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored ? stored : (systemPrefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
 </head>
 <body>
 
-  <!-- Persistent Disclaimer Banner -->
-  <aside class="disclaimer-banner" role="complementary" aria-label="Legal Disclaimer">
-    <div class="disclaimer-content">
-      <svg class="disclaimer-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span><strong>Notice:</strong> BillRight is an informational utility tool and does not provide formal legal advice. Never treat regulatory assessments as formal judicial rulings.</span>
-    </div>
-  </aside>
-
   <!-- Site Header -->
-  <header class="site-header">
+  <header class="site-header" role="banner">
     <div class="header-container">
-      <div>
-        <span class="brand-badge">Consumer Protection Utility</span>
-        <h1 class="brand-title">BillRight</h1>
-        <p class="brand-tagline">Verify electricity catch-up charges against statutory back-billing limits.</p>
+      <div class="header-brand-block">
+        <div class="brand-logo-title-group">
+          <img src="logo.jpg" alt="BillRight Logo" class="brand-logo-img">
+          <h1 class="brand-title">BillRight</h1>
+        </div>
+        <p class="brand-tagline">Deterministic statutory audit of utility catch-up bills against statutory back-billing limits.</p>
       </div>
-      <div>
-        <button type="button" id="btn-reset-all" class="btn-secondary" title="Reset all inputs">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="1 4 1 10 7 10"/>
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+
+      <div class="header-actions">
+        <!-- Theme Switcher Button -->
+        <button type="button" id="btn-theme-toggle" class="btn-theme-toggle" aria-label="Toggle color theme" title="Toggle theme (Light / Dark)">
+          <svg class="theme-icon-light" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
           </svg>
-          Reset Form
+        </button>
+
+        <!-- Statutory Rules Modal Trigger Button -->
+        <button type="button" id="btn-open-rules-modal" class="btn-secondary" title="View statutory rules & regulatory limits">
+          Statutory Rules
+        </button>
+
+        <!-- Reset Button -->
+        <button type="button" id="btn-reset-all" class="btn-secondary" title="Reset all form fields to default state">
+          Reset Audit
         </button>
       </div>
     </div>
   </header>
 
-  <main class="main-container">
+  <main class="main-container" id="main-content" role="main">
 
-    <!-- Sample Presets Section -->
+    <!-- Sample Presets Section (Radio Group Semantics) -->
     <section class="presets-card" aria-labelledby="presets-heading">
       <h2 id="presets-heading" class="presets-title">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="16" x2="12" y2="12"/>
-          <line x1="12" y1="8" x2="12.01" y2="8"/>
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
         </svg>
-        Sample Regulatory Cases (Instant Presets)
+        Select Benchmark Regulatory Case:
       </h2>
-      <div class="presets-grid">
-        <button type="button" class="preset-btn" id="preset-a" data-preset="A">
-          <span class="preset-badge protected">UK: Exceeds 12 Mos</span>
+      <div class="presets-grid" role="radiogroup" aria-label="Benchmark cases">
+        <button type="button" class="preset-btn active" id="preset-a" data-preset="A" role="radio" aria-checked="true" tabindex="0">
+          <span class="preset-badge protected">🇬🇧 UK: Exceeds 12 Mos</span>
           <span class="preset-name">£1,400 Catch-up Bill</span>
-          <span class="preset-desc">Includes £1,000 from 2024–2025. Protected by Ofgem SLC 21BA.</span>
+          <span class="preset-desc">£1,000 accrued beyond permitted 12-month limit. Protected by Ofgem SLC 21BA.</span>
         </button>
-        <button type="button" class="preset-btn" id="preset-b" data-preset="B">
-          <span class="preset-badge valid">UK: Within 12 Mos</span>
+        <button type="button" class="preset-btn" id="preset-b" data-preset="B" role="radio" aria-checked="false" tabindex="-1">
+          <span class="preset-badge valid">🇬🇧 UK: Within 12 Mos</span>
           <span class="preset-name">£650 Recent Charge</span>
-          <span class="preset-desc">All charges accrued within permitted 12-month window.</span>
+          <span class="preset-desc">Charges accrued within permitted statutory 12-month lookback window.</span>
         </button>
-        <button type="button" class="preset-btn" id="preset-d" data-preset="D">
-          <span class="preset-badge protected">AU: Exceeds 9 Mos</span>
+        <button type="button" class="preset-btn" id="preset-d" data-preset="D" role="radio" aria-checked="false" tabindex="-1">
+          <span class="preset-badge protected">🇦🇺 AU: Exceeds 9 Mos</span>
           <span class="preset-name">A$1,800 Catch-up Bill</span>
-          <span class="preset-desc">Includes A$900 older than 9 months. Protected by AER Rule 30.</span>
+          <span class="preset-desc">A$900 older than statutory 9 months. Protected by AER Rule 30.</span>
         </button>
-        <button type="button" class="preset-btn" id="preset-e" data-preset="E">
-          <span class="preset-badge protected">US CA: Exceeds 3 Mos</span>
+        <button type="button" class="preset-btn" id="preset-e" data-preset="E" role="radio" aria-checked="false" tabindex="-1">
+          <span class="preset-badge protected">🇺🇸 US CA: Exceeds 3 Mos</span>
           <span class="preset-name">$900 Undercharge</span>
-          <span class="preset-desc">Includes $600 older than 3 months. Protected by CPUC Rule 17.1.</span>
+          <span class="preset-desc">$600 older than strict 3-month window. Protected by CPUC Rule 17.1.</span>
         </button>
-        <button type="button" class="preset-btn" id="preset-c" data-preset="C">
-          <span class="preset-badge incomplete">Case C: Missing Data</span>
+        <button type="button" class="preset-btn" id="preset-c" data-preset="C" role="radio" aria-checked="false" tabindex="-1">
+          <span class="preset-badge incomplete">⚠️ Case C: Missing Data</span>
           <span class="preset-name">Incomplete Period</span>
-          <span class="preset-desc">Missing dates prompt "More evidence needed".</span>
+          <span class="preset-desc">Missing dates trigger statutory evidence request.</span>
         </button>
       </div>
     </section>
 
-    <!-- Document & Physical Meter Upload Card (Gemini Vision) -->
+    <!-- Document & Physical Meter Upload Card -->
     <section class="card upload-card" aria-labelledby="upload-heading">
       <div class="card-header">
         <div>
-          <span class="brand-badge" style="background-color: #ede9fe; color: #5b21b6; border-color: #ddd6fe;">Multimodal AI Vision</span>
-          <h2 id="upload-heading" class="card-title" style="margin-top: 0.35rem;">Auto-Extract Statement or Meter Photo</h2>
-          <p class="card-subtitle">Upload a utility statement (PDF/Image) or photograph of your physical meter dial. Gemini Vision extracts billing dates or verifies physical kWh registers.</p>
+          <h2 id="upload-heading" class="card-title">Upload Statement or Meter Photo</h2>
+          <p class="card-subtitle">Upload your utility bill statement (PDF/Image) or a photo of your meter dials to automatically extract billing periods.</p>
         </div>
       </div>
 
       <!-- Upload Type Switcher Tabs -->
-      <div class="upload-tabs-nav" role="tablist">
-        <button type="button" class="upload-tab-btn active" id="tab-btn-bill" role="tab" aria-selected="true">
+      <div class="upload-tabs-nav" role="tablist" aria-label="Upload source">
+        <button type="button" class="upload-tab-btn active" id="tab-btn-bill" role="tab" aria-selected="true" aria-controls="pane-bill-upload">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
           1. Energy Bill Statement (PDF / Image)
         </button>
-        <button type="button" class="upload-tab-btn" id="tab-btn-meter" role="tab" aria-selected="false">
+        <button type="button" class="upload-tab-btn" id="tab-btn-meter" role="tab" aria-selected="false" aria-controls="pane-meter-upload">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
-          2. Physical Meter Dial Photo (LCD / Cyclometer)
+          2. Physical Meter Register Photo (LCD / Cyclometer)
         </button>
       </div>
 
       <!-- Tab Pane 1: Bill Dropzone -->
-      <div id="pane-bill-upload">
-        <div class="dropzone" id="bill-dropzone" tabindex="0" role="region" aria-label="Bill file upload dropzone">
+      <div id="pane-bill-upload" role="tabpanel" aria-labelledby="tab-btn-bill">
+        <div class="dropzone" id="bill-dropzone" tabindex="0" role="region" aria-label="Bill statement upload dropzone">
           <input type="file" id="file-input" class="file-input-hidden" accept="application/pdf,image/png,image/jpeg,image/webp">
           
           <div class="dropzone-content" id="dropzone-prompt">
@@ -131,17 +167,17 @@
 
           <div class="dropzone-processing" id="dropzone-processing" style="display: none;">
             <div class="spinner"></div>
-            <p class="processing-title">Analyzing document with Gemini Vision...</p>
-            <p class="processing-subtitle" id="processing-filename">Extracting statement date, reading types, and billing periods</p>
+            <p class="processing-title">Analyzing statement...</p>
+            <p class="processing-subtitle" id="processing-filename">Extracting statement date, reading types, and line items</p>
           </div>
 
           <div class="dropzone-success" id="dropzone-success" style="display: none;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <div>
               <strong id="success-filename">bill.pdf</strong>
-              <p id="success-summary" style="font-size: 0.8125rem; color: var(--color-text-muted);">Extracted 2 billing periods. Form populated below.</p>
+              <p id="success-summary" style="font-size: 0.8125rem; color: var(--text-muted);">Extracted billing periods. Populated form below.</p>
             </div>
             <button type="button" id="btn-clear-file" class="btn-secondary" style="margin-left: auto; font-size: 0.75rem; padding: 0.25rem 0.6rem;">Clear</button>
           </div>
@@ -149,12 +185,12 @@
       </div>
 
       <!-- Tab Pane 2: Physical Meter Photo Dropzone -->
-      <div id="pane-meter-upload" style="display: none;">
-        <div class="dropzone" id="meter-dropzone" tabindex="0" role="region" aria-label="Meter photo upload dropzone" style="border-color: #818cf8;">
+      <div id="pane-meter-upload" style="display: none;" role="tabpanel" aria-labelledby="tab-btn-meter">
+        <div class="dropzone" id="meter-dropzone" tabindex="0" role="region" aria-label="Meter photo upload dropzone">
           <input type="file" id="meter-file-input" class="file-input-hidden" accept="image/png,image/jpeg,image/webp">
           
           <div class="dropzone-content" id="meter-dropzone-prompt">
-            <div class="dropzone-icon" style="color: #6366f1;">
+            <div class="dropzone-icon">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
@@ -164,44 +200,44 @@
             <div class="dropzone-text">
               <strong>Drop your physical meter dial / LCD photo here</strong>, or <span class="dropzone-browse">browse photos</span>
             </div>
-            <p class="dropzone-hint">Upload a photo of your electric or gas meter faceplate (PNG, JPG, WebP)</p>
+            <p class="dropzone-hint">Upload a photograph of your electric or gas meter faceplate</p>
           </div>
 
           <div class="dropzone-processing" id="meter-dropzone-processing" style="display: none;">
-            <div class="spinner" style="border-top-color: #6366f1;"></div>
-            <p class="processing-title">Reading meter dials with Gemini Vision...</p>
-            <p class="processing-subtitle" id="meter-processing-filename">Extracting physical register indices & meter serial number</p>
+            <div class="spinner"></div>
+            <p class="processing-title">Reading meter dials...</p>
+            <p class="processing-subtitle" id="meter-processing-filename">Extracting physical register index & serial number</p>
           </div>
 
           <div class="dropzone-success" id="meter-dropzone-success" style="display: none;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
             <div>
               <strong id="meter-success-filename">meter.jpg</strong>
-              <p id="meter-success-summary" style="font-size: 0.8125rem; color: var(--color-text-muted);">Physical index verified. Evidence attached below.</p>
+              <p id="meter-success-summary" style="font-size: 0.8125rem; color: var(--text-muted);">Physical index verified. Evidence attached.</p>
             </div>
             <button type="button" id="btn-clear-meter" class="btn-secondary" style="margin-left: auto; font-size: 0.75rem; padding: 0.25rem 0.6rem;">Clear</button>
           </div>
         </div>
 
-        <!-- Verified Meter Evidence Card Display -->
+        <!-- Verified Meter Evidence Card -->
         <div id="meter-evidence-container" style="display: none;">
           <div class="meter-evidence-card">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
               <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
             <div style="flex-grow: 1;">
               <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <strong style="color: #14532d; font-size: 0.9375rem;">Physical Meter Evidence Verified by Gemini Vision</strong>
+                <strong style="color: var(--success-text); font-size: 0.9375rem;">Physical Meter Evidence Verified</strong>
                 <span class="meter-evidence-badge" id="meter-type-badge">Digital LCD</span>
               </div>
-              <p style="font-size: 0.84375rem; color: #166534; margin: 0.35rem 0;" id="meter-details-text">
-                Current Physical Register Index: <strong id="meter-reading-val">4,821 kWh</strong> • Serial: <strong id="meter-serial-val">K18-E84021</strong>
+              <p style="font-size: 0.84375rem; color: var(--text-secondary); margin: 0.35rem 0;" id="meter-details-text">
+                Current Register Index: <strong id="meter-reading-val">4,821 kWh</strong> • Serial: <strong id="meter-serial-val">K18-E84021</strong>
               </p>
-              <p style="font-size: 0.8125rem; color: #15803d; line-height: 1.4;" id="meter-notes-text">
-                Physical meter reading confirms actual consumption discrepancy against supplier's estimated catch-up billing.
+              <p style="font-size: 0.8125rem; color: var(--text-muted); line-height: 1.4;" id="meter-notes-text">
+                Physical meter index confirms actual consumption discrepancy against supplier estimates.
               </p>
             </div>
           </div>
@@ -209,21 +245,21 @@
       </div>
     </section>
 
-    <!-- Bill Input Form -->
+    <!-- Main Bill Input Form -->
     <form id="bill-form" novalidate>
       
-      <!-- Card 1: Bill Metadata -->
+      <!-- Card 1: Bill Metadata & Factors -->
       <section class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">1. Bill Details & Customer Factors</h2>
-            <p class="card-subtitle">Specify your jurisdiction and relevant account factors.</p>
+            <h2 class="card-title">1. Regulatory Jurisdiction & Bill Date</h2>
+            <p class="card-subtitle">Select your utility territory to determine statutory lookback barriers.</p>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
-            <label for="input-country" class="form-label">Country / Jurisdiction</label>
+            <label for="input-country" class="form-label">Country / Regulatory Jurisdiction</label>
             <select id="input-country" class="form-select">
               <option value="United Kingdom" selected>United Kingdom (Ofgem SLC 21BA — 12 Mos)</option>
               <option value="Australia">Australia (AER NERR Rule 30 — 9 Mos)</option>
@@ -231,33 +267,33 @@
               <option value="United States (Texas)">United States - Texas (PUCT §25.28 — 6 Mos)</option>
               <option value="Other Country">Other Country (Statutory Window)</option>
             </select>
-            <span class="form-hint">Governs which regulatory standard and lookback limit apply.</span>
+            <span class="form-hint">Governs the statutory lookback window and governing legal citation.</span>
           </div>
 
           <div class="form-group">
-            <label for="input-bill-date" class="form-label">Bill Issue Date</label>
-            <input type="date" id="input-bill-date" class="form-input" value="2026-10-01" required>
-            <span class="form-hint">The date printed on your catch-up bill.</span>
+            <label for="input-bill-date" class="form-label">Catch-up Bill Issue Date</label>
+            <input type="date" id="input-bill-date" class="form-input tabular-nums" value="2026-10-01" required>
+            <span class="form-hint">The formal issue date printed on the catch-up statement.</span>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Estimated Meter Readings?</label>
-            <div class="toggle-group" id="group-estimated">
-              <button type="button" class="toggle-btn active" data-value="false">No (Actual)</button>
-              <button type="button" class="toggle-btn" data-value="true">Yes (Estimated)</button>
+            <label class="form-label">Were Prior Bills Based on Estimates?</label>
+            <div class="toggle-group" id="group-estimated" role="radiogroup" aria-label="Estimated readings">
+              <button type="button" class="toggle-btn active" data-value="false" role="radio" aria-checked="true">No (Actual)</button>
+              <button type="button" class="toggle-btn" data-value="true" role="radio" aria-checked="false">Yes (Estimated)</button>
             </div>
             <input type="hidden" id="input-estimated" value="false">
-            <span class="form-hint">Did the supplier bill on estimates previously?</span>
+            <span class="form-hint">Suppliers cannot penalize customers for delayed meter reading cycles.</span>
           </div>
 
           <div class="form-group">
-            <label class="form-label">Meter Access Denied / Obstructed?</label>
-            <div class="toggle-group" id="group-obstructed">
-              <button type="button" class="toggle-btn active" data-value="false">No</button>
-              <button type="button" class="toggle-btn" data-value="true">Yes</button>
+            <label class="form-label">Was Meter Access Obstructed by Consumer?</label>
+            <div class="toggle-group" id="group-obstructed" role="radiogroup" aria-label="Meter obstruction">
+              <button type="button" class="toggle-btn active" data-value="false" role="radio" aria-checked="true">No</button>
+              <button type="button" class="toggle-btn" data-value="true" role="radio" aria-checked="false">Yes</button>
             </div>
             <input type="hidden" id="input-obstructed" value="false">
-            <span class="form-hint">Did you ever prevent meter inspection access?</span>
+            <span class="form-hint">Under statutory rules, deliberate obstruction nullifies protections.</span>
           </div>
         </div>
       </section>
@@ -266,44 +302,44 @@
       <section class="card" style="margin-top: 1.5rem;">
         <div class="card-header">
           <div>
-            <h2 class="card-title">2. Consumer & Supplier Identification</h2>
-            <p class="card-subtitle">Legally required party and account details for personalized formal dispute notices.</p>
+            <h2 class="card-title">2. Account & Supplier Identification</h2>
+            <p class="card-subtitle">Required party details for generating court-admissible dispute notices.</p>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
-            <label for="input-consumer-name" class="form-label">Consumer Full Name</label>
+            <label for="input-consumer-name" class="form-label">Account Holder Full Name</label>
             <input type="text" id="input-consumer-name" class="form-input" placeholder="e.g. Sarah Jenkins" value="Sarah Jenkins" required>
-            <span class="form-hint">Name of account holder issuing the dispute.</span>
+            <span class="form-hint">Primary name on utility contract.</span>
           </div>
 
           <div class="form-group">
-            <label for="input-supplier-name" class="form-label">Energy Supplier Name</label>
+            <label for="input-supplier-name" class="form-label">Licensed Energy Supplier</label>
             <input type="text" id="input-supplier-name" class="form-input" placeholder="e.g. British Gas" value="British Gas" required>
-            <span class="form-hint">Licensed energy utility company being disputed.</span>
+            <span class="form-hint">Supplier against whom the formal statutory notice is served.</span>
           </div>
 
           <div class="form-group">
-            <label for="input-account-number" class="form-label">Account / Customer Reference</label>
-            <input type="text" id="input-account-number" class="form-input" placeholder="e.g. BG-8849201" value="BG-8849201" required>
-            <span class="form-hint">Account reference number shown on utility statements.</span>
+            <label for="input-account-number" class="form-label">Customer Account Reference Number</label>
+            <input type="text" id="input-account-number" class="form-input tabular-nums" placeholder="e.g. BG-8849201" value="BG-8849201" required>
+            <span class="form-hint">Unique billing account reference.</span>
           </div>
 
           <div class="form-group">
-            <label for="input-supply-address" class="form-label">Supply Property Address</label>
+            <label for="input-supply-address" class="form-label">Property Supply Address</label>
             <input type="text" id="input-supply-address" class="form-input" placeholder="e.g. 14 Windsor Gardens, Bristol, BS8 4UQ" value="14 Windsor Gardens, Bristol, BS8 4UQ" required>
-            <span class="form-hint">Physical property address supplied by meter.</span>
+            <span class="form-hint">Physical property connected to the disputed meter.</span>
           </div>
         </div>
       </section>
 
-      <!-- Card 3: Billing Line Items -->
+      <!-- Card 3: Billing Line Items Table -->
       <section class="card" style="margin-top: 1.5rem;">
         <div class="card-header">
           <div>
-            <h2 class="card-title">3. Billing Period Breakdown</h2>
-            <p class="card-subtitle">List the specific energy consumption periods included on the bill.</p>
+            <h2 class="card-title">3. Itemized Consumption Periods</h2>
+            <p class="card-subtitle">Enter each billing period and associated charge as listed on the statement.</p>
           </div>
         </div>
 
@@ -313,7 +349,7 @@
               <tr>
                 <th scope="col" style="width: 32%;">Period Start Date</th>
                 <th scope="col" style="width: 32%;">Period End Date</th>
-                <th scope="col" style="width: 26%;">Amount (<span id="currency-symbol-header">£</span>)</th>
+                <th scope="col" style="width: 26%;">Charge Amount (<span id="currency-symbol-header">£</span>)</th>
                 <th scope="col" style="width: 10%; text-align: center;">Action</th>
               </tr>
             </thead>
@@ -338,22 +374,23 @@
         </div>
 
         <!-- Inline Validation Error -->
-        <div id="validation-error" class="error-banner" role="alert">
+        <div id="validation-error" class="error-banner" role="alert" aria-live="assertive">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
             <line x1="12" y1="8" x2="12" y2="12"/>
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
-          <span id="validation-error-msg">Please correct errors in your billing periods.</span>
+          <span id="validation-error-msg">Please correct dates and amounts in the billing table.</span>
         </div>
 
-        <!-- Action Bar -->
+        <!-- Primary Audit Action Bar -->
         <div class="action-bar">
-          <button type="submit" id="btn-analyze" class="btn-primary">
+          <button type="submit" id="btn-analyze" class="btn-primary" style="padding: 0.75rem 1.75rem; font-size: 0.9375rem;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
-            <span id="btn-analyze-text">Analyze Bill</span>
+            <span id="btn-analyze-text">Run Statutory Audit</span>
           </button>
         </div>
       </section>
@@ -363,29 +400,31 @@
     <!-- Results Section -->
     <section id="results-section" class="results-container" aria-live="polite">
       
-      <!-- Verdict Card -->
+      <!-- Executive Verdict Card -->
       <article class="card">
         <div class="card-header">
-          <h2 class="card-title">Analysis Verdict</h2>
-          <span class="card-subtitle">Based on statutory back-billing limits</span>
+          <div>
+            <h2 class="card-title">Statutory Audit Determination</h2>
+            <p class="card-subtitle">Deterministic evaluation against binding energy regulator lookback barriers</p>
+          </div>
         </div>
 
         <div id="verdict-badge-container">
           <!-- Semantic Badge injected via JS -->
         </div>
 
-        <p id="verdict-explanation" style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 1rem;">
+        <p id="verdict-explanation" style="color: var(--text-secondary); font-size: 0.9375rem; margin-bottom: 1rem; line-height: 1.5;">
           <!-- Summary explanation text -->
         </p>
 
         <div class="verdict-amount-banner">
           <div>
-            <div class="verdict-amount-title">Calculated Disputable Sum:</div>
+            <div class="verdict-amount-title">Unlawful Disputable Amount (Protected):</div>
             <div class="verdict-amount-value tabular-nums" id="verdict-disputable-sum">£0.00</div>
           </div>
           <div style="text-align: right;">
-            <div class="verdict-amount-title" id="verdict-cutoff-title">Statutory Lookback Cut-off:</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: var(--color-brand-secondary);" class="tabular-nums" id="verdict-cutoff-date">--</div>
+            <div class="verdict-amount-title" id="verdict-cutoff-title">Statutory Lookback Cut-off Barrier:</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 0.25rem;" class="tabular-nums" id="verdict-cutoff-date">--</div>
           </div>
         </div>
       </article>
@@ -394,13 +433,13 @@
       <article class="card" id="timeline-card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Interactive Statutory Lookback Timeline</h2>
-            <p class="card-subtitle">Visual mapping of billing periods against statutory cut-off barrier</p>
+            <h2 class="card-title">Statutory Lookback Cut-off Barrier Timeline</h2>
+            <p class="card-subtitle">Visual pro-rata mapping of billing periods against statutory lookback barrier</p>
           </div>
           <div class="timeline-legend">
-            <span class="legend-item"><span class="legend-dot dot-disputable"></span>Disputable Window</span>
-            <span class="legend-item"><span class="legend-dot dot-permissible"></span>Permissible Window</span>
-            <span class="legend-item"><span class="legend-dot dot-barrier"></span>Cut-off Barrier</span>
+            <span class="legend-item"><span class="legend-dot dot-disputable"></span>Unlawful Window</span>
+            <span class="legend-item"><span class="legend-dot dot-permissible"></span>Lawful Window</span>
+            <span class="legend-item"><span class="legend-dot dot-barrier"></span>Statutory Barrier</span>
           </div>
         </div>
 
@@ -414,20 +453,22 @@
       <!-- Itemized Math Breakdown Table -->
       <article class="card">
         <div class="card-header">
-          <h2 class="card-title">Mathematical Lookback Apportionment</h2>
-          <span class="card-subtitle">Deterministic pro-rata calculations by calendar day</span>
+          <div>
+            <h2 class="card-title">Deterministic Lookback Apportionment Schedule</h2>
+            <p class="card-subtitle">Day-by-day pro-rata calculation schedule</p>
+          </div>
         </div>
 
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
               <tr>
-                <th scope="col">Period</th>
+                <th scope="col">Consumption Period</th>
                 <th scope="col">Total Days</th>
-                <th scope="col">Days Pre-Cutoff</th>
-                <th scope="col">Period Amount</th>
+                <th scope="col">Pre-Cutoff Days</th>
+                <th scope="col">Period Billed</th>
                 <th scope="col">Disputable Amount</th>
-                <th scope="col">Status</th>
+                <th scope="col">Statutory Finding</th>
               </tr>
             </thead>
             <tbody id="breakdown-tbody">
@@ -437,11 +478,13 @@
         </div>
       </article>
 
-      <!-- Retrieved Regulatory Sources -->
+      <!-- Retrieved Regulatory Sources Citation -->
       <article class="card">
         <div class="card-header">
-          <h2 class="card-title">Verified Regulatory Authority</h2>
-          <span class="card-subtitle">Retrieved live from official regulator databases</span>
+          <div>
+            <h2 class="card-title">Retrieved Statutory Legal Authority</h2>
+            <p class="card-subtitle">Official legislative and regulator licence condition grounding</p>
+          </div>
         </div>
 
         <div id="sources-container">
@@ -449,12 +492,12 @@
         </div>
       </article>
 
-      <!-- Complaint Letter Box -->
+      <!-- Actionable Dispute Letter & Evidence Dossier Box -->
       <article class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Actionable Dispute Letter</h2>
-            <p class="card-subtitle">Ready-to-send dispute referencing official regulations and statutory escalation ladder.</p>
+            <h2 class="card-title">Formal Notice of Dispute</h2>
+            <p class="card-subtitle">Ready-to-serve legal pleading citing statutory provisions and escalation deadlines.</p>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <button type="button" id="btn-copy-letter" class="btn-secondary">
@@ -464,21 +507,29 @@
               </svg>
               Copy Letter
             </button>
-            <button type="button" id="btn-email-supplier" class="btn-secondary" style="color: #1e40af; border-color: #bfdbfe; background-color: #eff6ff;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button type="button" id="btn-email-supplier" class="btn-secondary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
               <span id="btn-email-supplier-text">Email Dispute to Supplier</span>
             </button>
-            <button type="button" id="btn-download-pdf" class="btn-primary" style="padding: 0.45rem 0.85rem; font-size: 0.8125rem;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <button type="button" id="btn-print-dossier" class="btn-secondary" title="Print court-admissible legal dossier">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+              Print Dossier
+            </button>
+            <button type="button" id="btn-download-pdf" class="btn-primary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <line x1="12" y1="18" x2="12" y2="12"/>
                 <line x1="9" y1="15" x2="15" y2="15"/>
               </svg>
-              <span id="btn-download-pdf-text">Download Formal Legal Packet (.pdf)</span>
+              <span id="btn-download-pdf-text">Download Legal Dossier (.pdf)</span>
             </button>
             <span id="copy-feedback" class="copy-feedback">Copied to clipboard!</span>
           </div>
@@ -493,41 +544,41 @@
       <article class="card escalation-tracker-card" id="escalation-tracker-card">
         <div class="card-header" style="align-items: flex-start;">
           <div>
-            <span class="brand-badge" style="background-color: #fef2f2; color: #991b1b; border-color: #fecaca;">Statutory Legal Timeline</span>
+            <span class="brand-badge">Statutory Procedural Timeline</span>
             <h2 class="card-title" style="margin-top: 0.35rem;">Statutory Escalation & Ombudsman Deadlines</h2>
-            <p class="card-subtitle">Enforcing statutory debt collection hold periods and legally binding ombudsman determination windows.</p>
+            <p class="card-subtitle">Mandatory debt collection stay periods and independent ombudsman determination windows.</p>
           </div>
-          <button type="button" id="btn-add-calendar" class="btn-secondary" style="font-size: 0.8125rem; padding: 0.45rem 0.85rem; gap: 0.45rem;">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button type="button" id="btn-add-calendar" class="btn-secondary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
               <line x1="16" y1="2" x2="16" y2="6"/>
               <line x1="8" y1="2" x2="8" y2="6"/>
               <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
-            Add Deadlines to Calendar (.ics)
+            Save Deadlines to Calendar (.ics)
           </button>
         </div>
 
         <div class="escalation-steps-grid">
           <div class="escalation-step-card">
             <span class="step-number-pill today">Day 1 • Today</span>
-            <div class="step-title">Formal Dispute Notice Lodged</div>
+            <div class="step-title">Formal Dispute Notice Served</div>
             <div class="step-date" id="date-step-1">13 October 2026</div>
-            <p class="step-desc">Notice of dispute submitted with Schedule of Mathematical Evidence. Supplier is statutory bound to pause collection activity.</p>
+            <p class="step-desc">Notice lodged with Schedule of Mathematical Evidence. Supplier is statutory bound to pause debt collection activity.</p>
           </div>
 
           <div class="escalation-step-card active-step">
             <span class="step-number-pill deadline">Day 14 • Statutory Deadline</span>
             <div class="step-title">14-Day Written Response Deadline</div>
             <div class="step-date" id="date-step-2">27 October 2026</div>
-            <p class="step-desc">Supplier must issue an amended bill or formal position. Non-response triggers a statutory breach of complaint handling regulations.</p>
+            <p class="step-desc">Supplier must issue an amended lawful statement or formal deadlock letter. Non-response constitutes regulatory non-compliance.</p>
           </div>
 
           <div class="escalation-step-card">
-            <span class="step-number-pill ombudsman">Day 56 • 8 Weeks Window</span>
-            <div class="step-title">Ombudsman Escalation Threshold</div>
+            <span class="step-number-pill ombudsman">Day 56 • 8-Week Threshold</span>
+            <div class="step-title">Ombudsman Escalation Gateway</div>
             <div class="step-date" id="date-step-3">8 December 2026</div>
-            <p class="step-desc">Statutory right to escalate to the Energy Ombudsman / Utilities Commission for an independent, legally binding determination.</p>
+            <p class="step-desc">Statutory right to escalate directly to the independent Energy Ombudsman / Commission for a binding final determination.</p>
           </div>
         </div>
       </article>
@@ -535,6 +586,224 @@
     </section>
 
   </main>
+
+  <!-- Enterprise Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <div class="footer-col-main">
+        <div class="footer-brand">
+          <img src="logo.jpg" alt="BillRight Logo" class="footer-logo-img">
+          <span class="brand-title" style="font-size: 1.15rem;">BillRight</span>
+          <span class="badge-version">v2.4 LTS</span>
+        </div>
+        <p style="margin-top: 0.35rem; color: var(--text-secondary); font-size: 0.8125rem;">Deterministic back-billing statutory compliance platform for electricity &amp; gas utility consumers.</p>
+        <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.75rem;">
+          <button type="button" id="btn-footer-rules-modal" style="background:none; border:none; padding:0; color:var(--text-primary); text-decoration:underline; font:inherit; cursor:pointer;">
+            View Statutory Lookback Framework (UK, AU, CA, TX)
+          </button>
+        </p>
+      </div>
+      <div class="footer-badge-group">
+        <span class="footer-pill">Deterministic Arithmetic</span>
+        <span class="footer-pill">Zero Server Storage</span>
+        <span class="footer-pill">Court-Admissible Dossier</span>
+      </div>
+    </div>
+    <div class="footer-disclaimer">
+      <p>Informational regulatory assessment only. Does not constitute formal judicial counsel. Consult your energy ombudsman or solicitor for binding dispute awards.</p>
+    </div>
+  </footer>
+
+  <!-- Enterprise Direct Supplier Email Dispatcher Modal -->
+  <div id="email-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-email-title" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <div class="modal-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </div>
+          <div>
+            <h3 id="modal-email-title" class="modal-title">Official Dispute Dispatcher</h3>
+            <p class="modal-subtitle" id="modal-supplier-subtitle">Verified statutory complaints channel</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-email-modal" class="modal-close-btn" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Verified Supplier Dossier Pill -->
+        <div class="supplier-dossier-pill" id="modal-supplier-info-box">
+          <!-- Injected dynamically via app.js -->
+        </div>
+
+        <!-- Recipient Email Field -->
+        <div class="modal-field-group">
+          <label class="modal-label" for="modal-email-to">
+            Verified Complaints Desk:
+            <span class="modal-label-badge">Statutory Escalation</span>
+          </label>
+          <div class="modal-input-with-action">
+            <input type="text" id="modal-email-to" class="form-input modal-input tabular-nums" readonly>
+            <button type="button" class="btn-copy-inline" id="btn-copy-modal-to" title="Copy recipient email">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Subject Line Field -->
+        <div class="modal-field-group">
+          <label class="modal-label" for="modal-email-subject">
+            Formal Legal Subject Line:
+            <span class="modal-label-badge">Statutory Reference</span>
+          </label>
+          <div class="modal-input-with-action">
+            <input type="text" id="modal-email-subject" class="form-input modal-input" readonly>
+            <button type="button" class="btn-copy-inline" id="btn-copy-modal-subject" title="Copy subject line">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Direct Dispatch Channels Grid -->
+        <div class="modal-channels-section">
+          <span class="modal-channels-heading">Select Dispatch Channel (1-Click Launch):</span>
+          <div class="modal-actions-grid">
+            <button type="button" id="btn-launch-gmail" class="dispatch-channel-btn gmail-btn" title="Open directly in Gmail web compose">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#ea4335">
+                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              <div class="channel-text">
+                <div class="channel-title">Launch Gmail (Web)</div>
+                <div class="channel-desc">Instant compose tab in browser</div>
+              </div>
+            </button>
+
+            <button type="button" id="btn-launch-outlook" class="dispatch-channel-btn outlook-btn" title="Open directly in Outlook / Office 365 web">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#0078d4">
+                <path d="M21.5 4h-19C1.7 4 1 4.7 1 5.5v13c0 .8.7 1.5 1.5 1.5h19c.8 0 1.5-.7 1.5-1.5v-13c0-.8-.7-1.5-1.5-1.5zm-.5 3.3L12 12.8 3 7.3V6l9 5.5 9-5.5v1.3z"/>
+              </svg>
+              <div class="channel-text">
+                <div class="channel-title">Launch Outlook (Web)</div>
+                <div class="channel-desc">Hotmail / 365 pre-filled compose</div>
+              </div>
+            </button>
+
+            <button type="button" id="btn-launch-mailto" class="dispatch-channel-btn mailto-btn" title="Launch default operating system email app">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="4" width="20" height="16" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <div class="channel-text">
+                <div class="channel-title">Default Email Client</div>
+                <div class="channel-desc">Apple Mail, Outlook App, Thunderbird</div>
+              </div>
+            </button>
+
+            <button type="button" id="btn-copy-all-email" class="dispatch-channel-btn copyall-btn" title="Copy recipient, subject and complete text">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <div class="channel-text">
+                <div class="channel-title">Copy Full Dossier</div>
+                <div class="channel-desc">Copies To, Subject & Body to Clipboard</div>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Collapsible Full Letter Preview -->
+        <div class="modal-preview-section">
+          <div class="modal-preview-header">
+            <span class="modal-label" style="margin: 0;">Dispute Letter Verbatim Copy:</span>
+            <button type="button" id="btn-modal-copy-letter-body" class="btn-copy-inline">Copy Body Only</button>
+          </div>
+          <textarea id="modal-email-body" class="form-input modal-textarea" readonly rows="8"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Statutory Framework & Back-Billing Limits Modal -->
+  <div id="rules-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-rules-title" style="display: none;">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-rules-title" class="modal-title">Statutory Framework &amp; Back-Billing Limits</h3>
+          <p class="modal-subtitle">Legally enforceable lookback barriers across supported jurisdictions</p>
+        </div>
+        <button type="button" id="btn-close-rules-modal" class="modal-close-btn" aria-label="Close dialog">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="rules-modal-grid">
+          <!-- United Kingdom -->
+          <article class="rules-modal-card">
+            <div class="rules-modal-card-top">
+              <span class="rules-modal-country">United Kingdom</span>
+              <span class="rules-modal-limit">12 Months</span>
+            </div>
+            <div class="rules-modal-code">Ofgem Supply Licence SLC 21BA</div>
+            <p class="rules-modal-desc">
+              Energy suppliers cannot charge or demand payment for unbilled gas or electricity consumed more than 12 months prior to the bill date where the supplier failed to accurately bill or read meters.
+            </p>
+            <div class="rules-modal-subnote">Binding Ombudsman dispute resolution after 8 weeks or formal deadlock.</div>
+          </article>
+
+          <!-- Australia -->
+          <article class="rules-modal-card">
+            <div class="rules-modal-card-top">
+              <span class="rules-modal-country">Australia (NEM)</span>
+              <span class="rules-modal-limit">9 Months</span>
+            </div>
+            <div class="rules-modal-code">National Energy Retail Rules (NERR) Rule 30</div>
+            <p class="rules-modal-desc">
+              Retailers may only recover undercharged amounts for up to 9 months prior to notifying the customer. The retailer must offer an interest-free payment plan of equal duration.
+            </p>
+            <div class="rules-modal-subnote">Enforced by State Energy Ombudsmen (EWON, EWOV, EWOQ, EWOSA).</div>
+          </article>
+
+          <!-- California -->
+          <article class="rules-modal-card">
+            <div class="rules-modal-card-top">
+              <span class="rules-modal-country">California (US)</span>
+              <span class="rules-modal-limit">3 Months</span>
+            </div>
+            <div class="rules-modal-code">CPUC Tariff Rule 17.1 (Residential Utility Error)</div>
+            <p class="rules-modal-desc">
+              Investor-owned utilities (PG&amp;E, SCE, SDG&amp;E, SoCalGas) are barred from billing residential accounts for more than 3 months of unbilled service resulting from utility billing delays or meter inaccuracies.
+            </p>
+            <div class="rules-modal-subnote">Enforced by CPUC Consumer Affairs Branch.</div>
+          </article>
+
+          <!-- Texas -->
+          <article class="rules-modal-card">
+            <div class="rules-modal-card-top">
+              <span class="rules-modal-country">Texas (ERCOT)</span>
+              <span class="rules-modal-limit">6 Months</span>
+            </div>
+            <div class="rules-modal-code">PUCT Substantive Rules §25.28(b)</div>
+            <p class="rules-modal-desc">
+              Retail Electric Providers in the competitive Texas market cannot back-bill a customer for unbilled electricity service provided more than 6 months prior to initial notice.
+            </p>
+            <div class="rules-modal-subnote">Enforced by Public Utility Commission of Texas (PUCT).</div>
+          </article>
+        </div>
+
+        <div class="rules-modal-footer-note">
+          <span>Deterministic pro-rata calculations are strictly grounded in these regulatory statutes. All processing is 100% client-side with zero server storage.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <script type="module" src="app.js"></script>
 </body>

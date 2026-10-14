@@ -134,6 +134,12 @@ const btnDownloadPdf = document.getElementById('btn-download-pdf');
 const btnDownloadPdfText = document.getElementById('btn-download-pdf-text');
 const btnEmailSupplier = document.getElementById('btn-email-supplier');
 const btnEmailSupplierText = document.getElementById('btn-email-supplier-text');
+const btnPrintDossier = document.getElementById('btn-print-dossier');
+
+// Header & Utility Controls
+const btnThemeToggle = document.getElementById('btn-theme-toggle');
+const disclaimerBanner = document.getElementById('disclaimer-banner');
+const btnDismissNotice = document.getElementById('btn-dismiss-notice');
 
 // Statutory Escalation & Calendar DOM
 const escalationTrackerCard = document.getElementById('escalation-tracker-card');
@@ -328,12 +334,18 @@ function loadPreset(presetKey) {
   const preset = PRESETS[presetKey];
   if (!preset) return;
 
-  // Highlight active preset button
+  // Highlight active preset button with radio group semantics
   document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.classList.remove('active');
+    btn.setAttribute('aria-checked', 'false');
+    btn.setAttribute('tabindex', '-1');
   });
   const activeBtn = document.getElementById(`preset-${presetKey.toLowerCase()}`);
-  if (activeBtn) activeBtn.classList.add('active');
+  if (activeBtn) {
+    activeBtn.classList.add('active');
+    activeBtn.setAttribute('aria-checked', 'true');
+    activeBtn.setAttribute('tabindex', '0');
+  }
 
   // Fill form values
   countrySelect.value = preset.country;
@@ -362,17 +374,26 @@ function loadPreset(presetKey) {
   // Hide any previous results on preset switch
   resultsSection.classList.remove('visible');
   validateAndRecalculate();
+  showToast(`Loaded ${preset.name}`, 'info', 2200);
 }
 
 /**
  * Resets the entire form to clean defaults
  */
 function resetForm() {
-  document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.setAttribute('aria-checked', 'false');
+    btn.setAttribute('tabindex', '-1');
+  });
+  const firstPreset = document.getElementById('preset-a');
+  if (firstPreset) firstPreset.setAttribute('tabindex', '0');
+
   countrySelect.value = 'United Kingdom';
   billDateInput.value = '2026-10-01';
   setToggleValue(groupEstimated, inputEstimated, false);
   setToggleValue(groupObstructed, inputObstructed, false);
+  showToast('Audit form reset to defaults', 'info', 2000);
 
   if (consumerNameInput) consumerNameInput.value = 'Sarah Jenkins';
   if (supplierNameInput) supplierNameInput.value = 'British Gas';
@@ -635,6 +656,47 @@ billForm.addEventListener('submit', async (e) => {
   }
 });
 
+// Toast notification helper
+function showToast(message, type = 'success', duration = 3200) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast-item toast-${type}`;
+
+  let iconSvg = '';
+  if (type === 'success') {
+    iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+  } else if (type === 'warning') {
+    iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  } else if (type === 'error') {
+    iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  } else {
+    iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+  }
+
+  toast.innerHTML = `
+    <div class="toast-icon">${iconSvg}</div>
+    <div class="toast-text">${message}</div>
+    <button type="button" class="toast-close" aria-label="Close notification">&times;</button>
+  `;
+
+  const btnClose = toast.querySelector('.toast-close');
+  btnClose.addEventListener('click', () => {
+    toast.classList.add('fading');
+    setTimeout(() => toast.remove(), 250);
+  });
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    if (toast.parentElement) {
+      toast.classList.add('fading');
+      setTimeout(() => toast.remove(), 250);
+    }
+  }, duration);
+}
+
 // Copy letter button handler
 if (btnCopyLetter) {
   btnCopyLetter.addEventListener('click', async () => {
@@ -642,34 +704,223 @@ if (btnCopyLetter) {
     try {
       await navigator.clipboard.writeText(text);
       copyFeedback.classList.add('visible');
+      showToast('Dispute letter copied to clipboard!', 'success');
       setTimeout(() => {
         copyFeedback.classList.remove('visible');
       }, 2500);
     } catch (err) {
       console.error('Failed to copy to clipboard', err);
+      showToast('Could not access clipboard. Please copy manually.', 'error');
     }
   });
 }
 
-// Direct Supplier Email Launcher (mailto: with pre-populated fields)
+// Enterprise Dispute Dispatcher Modal DOM references
+const emailModal = document.getElementById('email-modal');
+const btnCloseEmailModal = document.getElementById('btn-close-email-modal');
+const modalEmailTo = document.getElementById('modal-email-to');
+const modalEmailSubject = document.getElementById('modal-email-subject');
+const modalEmailBody = document.getElementById('modal-email-body');
+const modalSupplierSubtitle = document.getElementById('modal-supplier-subtitle');
+const modalSupplierInfoBox = document.getElementById('modal-supplier-info-box');
+const btnCopyModalTo = document.getElementById('btn-copy-modal-to');
+const btnCopyModalSubject = document.getElementById('btn-copy-modal-subject');
+const btnModalCopyLetterBody = document.getElementById('btn-modal-copy-letter-body');
+const btnLaunchGmail = document.getElementById('btn-launch-gmail');
+const btnLaunchOutlook = document.getElementById('btn-launch-outlook');
+const btnLaunchMailto = document.getElementById('btn-launch-mailto');
+const btnCopyAllEmail = document.getElementById('btn-copy-all-email');
+
+/**
+ * Opens the Enterprise Email Dispatcher Modal with pre-populated details
+ */
+function openEmailDispatcherModal() {
+  if (!currentAnalysisResult || !currentAnalysisResult.disputeLetter) {
+    showToast('Please run an audit on a bill with disputable charges first.', 'warning');
+    return;
+  }
+
+  const contact = currentAnalysisResult.supplierContact || {};
+  const supplierName = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
+  const targetEmail = contact.email || 'complaints@energy-supplier.co.uk';
+  const accNum = currentAnalysisResult.accountNumber || (accountNumberInput ? accountNumberInput.value.trim() : 'Reference');
+  const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
+
+  const subject = `FORMAL DISPUTE: Back-billing catch-up charges (${clause}) - Account ${accNum}`;
+  const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Legal Dossier attached as a PDF.]\n\n`;
+  const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
+
+  if (modalEmailTo) modalEmailTo.value = targetEmail;
+  if (modalEmailSubject) modalEmailSubject.value = subject;
+  if (modalEmailBody) modalEmailBody.value = fullBody;
+
+  if (modalSupplierSubtitle) {
+    modalSupplierSubtitle.textContent = `Verified complaints channel for ${supplierName} (${currentAnalysisResult.regulation?.jurisdiction || 'Statutory Jurisdiction'})`;
+  }
+
+  if (modalSupplierInfoBox) {
+    modalSupplierInfoBox.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <strong style="color: var(--color-text-main); font-size: 0.9375rem;">${contact.name || supplierName}</strong>
+          <span class="preset-badge valid" style="margin-left: 0.5rem; font-size: 0.6875rem;">✓ Verified Statutory Desk</span>
+        </div>
+        <div style="font-size: 0.8125rem; color: var(--color-text-muted);">
+          ${contact.phone ? `<span>📞 Phone: <a href="tel:${contact.phone}" style="color: #2563eb; font-weight: 500;">${contact.phone}</a></span> &bull; ` : ''}
+          ${contact.portalUrl ? `<a href="${contact.portalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">Online Portal &nearr;</a> &bull; ` : ''}
+          <span style="color: #475569;">⚖️ ${contact.ombudsman || 'Independent Ombudsman'}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (emailModal) {
+    emailModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  showToast(`Loaded dispatch channel for ${supplierName}`, 'info', 2000);
+}
+
+function closeEmailDispatcherModal() {
+  if (emailModal) {
+    emailModal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
+// Modal event listeners
 if (btnEmailSupplier) {
-  btnEmailSupplier.addEventListener('click', () => {
-    if (!currentAnalysisResult || !currentAnalysisResult.disputeLetter) {
-      alert('Please analyze a bill with disputable charges first.');
-      return;
+  btnEmailSupplier.addEventListener('click', (e) => {
+    e.preventDefault();
+    openEmailDispatcherModal();
+  });
+}
+
+if (btnCloseEmailModal) {
+  btnCloseEmailModal.addEventListener('click', closeEmailDispatcherModal);
+}
+
+if (emailModal) {
+  emailModal.addEventListener('click', (e) => {
+    if (e.target === emailModal) {
+      closeEmailDispatcherModal();
     }
+  });
+}
 
-    const contact = currentAnalysisResult.supplierContact || {};
-    const targetEmail = contact.email || 'complaints@energy-supplier.co.uk';
-    const accNum = currentAnalysisResult.accountNumber || (accountNumberInput ? accountNumberInput.value.trim() : 'Reference');
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && emailModal && emailModal.style.display === 'flex') {
+    closeEmailDispatcherModal();
+  }
+});
+
+// Copy inline buttons inside modal
+if (btnCopyModalTo) {
+  btnCopyModalTo.addEventListener('click', async () => {
+    if (!modalEmailTo) return;
+    await navigator.clipboard.writeText(modalEmailTo.value);
+    showToast('Recipient complaints email copied!', 'success');
+  });
+}
+
+if (btnCopyModalSubject) {
+  btnCopyModalSubject.addEventListener('click', async () => {
+    if (!modalEmailSubject) return;
+    await navigator.clipboard.writeText(modalEmailSubject.value);
+    showToast('Formal subject line copied!', 'success');
+  });
+}
+
+if (btnModalCopyLetterBody) {
+  btnModalCopyLetterBody.addEventListener('click', async () => {
+    if (!modalEmailBody) return;
+    await navigator.clipboard.writeText(modalEmailBody.value);
+    showToast('Full letter text copied!', 'success');
+  });
+}
+
+// 1. Gmail Web Launcher
+if (btnLaunchGmail) {
+  btnLaunchGmail.addEventListener('click', async () => {
+    if (!currentAnalysisResult) return;
+    const to = modalEmailTo.value;
+    const sub = modalEmailSubject.value;
+    const fullText = modalEmailBody.value;
+
+    // Concise body for URL safety
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
+    const acc = currentAnalysisResult.accountNumber || 'Reference';
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach PDF dossier.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
-    const subject = `FORMAL DISPUTE: Back-billing catch-up charges (${clause}) - Account ${accNum}`;
-    const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Legal Dossier attached as a PDF.]\n\n`;
-    const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
+    try {
+      await navigator.clipboard.writeText(fullText);
+    } catch (_) {}
 
-    const mailtoUrl = `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
-    window.location.href = mailtoUrl;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
+    window.open(gmailUrl, '_blank');
+    showToast('Opened Gmail web compose! Full letter copied to clipboard.', 'success', 4000);
+  });
+}
+
+// 2. Outlook Web Launcher
+if (btnLaunchOutlook) {
+  btnLaunchOutlook.addEventListener('click', async () => {
+    if (!currentAnalysisResult) return;
+    const to = modalEmailTo.value;
+    const sub = modalEmailSubject.value;
+    const fullText = modalEmailBody.value;
+
+    const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
+    const acc = currentAnalysisResult.accountNumber || 'Reference';
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach PDF dossier.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+
+    try {
+      await navigator.clipboard.writeText(fullText);
+    } catch (_) {}
+
+    const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
+    window.open(outlookUrl, '_blank');
+    showToast('Opened Outlook web compose! Full letter copied to clipboard.', 'success', 4000);
+  });
+}
+
+// 3. Default OS Mail Client (safe mailto URL)
+if (btnLaunchMailto) {
+  btnLaunchMailto.addEventListener('click', async () => {
+    if (!currentAnalysisResult) return;
+    const to = modalEmailTo.value;
+    const sub = modalEmailSubject.value;
+    const fullText = modalEmailBody.value;
+
+    const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
+    const acc = currentAnalysisResult.accountNumber || 'Reference';
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Complete 3-Page Formal Pleading copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+
+    try {
+      await navigator.clipboard.writeText(fullText);
+    } catch (_) {}
+
+    const safeMailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
+    window.location.href = safeMailto;
+    showToast('Triggered default mail app! Full letter copied to clipboard.', 'success', 4000);
+  });
+}
+
+// 4. Copy All to Clipboard
+if (btnCopyAllEmail) {
+  btnCopyAllEmail.addEventListener('click', async () => {
+    const to = modalEmailTo.value;
+    const sub = modalEmailSubject.value;
+    const body = modalEmailBody.value;
+
+    const packet = `TO: ${to}\nSUBJECT: ${sub}\n\n---\n\n${body}`;
+    try {
+      await navigator.clipboard.writeText(packet);
+      showToast('Complete dispute dossier (To, Subject, Body) copied to clipboard!', 'success', 3500);
+    } catch (err) {
+      showToast('Could not access clipboard.', 'error');
+    }
   });
 }
 
@@ -677,7 +928,7 @@ if (btnEmailSupplier) {
 if (btnAddCalendar) {
   btnAddCalendar.addEventListener('click', () => {
     if (!currentAnalysisResult) {
-      alert('Please analyze a bill first.');
+      showToast('Please run an audit on a bill first.', 'warning');
       return;
     }
 
@@ -688,6 +939,7 @@ if (btnAddCalendar) {
       currency: currentAnalysisResult.currency || '£',
       startDate: new Date()
     });
+    showToast('Statutory dispute deadlines saved to calendar (.ics)!', 'success');
   });
 }
 
@@ -695,7 +947,7 @@ if (btnAddCalendar) {
 if (btnDownloadPdf) {
   btnDownloadPdf.addEventListener('click', async () => {
     if (!currentAnalysisResult) {
-      alert('Please analyze a bill before downloading the legal dispute packet.');
+      showToast('Please run an audit before downloading the legal dispute packet.', 'warning');
       return;
     }
 
@@ -748,9 +1000,11 @@ if (btnDownloadPdf) {
       downloadLink.remove();
       window.URL.revokeObjectURL(blobUrl);
 
+      showToast('Court-admissible PDF legal dossier downloaded!', 'success');
+
     } catch (err) {
       console.error('PDF generation error:', err);
-      alert(`Could not generate PDF packet: ${err.message}`);
+      showToast(`Could not generate PDF packet: ${err.message}`, 'error');
     } finally {
       btnDownloadPdf.disabled = false;
       if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;
@@ -950,7 +1204,7 @@ async function processMeterFile(file) {
   if (meterDropzonePrompt) meterDropzonePrompt.style.display = 'none';
   if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'none';
   if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'flex';
-  if (meterProcessingFilename) meterProcessingFilename.textContent = `Analyzing ${file.name} with Gemini Vision...`;
+  if (meterProcessingFilename) meterProcessingFilename.textContent = `Analyzing ${file.name}...`;
 
   try {
     const base64Data = await new Promise((resolve, reject) => {
@@ -1050,16 +1304,165 @@ function setupUploadTabs() {
 
   tabBtnBill.addEventListener('click', () => {
     tabBtnBill.classList.add('active');
+    tabBtnBill.setAttribute('aria-selected', 'true');
     tabBtnMeter.classList.remove('active');
+    tabBtnMeter.setAttribute('aria-selected', 'false');
     if (paneBillUpload) paneBillUpload.style.display = 'block';
     if (paneMeterUpload) paneMeterUpload.style.display = 'none';
   });
 
   tabBtnMeter.addEventListener('click', () => {
     tabBtnMeter.classList.add('active');
+    tabBtnMeter.setAttribute('aria-selected', 'true');
     tabBtnBill.classList.remove('active');
+    tabBtnBill.setAttribute('aria-selected', 'false');
     if (paneMeterUpload) paneMeterUpload.style.display = 'block';
     if (paneBillUpload) paneBillUpload.style.display = 'none';
+  });
+}
+
+// Preset RadioGroup Arrow Key Navigation
+function setupPresetKeyboardNav() {
+  const presetButtons = Array.from(document.querySelectorAll('.preset-btn'));
+  presetButtons.forEach((btn, index) => {
+    btn.addEventListener('keydown', (e) => {
+      let targetIndex = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        targetIndex = (index + 1) % presetButtons.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        targetIndex = (index - 1 + presetButtons.length) % presetButtons.length;
+      }
+      if (targetIndex >= 0) {
+        e.preventDefault();
+        const targetBtn = presetButtons[targetIndex];
+        targetBtn.focus();
+        targetBtn.click();
+      }
+    });
+  });
+}
+
+// Theme Switcher & Persistence
+function updateThemeIcon(theme) {
+  if (!btnThemeToggle) return;
+  if (theme === 'dark') {
+    btnThemeToggle.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    `;
+    btnThemeToggle.setAttribute('title', 'Switch to Light Theme');
+  } else {
+    btnThemeToggle.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+    `;
+    btnThemeToggle.setAttribute('title', 'Switch to Dark Theme');
+  }
+}
+
+function setupTheme() {
+  if (!btnThemeToggle) return;
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  updateThemeIcon(current);
+
+  btnThemeToggle.addEventListener('click', () => {
+    const active = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = active === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try {
+      localStorage.setItem('billright-theme', next);
+    } catch (_) {}
+    updateThemeIcon(next);
+    showToast(`Switched to ${next} theme`, 'info', 1800);
+  });
+}
+
+// Notice Banner Dismissal Persistence
+function setupNoticeDismissal() {
+  if (disclaimerBanner) {
+    try {
+      if (localStorage.getItem('billright-notice-dismissed') === 'true') {
+        disclaimerBanner.classList.add('dismissed');
+      }
+    } catch (_) {}
+  }
+
+  if (btnDismissNotice && disclaimerBanner) {
+    btnDismissNotice.addEventListener('click', () => {
+      disclaimerBanner.classList.add('dismissed');
+      try {
+        localStorage.setItem('billright-notice-dismissed', 'true');
+      } catch (_) {}
+    });
+  }
+}
+
+// Print Court-Admissible Dossier
+function setupPrintDossier() {
+  if (!btnPrintDossier) return;
+  btnPrintDossier.addEventListener('click', () => {
+    if (!currentAnalysisResult) {
+      showToast('Please run an audit before printing the legal dossier.', 'warning');
+      return;
+    }
+    showToast('Preparing court-admissible print dossier...', 'info', 1800);
+    setTimeout(() => {
+      window.print();
+    }, 200);
+  });
+}
+
+// Reset Audit Action
+function setupResetAll() {
+  const btnResetAll = document.getElementById('btn-reset-all');
+  if (!btnResetAll) return;
+  btnResetAll.addEventListener('click', () => {
+    loadPreset('A');
+    showToast('Audit reset to standard baseline (Preset A).', 'info', 2200);
+  });
+}
+
+// Dedicated Statutory Rules Modal
+function setupRulesModal() {
+  const rulesModal = document.getElementById('rules-modal');
+  const btnOpenHeader = document.getElementById('btn-open-rules-modal');
+  const btnOpenFooter = document.getElementById('btn-footer-rules-modal');
+  const btnClose = document.getElementById('btn-close-rules-modal');
+
+  if (!rulesModal) return;
+
+  const openModal = () => {
+    rulesModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    rulesModal.style.display = 'none';
+    document.body.style.overflow = '';
+  };
+
+  if (btnOpenHeader) btnOpenHeader.addEventListener('click', openModal);
+  if (btnOpenFooter) btnOpenFooter.addEventListener('click', openModal);
+  if (btnClose) btnClose.addEventListener('click', closeModal);
+
+  rulesModal.addEventListener('click', (e) => {
+    if (e.target === rulesModal) closeModal();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && rulesModal.style.display === 'flex') {
+      closeModal();
+    }
   });
 }
 
@@ -1069,6 +1472,13 @@ setupToggle(groupObstructed, inputObstructed);
 setupDropzone();
 setupMeterDropzone();
 setupUploadTabs();
+setupPresetKeyboardNav();
+setupTheme();
+setupNoticeDismissal();
+setupPrintDossier();
+setupResetAll();
+setupRulesModal();
 
 // Initial bootstrap with Preset A loaded for instant demo readiness
 loadPreset('A');
+

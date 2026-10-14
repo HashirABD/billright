@@ -150,3 +150,7 @@ vite.config.ts.timestamp-*
 
 # Devpost Learn personal context
 /devpost/learner-profile.md
+.vercel
+.env
+.env.*
+!.env.example
