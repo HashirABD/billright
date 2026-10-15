@@ -33,12 +33,34 @@ app.get('/api/health', (req, res) => {
 });
 
 // Multi-jurisdiction statutory configurations
+// TODO verify REP limit in 16 TAC 25.480(e)
 const JURISDICTION_CONFIGS = {
-  'United Kingdom': { lookbackMonths: 12, currency: '£', label: 'United Kingdom (Ofgem SLC 21BA)' },
-  'Australia': { lookbackMonths: 9, currency: 'A$', label: 'Australia (AER Rule 30)' },
-  'United States (California)': { lookbackMonths: 3, currency: '$', label: 'United States - California (CPUC Rule 17.1)' },
-  'United States (Texas)': { lookbackMonths: 6, currency: '$', label: 'United States - Texas (PUCT §25.28)' },
-  'Other Country': { lookbackMonths: 12, currency: '$', label: 'Other Country (Statutory Window)' }
+  'United Kingdom': {
+    lookbackMonths: 12,
+    currency: '£',
+    label: 'United Kingdom (Ofgem SLC 21BA)'
+  },
+  'Australia': {
+    lookbackMonths: 9,
+    currency: 'A$',
+    label: 'Australia (NERR Rule 30)' // Scope: NERR states (e.g. NSW, QLD, SA). Note: Victoria has its own code and is not covered.
+  },
+  'United States (California)': {
+    lookbackMonths: 3,
+    currency: '$',
+    label: 'California (PG&E Electric Rule 17.1; equivalent tariff rules apply for SCE/SDG&E)' // Residential undercharges due to billing error only, 3 months.
+  },
+  'United States (Texas)': {
+    // TODO verify REP limit in 16 TAC 25.480(e)
+    lookbackMonths: 6,
+    currency: '$',
+    label: 'Texas (PUCT §25.28(d) electric utilities; §25.480(e) for retail electric providers)'
+  },
+  'Other Country': {
+    lookbackMonths: 12,
+    currency: '$',
+    label: 'Other Country (Provisional Placeholder - Must Be Verified)'
+  }
 };
 
 // Multimodal bill extraction endpoint using Gemini Vision
@@ -94,13 +116,20 @@ app.post('/api/analyze', async (req, res) => {
       isMeterObstructed = false,
       lookbackMonths: customLookbackMonths,
       currency: customCurrency,
-      consumerName = 'Sarah Jenkins',
-      supplierName = 'British Gas',
-      accountNumber = 'BG-8849201',
-      supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ'
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress,
+      noticeDate
     } = req.body;
 
     // 1. Client input validation
+    if (!consumerName || !supplierName || !accountNumber || !supplyAddress) {
+      return res.status(400).json({
+        error: 'consumerName, supplierName, accountNumber, and supplyAddress are required'
+      });
+    }
+
     if (!billDate) {
       return res.status(400).json({
         error: 'billDate is required (YYYY-MM-DD)'
@@ -147,7 +176,9 @@ app.post('/api/analyze', async (req, res) => {
       consumerName,
       supplierName,
       accountNumber,
-      supplyAddress
+      supplyAddress,
+      noticeDate,
+      country
     });
 
     // 5. Final unified response payload matching spec.md
@@ -170,7 +201,8 @@ app.post('/api/analyze', async (req, res) => {
       supplierName,
       accountNumber,
       supplyAddress,
-      supplierContact
+      supplierContact,
+      noticeDate: evaluation.noticeDate || noticeDate
     });
 
   } catch (err) {
@@ -181,17 +213,18 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
-// Official Multi-Page Legal Dispute Packet Generator Endpoint (PDF Engine)
+// Official Multi-Page Ready-to-Send Legal Dispute Packet Generator Endpoint (PDF Engine)
 app.post('/api/generate-pdf', async (req, res) => {
   try {
     const {
-      consumerName = 'Sarah Jenkins',
-      supplierName = 'British Gas',
-      accountNumber = 'BG-8849201',
-      supplyAddress = '14 Windsor Gardens, Bristol, BS8 4UQ',
+      consumerName,
+      supplierName,
+      accountNumber,
+      supplyAddress,
       country = 'United Kingdom',
       billDate,
       cutOffDate,
+      noticeDate,
       lookbackMonths = 12,
       currency = '£',
       disputableTotal = 0,
@@ -203,6 +236,12 @@ app.post('/api/generate-pdf', async (req, res) => {
       disputeLetter = '',
       meterEvidence = null
     } = req.body;
+
+    if (!consumerName || !supplierName || !accountNumber || !supplyAddress) {
+      return res.status(400).json({
+        error: 'consumerName, supplierName, accountNumber, and supplyAddress are required'
+      });
+    }
 
     if (!billDate || !cutOffDate) {
       return res.status(400).json({
@@ -218,6 +257,7 @@ app.post('/api/generate-pdf', async (req, res) => {
       country,
       billDate,
       cutOffDate,
+      noticeDate,
       lookbackMonths,
       currency,
       disputableTotal,
@@ -247,7 +287,7 @@ app.post('/api/generate-pdf', async (req, res) => {
   }
 });
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`⚡ BillRight server running at http://localhost:${PORT}`);
   });

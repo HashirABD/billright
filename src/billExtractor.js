@@ -1,5 +1,5 @@
 /**
- * Multimodal Bill Extractor using Gemini 2.5 Flash / 3.8 Flash.
+ * Multimodal Bill Extractor using Gemini Vision.
  * Extracts bill issue date, billing periods, amounts, and reading types
  * from electricity bill PDFs and images.
  */
@@ -25,20 +25,10 @@ export async function extractBillData({ fileData, mimeType }) {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'your_gemini_key_here') {
-    console.warn('⚠️ GEMINI_API_KEY not configured. Returning mock extraction for testing.');
-    return {
-      billDate: '2026-10-01',
-      isEstimated: true,
-      currency: '£',
-      supplierName: 'Sample Energy Supplier Ltd',
-      accountNumber: 'ACC-89214',
-      billingPeriods: [
-        { startDate: '2024-10-01', endDate: '2025-09-30', amount: 1000.00 },
-        { startDate: '2025-10-01', endDate: '2026-09-30', amount: 400.00 }
-      ],
-      notes: 'Sample extraction returned (GEMINI_API_KEY is not set).'
-    };
+    throw new Error('GEMINI_API_KEY is not configured. Please enter the values manually.');
   }
+
+  const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
   const prompt = `You are a forensic utility bill extraction assistant.
 Analyze this energy/electricity bill document (PDF or image).
@@ -78,7 +68,7 @@ STRICT JSON OUTPUT FORMAT:
     const cleanBase64 = fileData.replace(/^data:[^;]+;base64,/, '');
 
     const generatePromise = ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: modelName,
       contents: [
         {
           inlineData: {
@@ -95,7 +85,7 @@ STRICT JSON OUTPUT FORMAT:
     });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini Vision API call timed out after 8 seconds')), 8000)
+      setTimeout(() => reject(new Error('Gemini Vision API call timed out after 20 seconds')), 20000)
     );
 
     const response = await Promise.race([generatePromise, timeoutPromise]);
@@ -104,11 +94,11 @@ STRICT JSON OUTPUT FORMAT:
 
     // Validate and sanitize parsed extraction
     if (!parsed.billDate) {
-      throw new Error('Could not identify a bill date in the document.');
+      throw new Error('Could not identify a bill date in the document. Please enter the values manually.');
     }
 
     if (!Array.isArray(parsed.billingPeriods) || parsed.billingPeriods.length === 0) {
-      throw new Error('Could not find itemized billing periods in the document.');
+      throw new Error('Could not find itemized billing periods in the document. Please enter the values manually.');
     }
 
     // Sanitize period numbers
@@ -127,19 +117,7 @@ STRICT JSON OUTPUT FORMAT:
     return parsed;
 
   } catch (err) {
-    console.warn('Gemini Vision extraction call failed or timed out:', err.message);
-    // Graceful fallback for demo resilience
-    return {
-      billDate: '2026-10-01',
-      isEstimated: true,
-      currency: '£',
-      supplierName: 'Energy Supplier (Extracted Statement)',
-      accountNumber: 'ACC-89214',
-      billingPeriods: [
-        { startDate: '2024-10-01', endDate: '2025-09-30', amount: 1000.00 },
-        { startDate: '2025-10-01', endDate: '2026-09-30', amount: 400.00 }
-      ],
-      notes: `Extracted with fallback (${err.message})`
-    };
+    console.error('Gemini Vision extraction call failed:', err.message);
+    throw new Error(err.message || 'Could not read this file. Please enter the values manually.');
   }
 }

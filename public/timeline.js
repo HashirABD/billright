@@ -77,7 +77,7 @@ export function renderTimeline({
     dispLabel.setAttribute('x', padLeft + 12);
     dispLabel.setAttribute('y', 56);
     dispLabel.setAttribute('class', 'zone-label disputable-label');
-    dispLabel.textContent = `UNLAWFUL / DISPUTABLE ZONE (Pre-${cutOffDate})`;
+    dispLabel.textContent = `DISPUTABLE WINDOW (Pre-${cutOffDate})`;
     svg.appendChild(dispLabel);
   }
 
@@ -96,7 +96,7 @@ export function renderTimeline({
     permLabel.setAttribute('x', cutOffX + 12);
     permLabel.setAttribute('y', 56);
     permLabel.setAttribute('class', 'zone-label permissible-label');
-    permLabel.textContent = `PERMISSIBLE BILLING WINDOW (${lookbackMonths} Mos)`;
+    permLabel.textContent = `PERMITTED WINDOW (${lookbackMonths} Mos)`;
     svg.appendChild(permLabel);
   }
 
@@ -285,9 +285,10 @@ export function renderTimeline({
   svg.appendChild(axisLine);
 
   // Axis Labels
+  // Text-anchor to 'end' when within 90px of right edge to prevent clipping
+  const billDateAlign = (billDateX >= (padLeft + chartWidth - 90)) ? 'end' : 'middle';
   const labels = [
-    { text: `Cut-off: ${cutOffDate}`, x: cutOffX, align: 'middle' },
-    { text: `Bill Date: ${billDate}`, x: billDateX, align: 'middle' }
+    { text: `Bill Date: ${billDate}`, x: billDateX, align: billDateAlign }
   ];
 
   labels.forEach(lbl => {

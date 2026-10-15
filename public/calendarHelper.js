@@ -36,19 +36,19 @@ export function generateIcsCalendar({
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
 
-    // Event 1: 14-Day Statutory Response Deadline
+    // Event 1: Suggested Response Deadline (Day 14)
     'BEGIN:VEVENT',
     `UID:billright-14d-${Date.now()}@billright.org`,
     `DTSTAMP:${now}`,
     `DTSTART:${formatIcsDate(day14)}`,
     `DTEND:${formatIcsDate(new Date(day14.getTime() + 3600000))}`,
-    `SUMMARY:⚠️ Statutory 14-Day Dispute Deadline: ${supplierName} (${accountNumber})`,
-    `DESCRIPTION:Statutory deadline for ${supplierName} to respond in writing to back-billing dispute for ${currency}${disputableTotal.toFixed(2)}. If no acceptable resolution is reached, initiate ombudsman escalation.`,
+    `SUMMARY:📅 Suggested Response Deadline: ${supplierName} (${accountNumber})`,
+    `DESCRIPTION:Suggested 14-day response deadline for ${supplierName} to reply in writing to back-billing dispute for ${currency}${disputableTotal.toFixed(2)}. If no acceptable resolution is reached after 8 weeks, initiate ombudsman escalation.`,
     'STATUS:CONFIRMED',
     'BEGIN:VALARM',
     'TRIGGER:-PT9H',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Reminder: Energy supplier 14-day statutory response deadline today.',
+    'DESCRIPTION:Reminder: Energy supplier suggested response deadline today.',
     'END:VALARM',
     'END:VEVENT',
 

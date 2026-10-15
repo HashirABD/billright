@@ -145,3 +145,46 @@ export function calculateBackBilling({ billDate, billingPeriods, lookbackMonths 
     itemizedBreakdown
   };
 }
+
+/**
+ * Derives Day 1, Day 14, and Day 56 (8 weeks) calendar dates from the user's local date.
+ * Calendar date addition avoids UTC-midnight hour drift and daylight saving offset issues.
+ * 
+ * @param {string|Date} [baseDate] - Optional local date or YYYY-MM-DD string
+ * @returns {Object} Local date strings and Date objects
+ */
+export function calculateEscalationDates(baseDate) {
+  let d;
+  if (typeof baseDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(baseDate)) {
+    const [y, m, day] = baseDate.split('-').map(Number);
+    d = new Date(y, m - 1, day);
+  } else if (baseDate instanceof Date) {
+    d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  } else {
+    const now = new Date();
+    d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const date = d.getDate();
+
+  const day1 = new Date(year, month, date);
+  const day14 = new Date(year, month, date + 14);
+  const day56 = new Date(year, month, date + 56);
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoDate = `${year}-${pad(month + 1)}-${pad(date)}`;
+  const fmt = (dt) => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return {
+    isoDate,
+    day1Formatted: fmt(day1),
+    day14Formatted: fmt(day14),
+    day56Formatted: fmt(day56),
+    day1,
+    day14,
+    day56
+  };
+}
+

@@ -39,7 +39,7 @@ const PRESETS = {
     ]
   },
   D: {
-    name: 'AU Preset D (AER Rule 30 - 9 Months)',
+    name: 'AU Preset D (NERR Rule 30 - 9 Months)',
     country: 'Australia',
     billDate: '2026-10-01',
     consumerName: 'David Miller',
@@ -395,10 +395,10 @@ function resetForm() {
   setToggleValue(groupObstructed, inputObstructed, false);
   showToast('Audit form reset to defaults', 'info', 2000);
 
-  if (consumerNameInput) consumerNameInput.value = 'Sarah Jenkins';
-  if (supplierNameInput) supplierNameInput.value = 'British Gas';
-  if (accountNumberInput) accountNumberInput.value = 'BG-8849201';
-  if (supplyAddressInput) supplyAddressInput.value = '14 Windsor Gardens, Bristol, BS8 4UQ';
+  if (consumerNameInput) consumerNameInput.value = '';
+  if (supplierNameInput) supplierNameInput.value = '';
+  if (accountNumberInput) accountNumberInput.value = '';
+  if (supplyAddressInput) supplyAddressInput.value = '';
 
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) currencyHeader.textContent = '£';
@@ -446,8 +446,7 @@ function renderResults(data) {
     badge.className = 'verdict-badge protected';
     badge.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-        <polyline points="22 4 12 14.01 9 11.01"/>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
       <span>${data.verdict}</span>
     `;
@@ -477,6 +476,47 @@ function renderResults(data) {
   }
 
   verdictBadgeContainer.appendChild(badge);
+
+  // Render obstruction or provisional country notices
+  const obstructionContainer = document.getElementById('obstruction-warning-container');
+  if (obstructionContainer) {
+    if (data.exceptionTriggered || data.isMeterObstructed || inputObstructed.value === 'true') {
+      obstructionContainer.style.display = 'flex';
+      obstructionContainer.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div>
+          <strong>Caution: Meter Access Obstructed.</strong> Statutory back-billing protection rules generally exempt suppliers where the consumer obstructed or prevented physical access to read the meter. The supplier may dispute your back-billing rights on these grounds.
+        </div>
+      `;
+    } else {
+      obstructionContainer.style.display = 'none';
+      obstructionContainer.innerHTML = '';
+    }
+  }
+
+  const otherCountryContainer = document.getElementById('other-country-warning-container');
+  if (otherCountryContainer) {
+    if (countrySelect.value === 'Other Country' || data.regulation?.jurisdiction === 'Other Country') {
+      otherCountryContainer.style.display = 'flex';
+      otherCountryContainer.innerHTML = `
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div>
+          <strong>Provisional Estimate:</strong> The statutory lookback period for "Other Country" is a default benchmark (12 months) and has not been verified against local laws. Please consult your regional utility regulator or ombudsman before lodging a dispute.
+        </div>
+      `;
+    } else {
+      otherCountryContainer.style.display = 'none';
+      otherCountryContainer.innerHTML = '';
+    }
+  }
 
   // 2. Financial Totals
   const cutoffTitle = document.getElementById('verdict-cutoff-title');
@@ -584,17 +624,46 @@ Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter a
 }
 
 /**
- * Calculates dynamic dates for Day 1, Day 14, and Day 56 (8 Weeks).
+ * Calculates dynamic dates for Day 1 (local date), Day 14, and Day 56 (8 Weeks).
  */
-function updateEscalationDates() {
-  const now = new Date();
-  const day14 = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const day56 = new Date(now.getTime() + 56 * 24 * 60 * 60 * 1000);
+export function getLocalEscalationDates(baseDate) {
+  let d;
+  if (typeof baseDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(baseDate)) {
+    const [y, m, day] = baseDate.split('-').map(Number);
+    d = new Date(y, m - 1, day);
+  } else if (baseDate instanceof Date) {
+    d = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  } else {
+    const now = new Date();
+    d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
 
-  const fmt = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  if (dateStep1) dateStep1.textContent = fmt(now);
-  if (dateStep2) dateStep2.textContent = fmt(day14);
-  if (dateStep3) dateStep3.textContent = fmt(day56);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const date = d.getDate();
+
+  const day1 = new Date(year, month, date);
+  const day14 = new Date(year, month, date + 14);
+  const day56 = new Date(year, month, date + 56);
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const isoDate = `${year}-${pad(month + 1)}-${pad(date)}`;
+  const fmt = (dt) => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return {
+    isoDate,
+    day1Formatted: fmt(day1),
+    day14Formatted: fmt(day14),
+    day56Formatted: fmt(day56)
+  };
+}
+
+function updateEscalationDates(baseDate) {
+  const dates = getLocalEscalationDates(baseDate);
+  if (dateStep1) dateStep1.textContent = dates.day1Formatted;
+  if (dateStep2) dateStep2.textContent = dates.day14Formatted;
+  if (dateStep3) dateStep3.textContent = dates.day56Formatted;
+  return dates;
 }
 
 // Form submission handler
@@ -613,16 +682,32 @@ billForm.addEventListener('submit', async (e) => {
     billingPeriods.push({ startDate, endDate, amount });
   });
 
+  const consumerName = consumerNameInput ? consumerNameInput.value.trim() : '';
+  const supplierName = supplierNameInput ? supplierNameInput.value.trim() : '';
+  const accountNumber = accountNumberInput ? accountNumberInput.value.trim() : '';
+  const supplyAddress = supplyAddressInput ? supplyAddressInput.value.trim() : '';
+
+  if (!consumerName || !supplierName || !accountNumber || !supplyAddress) {
+    validationErrorBanner.classList.add('visible');
+    validationErrorMsg.textContent = 'Please provide Consumer Name, Supplier Name, Account Number, and Supply Address.';
+    btnAnalyze.disabled = false;
+    btnAnalyzeText.textContent = 'Analyze Bill';
+    return;
+  }
+
+  const localDates = getLocalEscalationDates();
+
   const payload = {
     country: countrySelect.value,
     billDate: billDateInput.value,
     isEstimated: inputEstimated.value === 'true',
     isMeterObstructed: inputObstructed.value === 'true',
-    consumerName: consumerNameInput ? consumerNameInput.value.trim() : 'Sarah Jenkins',
-    supplierName: supplierNameInput ? supplierNameInput.value.trim() : 'British Gas',
-    accountNumber: accountNumberInput ? accountNumberInput.value.trim() : 'BG-8849201',
-    supplyAddress: supplyAddressInput ? supplyAddressInput.value.trim() : '14 Windsor Gardens, Bristol, BS8 4UQ',
-    billingPeriods
+    consumerName,
+    supplierName,
+    accountNumber,
+    supplyAddress,
+    billingPeriods,
+    noticeDate: localDates.isoDate
   };
 
   // Button loading state
@@ -763,7 +848,8 @@ function openEmailDispatcherModal() {
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
         <div>
           <strong style="color: var(--color-text-main); font-size: 0.9375rem;">${contact.name || supplierName}</strong>
-          <span class="preset-badge valid" style="margin-left: 0.5rem; font-size: 0.6875rem;">✓ Verified Statutory Desk</span>
+          <span class="preset-badge valid" style="margin-left: 0.5rem; font-size: 0.6875rem;">Supplier complaints contact</span>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">Check the supplier's website for the latest address</div>
         </div>
         <div style="font-size: 0.8125rem; color: var(--color-text-muted);">
           ${contact.phone ? `<span>📞 Phone: <a href="tel:${contact.phone}" style="color: #2563eb; font-weight: 500;">${contact.phone}</a></span> &bull; ` : ''}
@@ -952,18 +1038,30 @@ if (btnDownloadPdf) {
     }
 
     const originalBtnText = btnDownloadPdfText ? btnDownloadPdfText.textContent : 'Download Formal Legal Packet (.pdf)';
+    const cName = consumerNameInput ? consumerNameInput.value.trim() : (currentAnalysisResult.consumerName || '');
+    const sName = supplierNameInput ? supplierNameInput.value.trim() : (currentAnalysisResult.supplierName || '');
+    const aNum = accountNumberInput ? accountNumberInput.value.trim() : (currentAnalysisResult.accountNumber || '');
+    const sAddr = supplyAddressInput ? supplyAddressInput.value.trim() : (currentAnalysisResult.supplyAddress || '');
+
+    if (!cName || !sName || !aNum || !sAddr) {
+      showToast('Please provide Consumer Name, Supplier Name, Account Number, and Supply Address.', 'error');
+      return;
+    }
+
     if (btnDownloadPdfText) btnDownloadPdfText.textContent = 'Generating PDF Packet...';
     btnDownloadPdf.disabled = true;
 
     try {
+      const localDates = getLocalEscalationDates();
       const pdfPayload = {
-        consumerName: consumerNameInput ? consumerNameInput.value.trim() : currentAnalysisResult.consumerName || 'Sarah Jenkins',
-        supplierName: supplierNameInput ? supplierNameInput.value.trim() : currentAnalysisResult.supplierName || 'British Gas',
-        accountNumber: accountNumberInput ? accountNumberInput.value.trim() : currentAnalysisResult.accountNumber || 'BG-8849201',
-        supplyAddress: supplyAddressInput ? supplyAddressInput.value.trim() : currentAnalysisResult.supplyAddress || '14 Windsor Gardens, Bristol, BS8 4UQ',
+        consumerName: cName,
+        supplierName: sName,
+        accountNumber: aNum,
+        supplyAddress: sAddr,
         country: countrySelect.value,
         billDate: currentAnalysisResult.billDate || billDateInput.value,
         cutOffDate: currentAnalysisResult.cutOffDate,
+        noticeDate: currentAnalysisResult.noticeDate || localDates.isoDate,
         lookbackMonths: currentAnalysisResult.lookbackMonths,
         currency: currentAnalysisResult.currency,
         disputableTotal: currentAnalysisResult.disputableTotal,
@@ -1000,7 +1098,7 @@ if (btnDownloadPdf) {
       downloadLink.remove();
       window.URL.revokeObjectURL(blobUrl);
 
-      showToast('Court-admissible PDF legal dossier downloaded!', 'success');
+      showToast('Ready-to-send PDF legal dossier downloaded!', 'success');
 
     } catch (err) {
       console.error('PDF generation error:', err);
@@ -1113,13 +1211,13 @@ async function processFile(file) {
     dropzoneProcessing.style.display = 'none';
     dropzoneSuccess.style.display = 'flex';
     successFilename.textContent = file.name;
-    successSummary.textContent = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. Review details below and click 'Analyze Bill'.`;
+    successSummary.textContent = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. Please verify these values against your document.`;
 
   } catch (err) {
     console.error('Extraction error:', err);
     resetDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = `Document extraction failed: ${err.message}`;
+    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
   }
 }
 
@@ -1235,14 +1333,14 @@ async function processMeterFile(file) {
     if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'none';
     if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'flex';
     if (meterSuccessFilename) meterSuccessFilename.textContent = file.name;
-    if (meterSuccessSummary) meterSuccessSummary.textContent = `Verified ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}).`;
+    if (meterSuccessSummary) meterSuccessSummary.textContent = `Verified ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}). Please verify these values against your document.`;
 
     // Render Evidence Card
     if (meterEvidenceContainer) meterEvidenceContainer.style.display = 'block';
     if (meterTypeBadge) meterTypeBadge.textContent = data.meterType || 'Digital LCD';
     if (meterReadingVal) meterReadingVal.textContent = `${data.readingValue} ${data.unit || 'kWh'}`;
-    if (meterSerialVal) meterSerialVal.textContent = data.serialNumber || 'Verified on Photo';
-    if (meterNotesText) meterNotesText.textContent = data.notes || 'Physical reading confirms actual discrepancy against supplier estimates.';
+    if (meterSerialVal) meterSerialVal.textContent = data.serialNumber || 'Not detected on photo';
+    if (meterNotesText) meterNotesText.textContent = data.notes || 'Meter reading attached as supporting evidence.';
 
     // Meter photo upload confirms supplier billed on estimates
     setToggleValue(groupEstimated, inputEstimated, true);
@@ -1252,7 +1350,7 @@ async function processMeterFile(file) {
     console.error('Meter OCR error:', err);
     resetMeterDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = `Meter OCR failed: ${err.message}`;
+    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
   }
 }
 
@@ -1407,7 +1505,7 @@ function setupNoticeDismissal() {
   }
 }
 
-// Print Court-Admissible Dossier
+// Print Ready-to-Send Dossier
 function setupPrintDossier() {
   if (!btnPrintDossier) return;
   btnPrintDossier.addEventListener('click', () => {
@@ -1415,7 +1513,7 @@ function setupPrintDossier() {
       showToast('Please run an audit before printing the legal dossier.', 'warning');
       return;
     }
-    showToast('Preparing court-admissible print dossier...', 'info', 1800);
+    showToast('Preparing ready-to-send print dossier...', 'info', 1800);
     setTimeout(() => {
       window.print();
     }, 200);
@@ -1478,6 +1576,9 @@ setupNoticeDismissal();
 setupPrintDossier();
 setupResetAll();
 setupRulesModal();
+
+// Synchronize timeline escalation dates with local date immediately on load
+updateEscalationDates();
 
 // Initial bootstrap with Preset A loaded for instant demo readiness
 loadPreset('A');

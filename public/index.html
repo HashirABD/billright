@@ -11,11 +11,11 @@
   <!-- Open Graph / Social Meta -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="BillRight — Energy Back-Billing Verification">
-  <meta property="og:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with court-admissible legal dossiers.">
+  <meta property="og:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with ready-to-send legal dossiers.">
   <meta property="og:site_name" content="BillRight">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="BillRight — Energy Back-Billing Verification">
-  <meta name="twitter:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with court-admissible legal dossiers.">
+  <meta name="twitter:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with ready-to-send legal dossiers.">
 
   <!-- Favicon -->
   <link rel="icon" type="image/jpeg" href="logo.jpg">
@@ -103,7 +103,7 @@
         <button type="button" class="preset-btn" id="preset-d" data-preset="D" role="radio" aria-checked="false" tabindex="-1">
           <span class="preset-badge protected">🇦🇺 AU: Exceeds 9 Mos</span>
           <span class="preset-name">A$1,800 Catch-up Bill</span>
-          <span class="preset-desc">A$900 older than statutory 9 months. Protected by AER Rule 30.</span>
+          <span class="preset-desc">A$900 older than statutory 9 months. Protected by NERR Rule 30 (NERR states; Victoria not covered).</span>
         </button>
         <button type="button" class="preset-btn" id="preset-e" data-preset="E" role="radio" aria-checked="false" tabindex="-1">
           <span class="preset-badge protected">🇺🇸 US CA: Exceeds 3 Mos</span>
@@ -234,10 +234,10 @@
                 <span class="meter-evidence-badge" id="meter-type-badge">Digital LCD</span>
               </div>
               <p style="font-size: 0.84375rem; color: var(--text-secondary); margin: 0.35rem 0;" id="meter-details-text">
-                Current Register Index: <strong id="meter-reading-val">4,821 kWh</strong> • Serial: <strong id="meter-serial-val">K18-E84021</strong>
+                Current Register Index: <strong id="meter-reading-val">--</strong> • Serial: <strong id="meter-serial-val">--</strong>
               </p>
               <p style="font-size: 0.8125rem; color: var(--text-muted); line-height: 1.4;" id="meter-notes-text">
-                Physical meter index confirms actual consumption discrepancy against supplier estimates.
+                Meter reading attached as supporting evidence.
               </p>
             </div>
           </div>
@@ -302,33 +302,33 @@
       <section class="card" style="margin-top: 1.5rem;">
         <div class="card-header">
           <div>
-            <h2 class="card-title">2. Account & Supplier Identification</h2>
-            <p class="card-subtitle">Required party details for generating court-admissible dispute notices.</p>
+            <h2 class="card-title">2. Account &amp; Supplier Identification</h2>
+            <p class="card-subtitle">Required party details for generating ready-to-send dispute notices.</p>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
             <label for="input-consumer-name" class="form-label">Account Holder Full Name</label>
-            <input type="text" id="input-consumer-name" class="form-input" placeholder="e.g. Sarah Jenkins" value="Sarah Jenkins" required>
+            <input type="text" id="input-consumer-name" class="form-input" placeholder="e.g. Sarah Jenkins" required>
             <span class="form-hint">Primary name on utility contract.</span>
           </div>
 
           <div class="form-group">
             <label for="input-supplier-name" class="form-label">Licensed Energy Supplier</label>
-            <input type="text" id="input-supplier-name" class="form-input" placeholder="e.g. British Gas" value="British Gas" required>
+            <input type="text" id="input-supplier-name" class="form-input" placeholder="e.g. British Gas" required>
             <span class="form-hint">Supplier against whom the formal statutory notice is served.</span>
           </div>
 
           <div class="form-group">
             <label for="input-account-number" class="form-label">Customer Account Reference Number</label>
-            <input type="text" id="input-account-number" class="form-input tabular-nums" placeholder="e.g. BG-8849201" value="BG-8849201" required>
+            <input type="text" id="input-account-number" class="form-input tabular-nums" placeholder="e.g. BG-8849201" required>
             <span class="form-hint">Unique billing account reference.</span>
           </div>
 
           <div class="form-group">
             <label for="input-supply-address" class="form-label">Property Supply Address</label>
-            <input type="text" id="input-supply-address" class="form-input" placeholder="e.g. 14 Windsor Gardens, Bristol, BS8 4UQ" value="14 Windsor Gardens, Bristol, BS8 4UQ" required>
+            <input type="text" id="input-supply-address" class="form-input" placeholder="e.g. 14 Windsor Gardens, Bristol, BS8 4UQ" required>
             <span class="form-hint">Physical property connected to the disputed meter.</span>
           </div>
         </div>
@@ -419,7 +419,7 @@
 
         <div class="verdict-amount-banner">
           <div>
-            <div class="verdict-amount-title">Unlawful Disputable Amount (Protected):</div>
+            <div class="verdict-amount-title">Likely Disputable Amount:</div>
             <div class="verdict-amount-value tabular-nums" id="verdict-disputable-sum">£0.00</div>
           </div>
           <div style="text-align: right;">
@@ -427,6 +427,19 @@
             <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 0.25rem;" class="tabular-nums" id="verdict-cutoff-date">--</div>
           </div>
         </div>
+
+        <!-- Visible Informational Disclaimer -->
+        <div class="not-legal-advice-banner" role="note">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span>Not legal advice. For informational assessment only. Verify official rules with your energy regulator or ombudsman.</span>
+        </div>
+
+        <div id="obstruction-warning-container" class="warning-banner-callout" style="display: none;" role="alert"></div>
+        <div id="other-country-warning-container" class="warning-banner-callout" style="display: none; background: #fffbeb; border-color: #fde68a; color: #92400e;" role="alert"></div>
       </article>
 
       <!-- Interactive Dispute Timeline Card -->
@@ -437,8 +450,8 @@
             <p class="card-subtitle">Visual pro-rata mapping of billing periods against statutory lookback barrier</p>
           </div>
           <div class="timeline-legend">
-            <span class="legend-item"><span class="legend-dot dot-disputable"></span>Unlawful Window</span>
-            <span class="legend-item"><span class="legend-dot dot-permissible"></span>Lawful Window</span>
+            <span class="legend-item"><span class="legend-dot dot-disputable"></span>Disputable Window</span>
+            <span class="legend-item"><span class="legend-dot dot-permissible"></span>Permitted Window</span>
             <span class="legend-item"><span class="legend-dot dot-barrier"></span>Statutory Barrier</span>
           </div>
         </div>
@@ -514,7 +527,7 @@
               </svg>
               <span id="btn-email-supplier-text">Email Dispute to Supplier</span>
             </button>
-            <button type="button" id="btn-print-dossier" class="btn-secondary" title="Print court-admissible legal dossier">
+            <button type="button" id="btn-print-dossier" class="btn-secondary" title="Print ready-to-send legal dossier">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 6 2 18 2 18 9"/>
                 <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
@@ -529,7 +542,7 @@
                 <line x1="12" y1="18" x2="12" y2="12"/>
                 <line x1="9" y1="15" x2="15" y2="15"/>
               </svg>
-              <span id="btn-download-pdf-text">Download Legal Dossier (.pdf)</span>
+              <span id="btn-download-pdf-text">Download Ready-to-Send Packet (.pdf)</span>
             </button>
             <span id="copy-feedback" class="copy-feedback">Copied to clipboard!</span>
           </div>
@@ -563,21 +576,21 @@
           <div class="escalation-step-card">
             <span class="step-number-pill today">Day 1 • Today</span>
             <div class="step-title">Formal Dispute Notice Served</div>
-            <div class="step-date" id="date-step-1">13 October 2026</div>
-            <p class="step-desc">Notice lodged with Schedule of Mathematical Evidence. Supplier is statutory bound to pause debt collection activity.</p>
+            <div class="step-date" id="date-step-1">--</div>
+            <p class="step-desc">Notice lodged with Schedule of Mathematical Evidence. Request temporary hold on collection while reviewed.</p>
           </div>
 
           <div class="escalation-step-card active-step">
-            <span class="step-number-pill deadline">Day 14 • Statutory Deadline</span>
-            <div class="step-title">14-Day Written Response Deadline</div>
-            <div class="step-date" id="date-step-2">27 October 2026</div>
-            <p class="step-desc">Supplier must issue an amended lawful statement or formal deadlock letter. Non-response constitutes regulatory non-compliance.</p>
+            <span class="step-number-pill deadline">Day 14 • Suggested Deadline</span>
+            <div class="step-title">Suggested response deadline</div>
+            <div class="step-date" id="date-step-2">--</div>
+            <p class="step-desc">Suggested timeframe for supplier to reply in writing or provide an amended statement.</p>
           </div>
 
           <div class="escalation-step-card">
             <span class="step-number-pill ombudsman">Day 56 • 8-Week Threshold</span>
             <div class="step-title">Ombudsman Escalation Gateway</div>
-            <div class="step-date" id="date-step-3">8 December 2026</div>
+            <div class="step-date" id="date-step-3">--</div>
             <p class="step-desc">Statutory right to escalate directly to the independent Energy Ombudsman / Commission for a binding final determination.</p>
           </div>
         </div>
@@ -594,7 +607,6 @@
         <div class="footer-brand">
           <img src="logo.jpg" alt="BillRight Logo" class="footer-logo-img">
           <span class="brand-title" style="font-size: 1.15rem;">BillRight</span>
-          <span class="badge-version">v2.4 LTS</span>
         </div>
         <p style="margin-top: 0.35rem; color: var(--text-secondary); font-size: 0.8125rem;">Deterministic back-billing statutory compliance platform for electricity &amp; gas utility consumers.</p>
         <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.75rem;">
@@ -605,8 +617,8 @@
       </div>
       <div class="footer-badge-group">
         <span class="footer-pill">Deterministic Arithmetic</span>
-        <span class="footer-pill">Zero Server Storage</span>
-        <span class="footer-pill">Court-Admissible Dossier</span>
+        <span class="footer-pill">Files Processed In-Memory • Zero Storage</span>
+        <span class="footer-pill">Ready-to-Send Dossier</span>
       </div>
     </div>
     <div class="footer-disclaimer">
@@ -750,9 +762,11 @@
             </div>
             <div class="rules-modal-code">Ofgem Supply Licence SLC 21BA</div>
             <p class="rules-modal-desc">
-              Energy suppliers cannot charge or demand payment for unbilled gas or electricity consumed more than 12 months prior to the bill date where the supplier failed to accurately bill or read meters.
+              Energy suppliers cannot charge or demand payment for unbilled gas or electricity consumed more than 12 months prior to the bill date. Exceptions apply if the consumer was obstructive or manifestly unreasonable, or if the contract was under 12 months.
             </p>
-            <div class="rules-modal-subnote">Binding Ombudsman dispute resolution after 8 weeks or formal deadlock.</div>
+            <div class="rules-modal-subnote">
+              Reference: <a href="https://www.ofgem.gov.uk/node/114480" target="_blank" rel="noopener noreferrer" style="color: var(--accent-blue); text-decoration: underline;">Ofgem Energy Back-billing project</a> • Binding Ombudsman dispute resolution after 8 weeks.
+            </div>
           </article>
 
           <!-- Australia -->
@@ -763,9 +777,9 @@
             </div>
             <div class="rules-modal-code">National Energy Retail Rules (NERR) Rule 30</div>
             <p class="rules-modal-desc">
-              Retailers may only recover undercharged amounts for up to 9 months prior to notifying the customer. The retailer must offer an interest-free payment plan of equal duration.
+              Retailers in NERR participating states (e.g. NSW, QLD, SA, ACT, TAS) may only recover undercharged amounts for up to 9 months before the date the customer was notified of the undercharge. Note: Victoria has its own Energy Retail Code of Practice and is not covered. An exception applies if the customer was at fault.
             </p>
-            <div class="rules-modal-subnote">Enforced by State Energy Ombudsmen (EWON, EWOV, EWOQ, EWOSA).</div>
+            <div class="rules-modal-subnote">Enforced by State Energy Ombudsmen (EWON, EWOQ, EWOSA).</div>
           </article>
 
           <!-- California -->
@@ -774,9 +788,9 @@
               <span class="rules-modal-country">California (US)</span>
               <span class="rules-modal-limit">3 Months</span>
             </div>
-            <div class="rules-modal-code">CPUC Tariff Rule 17.1 (Residential Utility Error)</div>
+            <div class="rules-modal-code">PG&amp;E Electric Rule 17.1 (SCE/SDG&amp;E equivalent)</div>
             <p class="rules-modal-desc">
-              Investor-owned utilities (PG&amp;E, SCE, SDG&amp;E, SoCalGas) are barred from billing residential accounts for more than 3 months of unbilled service resulting from utility billing delays or meter inaccuracies.
+              Investor-owned utilities are barred from billing residential accounts for more than 3 months of unbilled service resulting from utility billing delays or meter inaccuracies. Applies to residential undercharges due to billing error only.
             </p>
             <div class="rules-modal-subnote">Enforced by CPUC Consumer Affairs Branch.</div>
           </article>
@@ -787,16 +801,17 @@
               <span class="rules-modal-country">Texas (ERCOT)</span>
               <span class="rules-modal-limit">6 Months</span>
             </div>
-            <div class="rules-modal-code">PUCT Substantive Rules §25.28(b)</div>
+            <!-- TODO verify REP limit in 16 TAC 25.480(e) -->
+            <div class="rules-modal-code">PUCT §25.28(d) (electric utilities); §25.480(e) for REPs</div>
             <p class="rules-modal-desc">
-              Retail Electric Providers in the competitive Texas market cannot back-bill a customer for unbilled electricity service provided more than 6 months prior to initial notice.
+              Electric utilities and Retail Electric Providers (REPs) in Texas cannot back-bill a customer for unbilled electricity service provided more than 6 months prior to notice.
             </p>
             <div class="rules-modal-subnote">Enforced by Public Utility Commission of Texas (PUCT).</div>
           </article>
         </div>
 
         <div class="rules-modal-footer-note">
-          <span>Deterministic pro-rata calculations are strictly grounded in these regulatory statutes. All processing is 100% client-side with zero server storage.</span>
+          <span>Deterministic pro-rata calculations are strictly grounded in these regulatory statutes. Files are processed in-memory on the server and sent to Google Gemini to be read, and are never stored or retained.</span>
         </div>
       </div>
     </div>

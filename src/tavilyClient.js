@@ -36,26 +36,27 @@ export async function searchRegulations(country = 'United Kingdom') {
     query = 'Ofgem Standard Licence Condition 21BA back-billing electricity 12 months rule site:ofgem.gov.uk OR site:citizensadvice.org.uk OR site:legislation.gov.uk';
     defaultTitle = 'Ofgem Standard Licence Condition 21BA (Back-billing Principle)';
     defaultClause = 'SLC 21BA';
-    fallbackUrl = 'https://www.ofgem.gov.uk/information-consumers/energy-advice-households/check-energy-back-billing-rules';
+    fallbackUrl = 'https://www.ofgem.gov.uk/node/114480';
   } else if (country === 'Australia') {
-    query = 'Australian Energy Regulator AER Rule 30 undercharging 9 months energy retail rules site:aer.gov.au OR site:energyombudsman.com.au';
-    defaultTitle = 'AER National Energy Retail Rules (Rule 30: Undercharging)';
+    query = 'National Energy Retail Rules NERR Rule 30 undercharging 9 months energy retail rules site:aer.gov.au OR site:energyombudsman.com.au';
+    defaultTitle = 'NERR Rule 30 (Undercharging in NERR States; Victoria Not Covered)';
     defaultClause = 'NERR Rule 30';
     fallbackUrl = 'https://www.aer.gov.au/consumers/energy-bills-and-charges/billing-problems-and-disputes';
   } else if (country.includes('California')) {
-    query = 'California Public Utilities Commission CPUC Rule 17 underbilling 3 months electricity tariff site:cpuc.ca.gov';
-    defaultTitle = 'CPUC Tariff Rule 17.1 (Adjustment of Bills for Underbilling)';
-    defaultClause = 'CPUC Rule 17.1';
+    query = 'PG&E Electric Rule 17.1 underbilling 3 months residential utility tariff site:cpuc.ca.gov';
+    defaultTitle = 'PG&E Electric Rule 17.1 (equivalent tariff rules apply for SCE/SDG&E)';
+    defaultClause = 'PG&E Electric Rule 17.1';
     fallbackUrl = 'https://www.cpuc.ca.gov/consumer-support/file-a-complaint/utility-complaint-process';
   } else if (country.includes('Texas')) {
-    query = 'Public Utility Commission of Texas PUCT Rule 25.28 underbilling 6 months electricity meter';
-    defaultTitle = 'PUCT Substantive Rule §25.28 (Bill Payment and Adjustments)';
-    defaultClause = 'PUCT §25.28(h)';
+    // TODO verify REP limit in 16 TAC 25.480(e)
+    query = 'Public Utility Commission of Texas PUCT Rule 25.28(d) 25.480(e) underbilling 6 months electricity meter';
+    defaultTitle = 'PUCT §25.28(d) (electric utilities); §25.480(e) for retail electric providers';
+    defaultClause = 'PUCT §25.28(d) / §25.480(e)';
     fallbackUrl = 'https://www.puc.texas.gov/consumer/complaints/complaint.aspx';
   } else {
     query = `${country} energy regulator back-billing limit electricity utility law`;
-    defaultTitle = `${country} Statutory Utility Regulation`;
-    defaultClause = 'Statutory Utility Code';
+    defaultTitle = `${country} Provisional Placeholder`;
+    defaultClause = 'Provisional Limit (Unverified)';
     fallbackUrl = null;
   }
 

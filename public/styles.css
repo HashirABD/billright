@@ -1,5 +1,5 @@
 /* ==========================================================================
-   BillRight — Design System & Stylesheet (v2.4 LTS)
+   BillRight — Design System & Stylesheet
    Designed with Linear / Stripe / Vercel Calm Fintech Aesthetics
    Zero external trackers • WCAG 2.2 AA • Dual Theme (Light / Dark)
    ========================================================================== */
@@ -1053,8 +1053,8 @@ body {
   border-radius: 50%;
 }
 
-.dot-disputable { background-color: var(--danger-solid); }
-.dot-permissible { background-color: var(--success-solid); }
+.dot-disputable { background-color: #dc2626; }
+.dot-permissible { background-color: #059669; }
 .dot-barrier { background-color: var(--accent-blue); }
 
 .timeline-container {
@@ -1104,6 +1104,107 @@ body {
   font-size: 0.75rem;
   pointer-events: none;
   z-index: 20;
+}
+
+/* Period Bars and SVG Timeline Elements */
+.period-bar {
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.period-bar:hover {
+  filter: brightness(1.1);
+}
+
+.bar-disputable {
+  fill: #dc2626 !important;
+}
+
+.bar-permissible {
+  fill: #059669 !important;
+}
+
+.bar-text {
+  fill: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.cutoff-barrier-line {
+  stroke: #2563eb;
+  stroke-width: 2px;
+  stroke-dasharray: 4 3;
+}
+
+.cutoff-pill-rect {
+  fill: #1e293b;
+  stroke: #334155;
+  stroke-width: 1px;
+}
+
+[data-theme="dark"] .cutoff-pill-rect {
+  fill: #0f172a;
+  stroke: #475569;
+}
+
+.cutoff-pill-text {
+  fill: #f8fafc;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.timeline-axis-line {
+  stroke: var(--border-strong);
+  stroke-width: 1.5px;
+}
+
+.axis-tick {
+  stroke: var(--border-strong);
+  stroke-width: 1.5px;
+}
+
+.axis-label-text {
+  fill: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.not-legal-advice-banner {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.warning-banner-callout {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+[data-theme="dark"] .warning-banner-callout {
+  color: #fca5a5;
+  background: rgba(220, 38, 38, 0.15);
+  border-color: rgba(220, 38, 38, 0.35);
 }
 
 /* --------------------------------------------------------------------------
@@ -1726,7 +1827,7 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   17. Print Stylesheet (Court-Admissible A4 Legal Dossier)
+   17. Print Stylesheet (Ready-to-Send A4 Legal Dossier)
    -------------------------------------------------------------------------- */
 
 @media print {
