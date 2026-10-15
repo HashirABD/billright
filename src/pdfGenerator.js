@@ -218,7 +218,11 @@ A precise calendar audit against statutory utility standards demonstrates that $
       doc.text(p1, leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
 
       const p2Y = doc.y + 6;
-      const p2 = `Under mandatory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.
+      const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
+      const p2Statute = isTexas
+        ? 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers under §25.480(e), a 6-month limit applies (verify current limit).'
+        : `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
+      const p2 = `${p2Statute}
 
 ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request full documentation of all attempted visits and read records.' : 'I expressly confirm that I have never obstructed or prevented meter reader access'}${isEstimated ? ', and previous statements were rendered on estimated rather than actual readings' : ''}. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.`;
 
@@ -486,7 +490,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       const auditLines = [
         `• Physical Meter Obstruction: ${isMeterObstructed ? 'CAUTION: Obstruction indicated (protections may not apply if supplier proves access was denied).' : 'COMPLIANT: No obstruction; customer permitted physical access.'}`,
         `• Historical Billing Basis: ${isEstimated ? 'ESTIMATED: Previous bills were rendered on estimates; supports dispute regarding delayed actual meter readings.' : 'ACTUAL: Previous bills recorded normally.'}`,
-        ...(meterEvidence ? [`• Meter Photo Evidence: Serial ${meterEvidence.serialNumber || 'Verified'} (${meterEvidence.meterType || 'Physical meter'}). Physical reading ${meterEvidence.readingValue} ${meterEvidence.unit || 'kWh'} attached as supporting evidence.`] : []),
+        ...(meterEvidence ? [`• Meter Photo Evidence: Serial ${meterEvidence.serialNumber || 'Recorded'} (${meterEvidence.meterType || 'Physical meter'}). Physical reading ${meterEvidence.readingValue} ${meterEvidence.unit || 'kWh'} attached as supporting evidence.`] : []),
         `• Statutory Regulatory Standing: Consumer seeks resolution under ${regulation.clauseReference || 'statutory back-billing rules'}.`,
         `• Disputed Sum: Requesting removal of ${fmtCurr(disputableTotal, currency)} accrued prior to ${cutOffDate}.`
       ];

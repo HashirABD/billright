@@ -73,6 +73,11 @@ function generateDeterministicLetter({
 Please note that meter access obstruction was indicated for this account. Under statutory rules (such as ${regulation.clauseReference || 'statutory utility codes'}), back-billing protections may not apply if the supplier can demonstrate that the customer acted obstructively or prevented meter access. This letter is submitted without prejudice to investigate whether access attempts were legitimately made.\n`
     : '';
 
+  const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
+  const statutoryRuleText = isTexas
+    ? `Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers under §25.480(e), a 6-month limit applies (verify current limit).`
+    : `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
+
   return `${partyName}
 ${address}
 Account Reference: ${accNum}
@@ -92,7 +97,7 @@ I am writing to formally raise a complaint regarding my recent energy bill dated
 ${obstructionWarningParagraph}
 Upon reviewing the itemized breakdown against statutory regulatory standards, I have identified that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
 
-Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.
+${statutoryRuleText}
 
 ${isMeterObstructed ? 'While meter access issues were noted, I request full disclosure of all alleged visit records and meter reading attempts.' : 'I confirm that I have not acted obstructively or prevented meter access at any time'}${isEstimated ? ', and earlier bills were based on estimated rather than actual readings' : ''}.
 
@@ -306,6 +311,7 @@ INSTRUCTIONS:
    - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after 8 weeks.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
+   - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers under §25.480(e), add "verify current limit".
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
 
 Return strictly a JSON object with this shape:

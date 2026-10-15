@@ -52,19 +52,19 @@ export function generateIcsCalendar({
     'END:VALARM',
     'END:VEVENT',
 
-    // Event 2: 8-Week / 56-Day Ombudsman Determination Right
+    // Event 2: 8-Week / 56-Day Ombudsman Escalation Date
     'BEGIN:VEVENT',
     `UID:billright-56d-${Date.now()}@billright.org`,
     `DTSTAMP:${now}`,
     `DTSTART:${formatIcsDate(day56)}`,
     `DTEND:${formatIcsDate(new Date(day56.getTime() + 3600000))}`,
-    `SUMMARY:⚖️ Statutory Ombudsman Escalation Window: ${supplierName} (${accountNumber})`,
-    `DESCRIPTION:Standard 8-week statutory complaint period expired. You now possess an automatic statutory right under energy retail rules to escalate this dispute directly to the Energy Ombudsman for legally binding determination.`,
+    `SUMMARY:⚖️ Independent Ombudsman Escalation Date: ${supplierName} (${accountNumber})`,
+    `DESCRIPTION:Standard 8-week complaint period expired. Suggested response window has passed; you may now escalate this dispute directly to the independent Energy Ombudsman.`,
     'STATUS:CONFIRMED',
     'BEGIN:VALARM',
     'TRIGGER:-PT9H',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Reminder: Automatic right to escalate energy dispute to Ombudsman is active.',
+    'DESCRIPTION:Reminder: Independent Ombudsman escalation date reached.',
     'END:VALARM',
     'END:VEVENT',
 

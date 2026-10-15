@@ -39,7 +39,7 @@ const PRESETS = {
     ]
   },
   D: {
-    name: 'AU Preset D (NERR Rule 30 - 9 Months)',
+    name: 'Australia (NERR Rule 30, 9 Mos)',
     country: 'Australia',
     billDate: '2026-10-01',
     consumerName: 'David Miller',
@@ -54,7 +54,7 @@ const PRESETS = {
     ]
   },
   E: {
-    name: 'US CA Preset E (CPUC Rule 17.1 - 3 Months)',
+    name: 'United States - California (PG&E Rule 17.1, 3 Mos)',
     country: 'United States (California)',
     billDate: '2026-10-01',
     consumerName: 'Elena Rodriguez',
@@ -840,7 +840,7 @@ function openEmailDispatcherModal() {
   if (modalEmailBody) modalEmailBody.value = fullBody;
 
   if (modalSupplierSubtitle) {
-    modalSupplierSubtitle.textContent = `Verified complaints channel for ${supplierName} (${currentAnalysisResult.regulation?.jurisdiction || 'Statutory Jurisdiction'})`;
+    modalSupplierSubtitle.textContent = `Supplier complaints channel for ${supplierName} (${currentAnalysisResult.regulation?.jurisdiction || 'Statutory Jurisdiction'})`;
   }
 
   if (modalSupplierInfoBox) {
@@ -1333,7 +1333,7 @@ async function processMeterFile(file) {
     if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'none';
     if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'flex';
     if (meterSuccessFilename) meterSuccessFilename.textContent = file.name;
-    if (meterSuccessSummary) meterSuccessSummary.textContent = `Verified ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}). Please verify these values against your document.`;
+    if (meterSuccessSummary) meterSuccessSummary.textContent = `Meter reading extracted: ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}). Please check it against your photo.`;
 
     // Render Evidence Card
     if (meterEvidenceContainer) meterEvidenceContainer.style.display = 'block';

@@ -43,18 +43,18 @@ const JURISDICTION_CONFIGS = {
   'Australia': {
     lookbackMonths: 9,
     currency: 'A$',
-    label: 'Australia (NERR Rule 30)' // Scope: NERR states (e.g. NSW, QLD, SA). Note: Victoria has its own code and is not covered.
+    label: 'Australia (NERR Rule 30, 9 Mos)' // Scope: NERR participating states, e.g. NSW, QLD, SA. Note: Victoria has its own code and is not covered.
   },
   'United States (California)': {
     lookbackMonths: 3,
     currency: '$',
-    label: 'California (PG&E Electric Rule 17.1; equivalent tariff rules apply for SCE/SDG&E)' // Residential undercharges due to billing error only, 3 months.
+    label: 'United States - California (PG&E Rule 17.1, 3 Mos)' // Residential undercharges due to billing error only, 3 months.
   },
   'United States (Texas)': {
     // TODO verify REP limit in 16 TAC 25.480(e)
     lookbackMonths: 6,
     currency: '$',
-    label: 'Texas (PUCT §25.28(d) electric utilities; §25.480(e) for retail electric providers)'
+    label: 'United States - Texas (PUCT §25.28(d), 6 Mos)' // Electric utilities (§25.28(d)): 6 months from error discovery; REPs (§25.480(e)): verify current limit.
   },
   'Other Country': {
     lookbackMonths: 12,

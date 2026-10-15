@@ -270,7 +270,9 @@ export function renderTimeline({
 
   const pillText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   pillText.setAttribute('x', cutOffX);
-  pillText.setAttribute('y', 30);
+  pillText.setAttribute('y', 26);
+  pillText.setAttribute('dominant-baseline', 'middle');
+  pillText.setAttribute('text-anchor', 'middle');
   pillText.setAttribute('class', 'cutoff-pill-text');
   pillText.textContent = `Cut-off: ${cutOffDate}`;
   svg.appendChild(pillText);
