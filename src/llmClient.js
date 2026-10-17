@@ -40,6 +40,11 @@ function formatDate(d) {
   return String(d);
 }
 
+function fmtMoney(amount, currency = '£') {
+  const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  return `${currency}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 /**
  * Deterministic fallback letter generator if AI API is unavailable.
  */
@@ -57,10 +62,12 @@ function generateDeterministicLetter({
   supplierName,
   accountNumber,
   supplyAddress,
-  noticeDate
+  noticeDate,
+  supplierEmail,
+  supplierContact
 }) {
-  const formattedDisputable = `${currency}${disputableTotal.toFixed(2)}`;
-  const formattedTotal = `${currency}${totalBilled.toFixed(2)}`;
+  const formattedDisputable = fmtMoney(disputableTotal, currency);
+  const formattedTotal = fmtMoney(totalBilled, currency);
   const escalation = getEscalationPath(regulation.jurisdiction);
   const letterDate = formatDate(noticeDate);
 
@@ -68,6 +75,15 @@ function generateDeterministicLetter({
   const supplier = supplierName || 'Energy Supplier';
   const accNum = accountNumber || 'Reference On File';
   const address = supplyAddress || 'Supply Address On File';
+
+  let emailLine = '';
+  if (supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierName === 'Example Energy Ltd' || supplierContact?.email === 'complaints@example.com') {
+    emailLine = 'Email: complaints@example.com (demo address)';
+  } else if (supplierEmail) {
+    emailLine = `Email: ${supplierEmail}`;
+  } else if (supplierContact?.email) {
+    emailLine = `Email: ${supplierContact.email}`;
+  }
 
   const obstructionWarningParagraph = isMeterObstructed
     ? `\nIMPORTANT NOTICE REGARDING METER ACCESS:
@@ -85,7 +101,7 @@ Account Reference: ${accNum}
 Date: ${letterDate}
 
 Complaints Handling Team
-${supplier}
+${supplier}${emailLine ? '\n' + emailLine : ''}
 
 FORMAL COMPLAINT: Back-billing Dispute under ${regulation.clauseReference || 'Statutory Utility Code'}
 
@@ -151,7 +167,9 @@ export async function evaluateExceptionsAndFormatLetter({
   accountNumber,
   supplyAddress,
   noticeDate,
-  country = 'United Kingdom'
+  country = 'United Kingdom',
+  supplierEmail,
+  supplierContact
 }) {
   const partyName = consumerName || 'Account Holder';
   const supplier = supplierName || 'Energy Supplier';
@@ -192,7 +210,9 @@ export async function evaluateExceptionsAndFormatLetter({
       supplierName: supplier,
       accountNumber: accNum,
       supplyAddress: address,
-      noticeDate: letterDate
+      noticeDate: letterDate,
+      supplierEmail,
+      supplierContact
     });
 
     return {
@@ -221,7 +241,9 @@ export async function evaluateExceptionsAndFormatLetter({
       supplierName: supplier,
       accountNumber: accNum,
       supplyAddress: address,
-      noticeDate: letterDate
+      noticeDate: letterDate,
+      supplierEmail,
+      supplierContact
     });
 
     return {
@@ -267,7 +289,9 @@ export async function evaluateExceptionsAndFormatLetter({
       supplierName: supplier,
       accountNumber: accNum,
       supplyAddress: address,
-      noticeDate: letterDate
+      noticeDate: letterDate,
+      supplierEmail,
+      supplierContact
     });
     return {
       verdict: 'Likely Disputable Amount',
@@ -299,8 +323,8 @@ FACTS:
 - Regulation Summary: ${activeReg.summary}
 - Bill Issue Date: ${billDate}
 - Statutory ${lookbackMonths}-Month Lookback Cut-off: ${cutOffDate}
-- Total Billed: ${currency}${totalBilled.toFixed(2)}
-- Disputable Sum Accrued Before Cut-off: ${currency}${disputableTotal.toFixed(2)}
+- Total Billed: ${fmtMoney(totalBilled, currency)}
+- Disputable Sum Accrued Before Cut-off: ${fmtMoney(disputableTotal, currency)}
 - Meter Reading Status: ${isEstimated ? 'Previously estimated readings (supplier delayed actual reading)' : 'Actual readings'}
 - Customer Obstruction: No (Meter access was never denied)
 
@@ -312,7 +336,7 @@ INSTRUCTIONS:
    - Use the exact letter date: ${letterDate}.
    - DO NOT USE any bracketed placeholders like [Your Name], [Account Number], [Supplier Name], or [Address]. The real details provided above must be directly embedded.
    - Reference the exact regulation name and clause (${activeReg.clauseReference || 'Statutory Code'}).
-   - Insert the exact pre-calculated disputable sum of ${currency}${disputableTotal.toFixed(2)}.
+   - Insert the exact pre-calculated disputable sum of ${fmtMoney(disputableTotal, currency)}.
    - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after 8 weeks.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.

@@ -8,15 +8,16 @@ import { renderTimeline } from './timeline.js';
 import { downloadCalendarEvent } from './calendarHelper.js';
 
 // Preset definitions conforming to PRD specification and multi-jurisdiction rules
+// Preset definitions conforming to PRD specification and multi-jurisdiction rules
 const PRESETS = {
   A: {
     name: 'UK Preset A (Exceeds 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
-    consumerName: 'Sarah Jenkins',
+    consumerName: 'Jane Example',
     supplierName: 'Example Energy Ltd',
     accountNumber: 'EX-8849201',
-    supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -28,10 +29,10 @@ const PRESETS = {
     name: 'UK Preset B (Within 12 Months)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
-    consumerName: 'James Wood',
+    consumerName: 'Jane Example',
     supplierName: 'Example Energy Ltd',
     accountNumber: 'EX-552109',
-    supplyAddress: '22 Richmond Way, London, SW15 2RF',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
     isEstimated: false,
     isMeterObstructed: false,
     periods: [
@@ -72,10 +73,10 @@ const PRESETS = {
     name: 'Preset C (Missing Data)',
     country: 'United Kingdom',
     billDate: '2026-10-01',
-    consumerName: 'Sarah Jenkins',
+    consumerName: 'Jane Example',
     supplierName: 'Example Energy Ltd',
     accountNumber: 'EX-8849201',
-    supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -92,6 +93,21 @@ function getCurrencySymbol(country = '') {
   if (country && country.includes('United States')) return '$';
   if (country === 'United Kingdom') return '£';
   return '$';
+}
+
+/**
+ * Formats a currency amount with commas and two decimal places (e.g. £1,000.00)
+ */
+function formatMoney(amount, currency = '£') {
+  const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  return `${currency}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * Validates whether an email string is structurally valid
+ */
+function isValidEmail(email) {
+  return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 // DOM references
@@ -135,6 +151,8 @@ const btnDownloadPdfText = document.getElementById('btn-download-pdf-text');
 const btnEmailSupplier = document.getElementById('btn-email-supplier');
 const btnEmailSupplierText = document.getElementById('btn-email-supplier-text');
 const btnPrintDossier = document.getElementById('btn-print-dossier');
+const unknownSupplierEmailBox = document.getElementById('unknown-supplier-email-box');
+const inputUnknownSupplierEmail = document.getElementById('input-unknown-supplier-email');
 
 // Header & Utility Controls
 const btnThemeToggle = document.getElementById('btn-theme-toggle');
@@ -340,7 +358,7 @@ function validateAndRecalculate() {
   }
 
   const currencySymbol = getCurrencySymbol(countrySelect.value);
-  displayTotalBilled.textContent = `${currencySymbol}${totalBilled.toFixed(2)}`;
+  displayTotalBilled.textContent = formatMoney(totalBilled, currencySymbol);
 
   if (hasErrors) {
     validationErrorBanner.classList.add('visible');
@@ -382,13 +400,22 @@ function resetResultsToEmptyState() {
   if (verdictContainer) verdictContainer.innerHTML = '';
   if (verdictExp) verdictExp.textContent = '';
   const currency = getCurrencySymbol(countrySelect ? countrySelect.value : 'United Kingdom');
-  if (verdictSum) verdictSum.textContent = `${currency}0.00`;
+  if (verdictSum) verdictSum.textContent = formatMoney(0, currency);
   if (verdictCut) verdictCut.textContent = '--';
   if (breakdownTb) breakdownTb.innerHTML = '';
   if (sourcesCont) sourcesCont.innerHTML = '';
   if (timelineCont) timelineCont.innerHTML = '';
   if (obsWarning) obsWarning.style.display = 'none';
   if (otherCountryWarning) otherCountryWarning.style.display = 'none';
+
+  // Hide and disable action buttons until a letter exists
+  if (btnCopyLetter) { btnCopyLetter.disabled = true; btnCopyLetter.style.display = 'none'; }
+  if (btnEmailSupplier) { btnEmailSupplier.disabled = true; btnEmailSupplier.style.display = 'none'; }
+  if (btnPrintDossier) { btnPrintDossier.disabled = true; btnPrintDossier.style.display = 'none'; }
+  if (btnDownloadPdf) { btnDownloadPdf.disabled = true; btnDownloadPdf.style.display = 'none'; }
+  if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
+  if (inputUnknownSupplierEmail) inputUnknownSupplierEmail.value = '';
+
   if (resultsSection) resultsSection.classList.remove('visible');
 }
 
@@ -613,9 +640,9 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
   }
 
   // Variant 4: Disputable (partly or fully disputable)
-  if (tagEl) tagEl.textContent = 'Dispute Eligible';
-  const dispStr = `${currency}${data.disputableTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const totalStr = `${currency}${(data.totalBilled || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (tagEl) tagEl.textContent = 'Possible Dispute';
+  const dispStr = formatMoney(data.disputableTotal, currency);
+  const totalStr = formatMoney(data.totalBilled || 0, currency);
 
   headlineEl.textContent = `You may not have to pay ${dispStr} of your ${totalStr} bill`;
   whyEl.textContent = `Based on the ${lookbackMonths}-month limit (${regClause}). Charges before ${cutOff} are outside the limit.`;
@@ -741,7 +768,7 @@ function renderResults(data) {
     cutoffTitle.textContent = `${lookbackMonths}-Month Lookback Cut-off:`;
   }
 
-  verdictDisputableSum.textContent = `${currency}${data.disputableTotal.toFixed(2)}`;
+  verdictDisputableSum.textContent = formatMoney(data.disputableTotal, currency);
   verdictCutoffDate.textContent = data.cutOffDate;
 
   // 3. Interactive Dispute Timeline Visualizer
@@ -773,57 +800,139 @@ function renderResults(data) {
       <td>${item.startDate} &rarr; ${item.endDate}</td>
       <td class="tabular-nums">${item.totalDays} days</td>
       <td class="tabular-nums">${item.disputableDays} days</td>
-      <td class="tabular-nums">${currency}${item.amount.toFixed(2)}</td>
-      <td class="tabular-nums"><strong>${currency}${item.disputableAmount.toFixed(2)}</strong></td>
+      <td class="tabular-nums">${formatMoney(item.amount, currency)}</td>
+      <td class="tabular-nums"><strong>${formatMoney(item.disputableAmount, currency)}</strong></td>
       <td>${statusBadge}</td>
     `;
     breakdownTbody.appendChild(tr);
   });
 
-  // 4. Retrieved Regulatory Authority
+  // 4. Retrieved Regulatory Authority (Curated Primary + Live Retrieved Source)
   sourcesContainer.innerHTML = '';
   const reg = data.regulation || {};
-  const sourceDiv = document.createElement('div');
-  sourceDiv.className = 'source-item';
+  const primary = reg.primaryAuthority || {
+    title: reg.title,
+    clauseReference: reg.clauseReference,
+    summary: reg.summary,
+    sourceUrl: reg.sourceUrl
+  };
 
-  const isLiveSearchUnavailable = reg.liveSearch === false || Boolean(reg.fallbackNotice);
-  const fallbackNoticeHtml = isLiveSearchUnavailable
-    ? `<div class="live-search-fallback-notice" style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-subtle); border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.8125rem; color: var(--text-secondary);">
-        <strong style="color: #f59e0b;">Notice:</strong> Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.
-      </div>`
-    : '';
-
-  sourceDiv.innerHTML = `
+  // Curated built-in statutory summary as primary authority
+  const primaryDiv = document.createElement('div');
+  primaryDiv.className = 'source-item primary-source-item';
+  primaryDiv.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
-      <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
-      ${(reg.liveSearch && !reg.builtIn) ? '<span class="trust-badge trust-live" style="font-size: 0.7rem;">Live source</span>' : '<span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Built-in reference (please verify)</span>'}
+      <div class="source-title" style="font-weight: 700; color: var(--text-primary); font-size: 0.9375rem;">
+        ${primary.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})
+      </div>
+      <span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Primary Statutory Authority</span>
     </div>
-    <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.35rem 0;">
-      ${reg.summary || 'Suppliers cannot back-bill customers for energy used more than 12 months ago.'}
+    <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.5rem 0 0.4rem 0; line-height: 1.5;">
+      ${primary.summary || 'Under mandatory back-billing rules, energy suppliers are barred from seeking recovery of charges for energy consumed more than the statutory limit prior to the bill date where previous accurate billing was not provided.'}
     </p>
-    ${reg.sourceUrl ? `<a href="${reg.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url">${reg.sourceUrl} &nearr;</a>` : ''}
-    ${fallbackNoticeHtml}
+    ${primary.sourceUrl ? `<a href="${primary.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${primary.sourceUrl} &nearr;</a>` : ''}
   `;
-  sourcesContainer.appendChild(sourceDiv);
+  sourcesContainer.appendChild(primaryDiv);
 
-  // 5. Dispute Letter Box
+  // Live Tavily additional retrieved source
+  if (reg.additionalSource && reg.additionalSource.url) {
+    const addSource = reg.additionalSource;
+    const addDiv = document.createElement('div');
+    addDiv.className = 'source-item additional-source-item';
+    addDiv.style.marginTop = '0.75rem';
+    addDiv.style.borderTop = '1px solid var(--border-color)';
+    addDiv.style.paddingTop = '0.75rem';
+
+    const docTypeBadge = addSource.docTypeLabel
+      ? `<span class="preset-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.6875rem; margin-left: 0.5rem;">${addSource.docTypeLabel}</span>`
+      : '';
+
+    addDiv.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; flex-wrap: wrap;">
+          <span style="font-weight: 600; font-size: 0.8125rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Additional retrieved source</span>
+          ${docTypeBadge}
+        </div>
+        <span class="trust-badge trust-live" style="font-size: 0.6875rem;">Live source</span>
+      </div>
+      <div class="source-title" style="font-size: 0.875rem; font-weight: 600; margin-top: 0.25rem;">
+        ${addSource.title || 'Retrieved Document'}
+      </div>
+      <div style="margin-top: 0.25rem;">
+        <a href="${addSource.url}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${addSource.url} &nearr;</a>
+      </div>
+      <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.5rem;">Summary of retrieved source:</div>
+      <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin: 0.2rem 0; line-height: 1.45;">
+        ${addSource.summary}
+      </p>
+    `;
+    sourcesContainer.appendChild(addDiv);
+  } else if (reg.liveSearch === false || Boolean(reg.fallbackNotice)) {
+    const fallbackDiv = document.createElement('div');
+    fallbackDiv.className = 'live-search-fallback-notice';
+    fallbackDiv.style.cssText = 'margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-subtle); border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.8125rem; color: var(--text-secondary);';
+    fallbackDiv.innerHTML = '<strong style="color: #f59e0b;">Notice:</strong> Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.';
+    sourcesContainer.appendChild(fallbackDiv);
+  }
+
+  // 5. Dispute Letter Box & Action Buttons
   if (data.disputeLetter) {
     letterContent.textContent = data.disputeLetter;
+    btnCopyLetter.disabled = false;
     btnCopyLetter.style.display = 'inline-flex';
-    if (btnDownloadPdf) btnDownloadPdf.style.display = 'inline-flex';
+    if (btnPrintDossier) {
+      btnPrintDossier.disabled = false;
+      btnPrintDossier.style.display = 'inline-flex';
+    }
+    if (btnDownloadPdf) {
+      btnDownloadPdf.disabled = false;
+      btnDownloadPdf.style.display = 'inline-flex';
+    }
 
-    // Direct Supplier Email Launcher Button
+    // Direct Supplier Email Handling
+    const contact = data.supplierContact || {};
+    const isDemoSupplier = contact.isDemo || data.supplierName === 'Example Energy Ltd' || contact.name === 'Example Energy Ltd';
+    const isDirectorySupplier = contact.isDirectory && Boolean(contact.email);
+
     if (btnEmailSupplier) {
       btnEmailSupplier.style.display = 'inline-flex';
-      const contact = data.supplierContact || {};
-      if (contact.email) {
-        btnEmailSupplier.title = `Launch pre-filled formal dispute email directly to ${contact.email}`;
+
+      if (isDemoSupplier) {
+        data.supplierEmail = 'complaints@example.com';
+        if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
+        btnEmailSupplier.disabled = false;
+        btnEmailSupplier.title = 'Launch pre-filled dispute email to complaints@example.com (demo address)';
+        if (btnEmailSupplierText) {
+          btnEmailSupplierText.textContent = 'Email Dispute (complaints@example.com • demo address)';
+        }
+      } else if (isDirectorySupplier) {
+        data.supplierEmail = contact.email;
+        if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
+        btnEmailSupplier.disabled = false;
+        btnEmailSupplier.title = `Launch pre-filled dispute email directly to ${contact.email}`;
         if (btnEmailSupplierText) {
           btnEmailSupplierText.textContent = `Email Dispute (${contact.email})`;
         }
       } else {
-        if (btnEmailSupplierText) {
-          btnEmailSupplierText.textContent = 'Email Dispute to Supplier';
+        // Unknown supplier: show input and disable email buttons until a valid email is entered
+        if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'block';
+        const enteredEmail = (inputUnknownSupplierEmail ? inputUnknownSupplierEmail.value.trim() : '') || (data.supplierEmail || '');
+        const valid = isValidEmail(enteredEmail);
+
+        if (valid) {
+          data.supplierEmail = enteredEmail;
+          btnEmailSupplier.disabled = false;
+          btnEmailSupplier.title = `Launch pre-filled dispute email directly to ${enteredEmail}`;
+          if (btnEmailSupplierText) {
+            btnEmailSupplierText.textContent = `Email Dispute (${enteredEmail})`;
+          }
+        } else {
+          data.supplierEmail = null;
+          btnEmailSupplier.disabled = true;
+          btnEmailSupplier.title = "Enter your supplier's complaints email to enable email buttons";
+          if (btnEmailSupplierText) {
+            btnEmailSupplierText.textContent = 'Email Dispute to Supplier';
+          }
         }
       }
     }
@@ -838,9 +947,21 @@ function renderResults(data) {
     letterContent.textContent = `[Formal Dispute Letter Not Applicable]
 
 Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter access was obstructed. A formal back-billing dispute cannot be issued.'}`;
+    btnCopyLetter.disabled = true;
     btnCopyLetter.style.display = 'none';
-    if (btnDownloadPdf) btnDownloadPdf.style.display = 'none';
-    if (btnEmailSupplier) btnEmailSupplier.style.display = 'none';
+    if (btnPrintDossier) {
+      btnPrintDossier.disabled = true;
+      btnPrintDossier.style.display = 'none';
+    }
+    if (btnDownloadPdf) {
+      btnDownloadPdf.disabled = true;
+      btnDownloadPdf.style.display = 'none';
+    }
+    if (btnEmailSupplier) {
+      btnEmailSupplier.disabled = true;
+      btnEmailSupplier.style.display = 'none';
+    }
+    if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
     if (escalationTrackerCard) escalationTrackerCard.style.display = 'none';
   }
 
@@ -1049,6 +1170,8 @@ if (btnCopyLetter) {
 const emailModal = document.getElementById('email-modal');
 const btnCloseEmailModal = document.getElementById('btn-close-email-modal');
 const modalEmailTo = document.getElementById('modal-email-to');
+const modalEmailToBadge = document.getElementById('modal-email-to-badge');
+const modalEmailToHint = document.getElementById('modal-email-to-hint');
 const modalEmailSubject = document.getElementById('modal-email-subject');
 const modalEmailBody = document.getElementById('modal-email-body');
 const modalSupplierSubtitle = document.getElementById('modal-supplier-subtitle');
@@ -1062,6 +1185,26 @@ const btnLaunchMailto = document.getElementById('btn-launch-mailto');
 const btnCopyAllEmail = document.getElementById('btn-copy-all-email');
 
 /**
+ * Updates the embedded complaints email in the current letter text
+ */
+function updateDisputeLetterEmail(newEmail) {
+  if (!currentAnalysisResult || !currentAnalysisResult.disputeLetter) return;
+  let letter = currentAnalysisResult.disputeLetter;
+  if (/Email:[^\n]+/i.test(letter)) {
+    letter = letter.replace(/Email:[^\n]+/i, `Email: ${newEmail}`);
+  } else {
+    const supplier = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
+    letter = letter.replace(supplier, `${supplier}\nEmail: ${newEmail}`);
+  }
+  currentAnalysisResult.disputeLetter = letter;
+  if (letterContent) letterContent.textContent = letter;
+  if (modalEmailBody) {
+    const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n`;
+    modalEmailBody.value = noticeHeader + letter;
+  }
+}
+
+/**
  * Opens the Enterprise Email Dispatcher Modal with pre-populated details
  */
 function openEmailDispatcherModal() {
@@ -1072,15 +1215,68 @@ function openEmailDispatcherModal() {
 
   const contact = currentAnalysisResult.supplierContact || {};
   const supplierName = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
-  const targetEmail = contact.email || 'complaints@energy-supplier.co.uk';
+  const isDemoSupplier = contact.isDemo || supplierName === 'Example Energy Ltd' || contact.name === 'Example Energy Ltd';
+  const isDirectorySupplier = contact.isDirectory && Boolean(contact.email);
+
+  let targetEmail = '';
+  if (isDemoSupplier) {
+    targetEmail = 'complaints@example.com';
+    currentAnalysisResult.supplierEmail = targetEmail;
+  } else if (isDirectorySupplier) {
+    targetEmail = contact.email;
+    currentAnalysisResult.supplierEmail = targetEmail;
+  } else if (currentAnalysisResult.supplierEmail) {
+    targetEmail = currentAnalysisResult.supplierEmail;
+  } else if (inputUnknownSupplierEmail && inputUnknownSupplierEmail.value.trim()) {
+    targetEmail = inputUnknownSupplierEmail.value.trim();
+    if (isValidEmail(targetEmail)) {
+      currentAnalysisResult.supplierEmail = targetEmail;
+    }
+  }
+
   const accNum = currentAnalysisResult.accountNumber || (accountNumberInput ? accountNumberInput.value.trim() : 'Reference');
   const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
 
   const subject = `FORMAL DISPUTE: Back-billing catch-up charges (${clause}) - Account ${accNum}`;
-  const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Legal Dossier attached as a PDF.]\n\n`;
+  const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n`;
   const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
 
-  if (modalEmailTo) modalEmailTo.value = targetEmail;
+  if (modalEmailTo) {
+    modalEmailTo.value = targetEmail;
+    if (isDemoSupplier) {
+      modalEmailTo.readOnly = true;
+      if (modalEmailToBadge) {
+        modalEmailToBadge.textContent = 'demo address';
+        modalEmailToBadge.className = 'modal-label-badge valid';
+      }
+      if (modalEmailToHint) modalEmailToHint.style.display = 'none';
+    } else if (isDirectorySupplier) {
+      modalEmailTo.readOnly = true;
+      if (modalEmailToBadge) {
+        modalEmailToBadge.textContent = 'Verified Supplier Channel';
+        modalEmailToBadge.className = 'modal-label-badge valid';
+      }
+      if (modalEmailToHint) modalEmailToHint.style.display = 'none';
+    } else {
+      modalEmailTo.readOnly = false;
+      modalEmailTo.placeholder = "e.g. complaints@supplier.co.uk";
+      if (modalEmailToBadge) {
+        modalEmailToBadge.textContent = "Check your supplier's website";
+        modalEmailToBadge.className = 'modal-label-badge';
+      }
+      if (modalEmailToHint) {
+        modalEmailToHint.style.display = 'block';
+        modalEmailToHint.textContent = "Check your supplier's website";
+      }
+    }
+  }
+
+  // Validate and toggle channel buttons
+  const isEmailValid = isValidEmail(targetEmail);
+  if (btnLaunchGmail) btnLaunchGmail.disabled = !isEmailValid;
+  if (btnLaunchOutlook) btnLaunchOutlook.disabled = !isEmailValid;
+  if (btnLaunchMailto) btnLaunchMailto.disabled = !isEmailValid;
+
   if (modalEmailSubject) modalEmailSubject.value = subject;
   if (modalEmailBody) modalEmailBody.value = fullBody;
 
@@ -1089,12 +1285,14 @@ function openEmailDispatcherModal() {
   }
 
   if (modalSupplierInfoBox) {
+    const badgeText = isDemoSupplier ? 'demo address' : (isDirectorySupplier ? 'Verified complaints contact' : "Check your supplier's website");
+    const badgeClass = isDemoSupplier || isDirectorySupplier ? 'valid' : '';
     modalSupplierInfoBox.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
         <div>
           <strong style="color: var(--color-text-main); font-size: 0.9375rem;">${contact.name || supplierName}</strong>
-          <span class="preset-badge valid" style="margin-left: 0.5rem; font-size: 0.6875rem;">Supplier complaints contact</span>
-          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">Check the supplier's website for the latest address</div>
+          <span class="preset-badge ${badgeClass}" style="margin-left: 0.5rem; font-size: 0.6875rem;">${badgeText}</span>
+          <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">Check your supplier's website for the complaints email address</div>
         </div>
         <div style="font-size: 0.8125rem; color: var(--color-text-muted);">
           ${contact.phone ? `<span>📞 Phone: <a href="tel:${contact.phone}" style="color: #2563eb; font-weight: 500;">${contact.phone}</a></span> &bull; ` : ''}
@@ -1146,6 +1344,57 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Real-time synchronization between unknown supplier inputs
+if (modalEmailTo) {
+  modalEmailTo.addEventListener('input', () => {
+    const val = modalEmailTo.value.trim();
+    if (inputUnknownSupplierEmail) inputUnknownSupplierEmail.value = val;
+    const valid = isValidEmail(val);
+    if (btnLaunchGmail) btnLaunchGmail.disabled = !valid;
+    if (btnLaunchOutlook) btnLaunchOutlook.disabled = !valid;
+    if (btnLaunchMailto) btnLaunchMailto.disabled = !valid;
+    if (btnEmailSupplier) {
+      btnEmailSupplier.disabled = !valid;
+      if (btnEmailSupplierText) {
+        btnEmailSupplierText.textContent = valid ? `Email Dispute (${val})` : 'Email Dispute to Supplier';
+      }
+    }
+    if (valid) {
+      if (currentAnalysisResult) {
+        currentAnalysisResult.supplierEmail = val;
+        updateDisputeLetterEmail(val);
+      }
+    } else if (currentAnalysisResult) {
+      currentAnalysisResult.supplierEmail = null;
+    }
+  });
+}
+
+if (inputUnknownSupplierEmail) {
+  inputUnknownSupplierEmail.addEventListener('input', () => {
+    const val = inputUnknownSupplierEmail.value.trim();
+    if (modalEmailTo) modalEmailTo.value = val;
+    const valid = isValidEmail(val);
+    if (btnEmailSupplier) {
+      btnEmailSupplier.disabled = !valid;
+      if (btnEmailSupplierText) {
+        btnEmailSupplierText.textContent = valid ? `Email Dispute (${val})` : 'Email Dispute to Supplier';
+      }
+    }
+    if (btnLaunchGmail) btnLaunchGmail.disabled = !valid;
+    if (btnLaunchOutlook) btnLaunchOutlook.disabled = !valid;
+    if (btnLaunchMailto) btnLaunchMailto.disabled = !valid;
+    if (valid) {
+      if (currentAnalysisResult) {
+        currentAnalysisResult.supplierEmail = val;
+        updateDisputeLetterEmail(val);
+      }
+    } else if (currentAnalysisResult) {
+      currentAnalysisResult.supplierEmail = null;
+    }
+  });
+}
+
 // Copy inline buttons inside modal
 if (btnCopyModalTo) {
   btnCopyModalTo.addEventListener('click', async () => {
@@ -1175,14 +1424,17 @@ if (btnModalCopyLetterBody) {
 if (btnLaunchGmail) {
   btnLaunchGmail.addEventListener('click', async () => {
     if (!currentAnalysisResult) return;
-    const to = modalEmailTo.value;
+    const to = modalEmailTo.value.trim();
+    if (!isValidEmail(to)) {
+      showToast("Please enter a valid supplier complaints email address.", 'warning');
+      return;
+    }
     const sub = modalEmailSubject.value;
     const fullText = modalEmailBody.value;
 
-    // Concise body for URL safety
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach PDF dossier.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -1198,13 +1450,17 @@ if (btnLaunchGmail) {
 if (btnLaunchOutlook) {
   btnLaunchOutlook.addEventListener('click', async () => {
     if (!currentAnalysisResult) return;
-    const to = modalEmailTo.value;
+    const to = modalEmailTo.value.trim();
+    if (!isValidEmail(to)) {
+      showToast("Please enter a valid supplier complaints email address.", 'warning');
+      return;
+    }
     const sub = modalEmailSubject.value;
     const fullText = modalEmailBody.value;
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach PDF dossier.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -1220,13 +1476,17 @@ if (btnLaunchOutlook) {
 if (btnLaunchMailto) {
   btnLaunchMailto.addEventListener('click', async () => {
     if (!currentAnalysisResult) return;
-    const to = modalEmailTo.value;
+    const to = modalEmailTo.value.trim();
+    if (!isValidEmail(to)) {
+      showToast("Please enter a valid supplier complaints email address.", 'warning');
+      return;
+    }
     const sub = modalEmailSubject.value;
     const fullText = modalEmailBody.value;
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Complete 3-Page Formal Pleading copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Complete Dispute Packet (draft) copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -1248,7 +1508,7 @@ if (btnCopyAllEmail) {
     const packet = `TO: ${to}\nSUBJECT: ${sub}\n\n---\n\n${body}`;
     try {
       await navigator.clipboard.writeText(packet);
-      showToast('Complete dispute dossier (To, Subject, Body) copied to clipboard!', 'success', 3500);
+      showToast('Complete dispute packet (draft) copied to clipboard!', 'success', 3500);
     } catch (err) {
       showToast('Could not access clipboard.', 'error');
     }
@@ -1274,15 +1534,15 @@ if (btnAddCalendar) {
   });
 }
 
-// Download Formal Legal Packet (.pdf) button handler
+// Download Dispute Packet (draft) (.pdf) button handler
 if (btnDownloadPdf) {
   btnDownloadPdf.addEventListener('click', async () => {
     if (!currentAnalysisResult) {
-      showToast('Please run an audit before downloading the legal dispute packet.', 'warning');
+      showToast('Please run an audit before downloading the dispute packet.', 'warning');
       return;
     }
 
-    const originalBtnText = btnDownloadPdfText ? btnDownloadPdfText.textContent : 'Download Formal Legal Packet (.pdf)';
+    const originalBtnText = btnDownloadPdfText ? btnDownloadPdfText.textContent : 'Download Dispute Packet (draft) (.pdf)';
     const cName = consumerNameInput ? consumerNameInput.value.trim() : (currentAnalysisResult.consumerName || '');
     const sName = supplierNameInput ? supplierNameInput.value.trim() : (currentAnalysisResult.supplierName || '');
     const aNum = accountNumberInput ? accountNumberInput.value.trim() : (currentAnalysisResult.accountNumber || '');
@@ -1298,6 +1558,8 @@ if (btnDownloadPdf) {
 
     try {
       const localDates = getLocalEscalationDates();
+      const resolvedSupplierEmail = currentAnalysisResult.supplierEmail || (inputUnknownSupplierEmail ? inputUnknownSupplierEmail.value.trim() : null);
+
       const pdfPayload = {
         consumerName: cName,
         supplierName: sName,
@@ -1316,7 +1578,9 @@ if (btnDownloadPdf) {
         isEstimated: inputEstimated.value === 'true',
         isMeterObstructed: inputObstructed.value === 'true',
         disputeLetter: currentAnalysisResult.disputeLetter,
-        meterEvidence: currentMeterEvidence
+        meterEvidence: currentMeterEvidence,
+        supplierEmail: resolvedSupplierEmail,
+        supplierContact: currentAnalysisResult.supplierContact
       };
 
       const response = await fetch('/api/generate-pdf', {
@@ -1337,17 +1601,23 @@ if (btnDownloadPdf) {
       const downloadLink = document.createElement('a');
       downloadLink.href = blobUrl;
       const safeRef = (pdfPayload.accountNumber || 'Reference').replace(/[^a-zA-Z0-9_-]/g, '_');
-      downloadLink.download = `BillRight_Legal_Dispute_Packet_${safeRef}.pdf`;
+      downloadLink.download = `BillRight_Dispute_Packet_Draft_${safeRef}.pdf`;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       downloadLink.remove();
       window.URL.revokeObjectURL(blobUrl);
 
-      showToast('Ready-to-send PDF legal dossier downloaded!', 'success');
+      showToast('Dispute packet (draft) PDF downloaded!', 'success');
 
     } catch (err) {
       console.error('PDF generation error:', err);
       showToast(`Could not generate PDF packet: ${err.message}`, 'error');
+    } finally {
+      btnDownloadPdf.disabled = false;
+      if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;
+    }
+  });
+}
     } finally {
       btnDownloadPdf.disabled = false;
       if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;
@@ -1793,15 +2063,15 @@ function setupNoticeDismissal() {
   }
 }
 
-// Print Ready-to-Send Dossier
+// Print Dispute Packet (draft)
 function setupPrintDossier() {
   if (!btnPrintDossier) return;
   btnPrintDossier.addEventListener('click', () => {
-    if (!currentAnalysisResult) {
-      showToast('Please run an audit before printing the legal dossier.', 'warning');
+    if (!currentAnalysisResult || !currentAnalysisResult.disputeLetter) {
+      showToast('Please run an audit before printing the dispute packet.', 'warning');
       return;
     }
-    showToast('Preparing ready-to-send print dossier...', 'info', 1800);
+    showToast('Preparing dispute packet (draft) for print...', 'info', 1800);
     setTimeout(() => {
       window.print();
     }, 200);

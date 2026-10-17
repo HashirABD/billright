@@ -11,11 +11,11 @@
   <!-- Open Graph / Social Meta -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="BillRight — Energy Back-Billing Verification">
-  <meta property="og:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with ready-to-send legal dossiers.">
+  <meta property="og:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with dispute packets (draft).">
   <meta property="og:site_name" content="BillRight">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="BillRight — Energy Back-Billing Verification">
-  <meta name="twitter:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with ready-to-send legal dossiers.">
+  <meta name="twitter:description" content="Audit utility catch-up bills against statutory back-billing limits. Deterministic pro-rata mathematics with dispute packets (draft).">
 
   <!-- Favicon -->
   <link rel="icon" type="image/jpeg" href="logo.jpg">
@@ -318,14 +318,14 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">2. Account &amp; Supplier Identification</h2>
-            <p class="card-subtitle">Required party details for generating ready-to-send dispute notices.</p>
+            <p class="card-subtitle">Required party details for generating dispute notices.</p>
           </div>
         </div>
 
         <div class="form-grid">
           <div class="form-group">
             <label for="input-consumer-name" class="form-label">Account Holder Full Name</label>
-            <input type="text" id="input-consumer-name" class="form-input" placeholder="e.g. Sarah Jenkins" required>
+            <input type="text" id="input-consumer-name" class="form-input" placeholder="e.g. Jane Example" required>
             <span class="form-hint">Primary name on utility contract.</span>
           </div>
 
@@ -343,7 +343,7 @@
 
           <div class="form-group">
             <label for="input-supply-address" class="form-label">Property Supply Address</label>
-            <input type="text" id="input-supply-address" class="form-input" placeholder="e.g. 14 Windsor Gardens, Bristol, BS8 4UQ" required>
+            <input type="text" id="input-supply-address" class="form-input" placeholder="e.g. 1 Example Street, Exampletown, EX1 1AA" required>
             <span class="form-hint">Physical property connected to the disputed meter.</span>
           </div>
         </div>
@@ -588,7 +588,7 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">Retrieved Statutory Legal Authority <span id="authority-trust-badge" class="trust-badge trust-builtin" style="display: none;">Built-in reference (please verify)</span></h2>
-            <p class="card-subtitle">Official legislative and regulator licence condition grounding</p>
+            <p class="card-subtitle">Statutory reference and retrieved sources</p>
           </div>
         </div>
 
@@ -602,42 +602,50 @@
         <div class="card-header">
           <div>
             <h2 class="card-title">Formal Notice of Dispute</h2>
-            <p class="card-subtitle">Ready-to-serve legal pleading citing statutory provisions and escalation deadlines.</p>
+            <p class="card-subtitle">Draft dispute letter. Review it before sending.</p>
           </div>
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" id="btn-copy-letter" class="btn-secondary">
+            <button type="button" id="btn-copy-letter" class="btn-secondary" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
               Copy Letter
             </button>
-            <button type="button" id="btn-email-supplier" class="btn-secondary">
+            <button type="button" id="btn-email-supplier" class="btn-secondary" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
               <span id="btn-email-supplier-text">Email Dispute to Supplier</span>
             </button>
-            <button type="button" id="btn-print-dossier" class="btn-secondary" title="Print ready-to-send legal dossier">
+            <button type="button" id="btn-print-dossier" class="btn-secondary" title="Print dispute packet (draft)" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 6 2 18 2 18 9"/>
                 <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
                 <rect x="6" y="14" width="12" height="8"/>
               </svg>
-              Print Dossier
+              <span id="btn-print-dossier-text">Print Dispute Packet (draft)</span>
             </button>
-            <button type="button" id="btn-download-pdf" class="btn-primary">
+            <button type="button" id="btn-download-pdf" class="btn-primary" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <line x1="12" y1="18" x2="12" y2="12"/>
                 <line x1="9" y1="15" x2="15" y2="15"/>
               </svg>
-              <span id="btn-download-pdf-text">Download Ready-to-Send Packet (.pdf)</span>
+              <span id="btn-download-pdf-text">Download Dispute Packet (draft) (.pdf)</span>
             </button>
             <span id="copy-feedback" class="copy-feedback">Copied to clipboard!</span>
           </div>
+        </div>
+
+        <div id="unknown-supplier-email-box" class="unknown-supplier-email-box" style="display: none; margin-bottom: 1rem; padding: 0.875rem 1rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-color); border-radius: 6px;">
+          <label for="input-unknown-supplier-email" class="form-label" style="font-weight: 600; margin-bottom: 0.35rem;">Enter your supplier's complaints email</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            <input type="email" id="input-unknown-supplier-email" class="form-input" placeholder="e.g. complaints@supplier.co.uk" style="flex: 1; min-width: 240px;">
+          </div>
+          <span class="form-hint" style="margin-top: 0.35rem; display: block; color: var(--text-muted); font-size: 0.8125rem;">Check your supplier's website</span>
         </div>
 
         <pre class="letter-box" id="letter-content" tabindex="0">
@@ -710,7 +718,7 @@
       <div class="footer-badge-group">
         <span class="footer-pill">Deterministic Arithmetic</span>
         <span class="footer-pill">BillRight does not store your files. They are sent to Google Gemini for reading and are subject to Google's data policy.</span>
-        <span class="footer-pill">Ready-to-Send Dossier</span>
+        <span class="footer-pill">Dispute Packet (draft)</span>
       </div>
     </div>
     <div class="footer-disclaimer">
@@ -745,17 +753,18 @@
 
         <!-- Recipient Email Field -->
         <div class="modal-field-group">
-          <label class="modal-label" for="modal-email-to">
+          <label class="modal-label" for="modal-email-to" id="modal-email-to-label">
             Supplier complaints email:
-            <span class="modal-label-badge">Statutory Escalation</span>
+            <span class="modal-label-badge" id="modal-email-to-badge">Statutory Escalation</span>
           </label>
           <div class="modal-input-with-action">
-            <input type="text" id="modal-email-to" class="form-input modal-input tabular-nums" readonly>
+            <input type="text" id="modal-email-to" class="form-input modal-input tabular-nums" placeholder="e.g. complaints@supplier.co.uk">
             <button type="button" class="btn-copy-inline" id="btn-copy-modal-to" title="Copy recipient email">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               <span>Copy</span>
             </button>
           </div>
+          <span class="form-hint" id="modal-email-to-hint" style="display: none; margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted);">Check your supplier's website</span>
         </div>
 
         <!-- Subject Line Field -->
@@ -814,7 +823,7 @@
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
               </svg>
               <div class="channel-text">
-                <div class="channel-title">Copy Full Dossier</div>
+                <div class="channel-title">Copy Dispute Packet (draft)</div>
                 <div class="channel-desc">Copies To, Subject & Body to Clipboard</div>
               </div>
             </button>

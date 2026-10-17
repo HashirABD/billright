@@ -80,7 +80,7 @@ function drawHeaderFooter(doc, { pageNum, totalPages, accountNumber, consumerNam
   // Running Header (top)
   doc.save();
   doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#64748b');
-  doc.text('BILLRIGHT READY-TO-SEND STATUTORY EVIDENCE DOSSIER', leftMargin, 22, { lineBreak: false });
+  doc.text('BILLRIGHT DISPUTE PACKET (DRAFT)', leftMargin, 22, { lineBreak: false });
   doc.font('Helvetica').fillColor('#94a3b8');
   doc.text(` | CASE REF: ${accountNumber || 'ON FILE'}`, doc.x, 22, { lineBreak: false });
   doc.font('Helvetica').text(`PARTY: ${consumerName || 'ACCOUNT HOLDER'}`, rightMargin - 150, 22, { width: 150, align: 'right' });
@@ -91,14 +91,14 @@ function drawHeaderFooter(doc, { pageNum, totalPages, accountNumber, consumerNam
   // Running Footer (bottom)
   doc.moveTo(leftMargin, 805).lineTo(rightMargin, 805).stroke();
   doc.fontSize(7).font('Helvetica').fillColor('#94a3b8');
-  doc.text('Prepared via BillRight Consumer Protection Utility • Ready-to-Send Statutory Evidence Dossier', leftMargin, 812, { lineBreak: false });
+  doc.text('Prepared via BillRight Consumer Protection Utility • Dispute Packet (draft)', leftMargin, 812, { lineBreak: false });
   doc.font('Helvetica-Bold').fillColor('#475569');
   doc.text(`Page ${pageNum} of ${totalPages}`, rightMargin - 80, 812, { width: 80, align: 'right' });
   doc.restore();
 }
 
 /**
- * Generates the complete 3-page Ready-to-Send Legal Dispute Packet PDF as a Buffer.
+ * Generates the complete 3-page Dispute Packet (draft) PDF as a Buffer.
  * 
  * @param {Object} data
  * @returns {Promise<Buffer>}
@@ -124,7 +124,9 @@ export async function generateLegalPacketPdf(data) {
         isEstimated = false,
         isMeterObstructed = false,
         disputeLetter = '',
-        meterEvidence = null
+        meterEvidence = null,
+        supplierEmail,
+        supplierContact
       } = data;
 
       const escalation = getEscalationDirectory(regulation.jurisdiction || country);
@@ -136,7 +138,7 @@ export async function generateLegalPacketPdf(data) {
         margin: 40,
         autoFirstPage: true,
         info: {
-          Title: `Ready-to-Send Dispute Packet - ${accountNumber || 'Dispute'}`,
+          Title: `Dispute Packet (draft) - ${accountNumber || 'Dispute'}`,
           Author: 'BillRight Consumer Protection Utility',
           Subject: `Back-Billing Dispute under ${regulation.clauseReference || 'Statutory Code'}`,
           Keywords: 'back-billing, dispute, energy, statutory, ofgem, nerr, cpuc, puct'
@@ -191,9 +193,19 @@ export async function generateLegalPacketPdf(data) {
         .text('RESPONDING ENERGY RETAILER', col2X, partyBoxY + 10);
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#0f172a')
         .text(supplierName || 'Energy Retailer', col2X, partyBoxY + 22);
-      doc.fontSize(8).font('Helvetica').fillColor('#334155')
-        .text('Complaints Handling & Compliance Team', col2X, partyBoxY + 36);
-      doc.fontSize(8).font('Helvetica').fillColor('#475569')
+
+      let emailText = '';
+      if (supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierName === 'Example Energy Ltd' || supplierContact?.email === 'complaints@example.com') {
+        emailText = 'Email: complaints@example.com (demo address)';
+      } else if (supplierEmail) {
+        emailText = `Email: ${supplierEmail}`;
+      } else if (supplierContact?.email) {
+        emailText = `Email: ${supplierContact.email}`;
+      }
+
+      doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
+        .text(emailText ? `Complaints: ${emailText}` : 'Complaints Handling Team', col2X, partyBoxY + 36, { width: colWidth });
+      doc.fontSize(7.5).font('Helvetica').fillColor('#475569')
         .text(`Notice Date: ${formattedNoticeDate}`, col2X, partyBoxY + 49);
       doc.fontSize(8).font('Helvetica-Bold').fillColor('#047857')
         .text(`Governing Rule: ${regulation.clauseReference || 'Statutory Utility Code'}`, col2X, partyBoxY + 62);

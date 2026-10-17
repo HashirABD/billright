@@ -28,7 +28,7 @@ Despite these protections, millions of households, tenants, and small businesses
 1. **Reading Statements & Meters Honestly**: Uses Gemini Vision to extract statement dates, billing periods, amounts, and physical meter index readings, always leaving the user in control to inspect, edit, or enter values manually.
 2. **Calculating Disputable Amounts Deterministically**: Apportions charges day-by-day across statutory lookback cut-off dates using zero-dependency, pure mathematical calculation. The AI is **never** permitted to calculate numbers or dates.
 3. **Visualizing Lookback Windows**: Renders an interactive SVG timeline showing the *Permitted Window* and the *Disputable Window*, with cut-off barrier line and pro-rata period slices.
-4. **Generating Ready-to-Send Dispute Dossiers**: Formulates formal dispute letters citing exact statutory rules, caveats for meter obstruction or estimated readings, and packages a 3-page vector PDF packet with full mathematical schedules.
+4. **Generating Dispute Packets (draft)**: Formulates formal dispute letters citing exact statutory rules, caveats for meter obstruction or estimated readings, and packages a 3-page vector PDF packet with full mathematical schedules.
 5. **Managing Escalation Calendars & Inboxes**: Computes Day 1 (today), Day 14 (suggested response deadline), and Day 56 (8-week Ombudsman escalation) from the user's local date, providing one-click `.ics` calendar reminders and pre-filled complaints email dispatch.
 
 ---

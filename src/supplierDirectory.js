@@ -148,7 +148,19 @@ export const SUPPLIER_DIRECTORY = {
 };
 
 /**
- * Resolves a supplier name to verified contact details with fuzzy matching and fallback.
+ * Resolves a country to its default ombudsman body.
+ */
+function getOmbudsmanByCountry(country = 'United Kingdom') {
+  if (country === 'Australia') return 'Energy and Water Ombudsman (EWON / EWOV)';
+  if (country.includes('California')) return 'California Public Utilities Commission (CPUC)';
+  if (country.includes('Texas')) return 'Public Utility Commission of Texas (PUCT)';
+  return 'Energy Ombudsman (www.energyombudsman.org)';
+}
+
+/**
+ * Resolves a supplier name to verified contact details with directory matching.
+ * Never invents an email address. For 'Example Energy Ltd', uses reserved complaints@example.com.
+ * For unknown suppliers not in the directory, returns email: null.
  * 
  * @param {string} supplierName 
  * @param {string} country 
@@ -157,50 +169,55 @@ export const SUPPLIER_DIRECTORY = {
 export function getSupplierContact(supplierName = '', country = 'United Kingdom') {
   const normalized = supplierName.trim().toLowerCase();
 
-  // Exact match
-  if (SUPPLIER_DIRECTORY[normalized]) {
-    return SUPPLIER_DIRECTORY[normalized];
+  // Fictional demo supplier: reserved address complaints@example.com
+  if (normalized === 'example energy ltd' || normalized.includes('example energy')) {
+    return {
+      name: 'Example Energy Ltd',
+      country: country || 'United Kingdom',
+      email: 'complaints@example.com',
+      isDemo: true,
+      demoLabel: 'demo address',
+      isDirectory: false,
+      isUnknown: false,
+      phone: '0800 000 0000',
+      portalUrl: '',
+      ombudsman: getOmbudsmanByCountry(country)
+    };
   }
 
-  // Substring match
+  // Exact directory match
+  if (SUPPLIER_DIRECTORY[normalized]) {
+    return {
+      ...SUPPLIER_DIRECTORY[normalized],
+      isDemo: false,
+      isDirectory: true,
+      isUnknown: false
+    };
+  }
+
+  // Substring directory match
   for (const [key, value] of Object.entries(SUPPLIER_DIRECTORY)) {
     if (normalized.includes(key) || key.includes(normalized)) {
-      return value;
+      return {
+        ...value,
+        isDemo: false,
+        isDirectory: true,
+        isUnknown: false
+      };
     }
   }
 
-  // Country-specific generic fallback
-  const safeName = supplierName.trim() || 'Energy Retailer';
-  const domain = safeName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
-
-  if (country === 'Australia') {
-    return {
-      name: safeName,
-      country: 'Australia',
-      email: `complaints@${domain}`,
-      phone: '13 00 00',
-      portalUrl: '',
-      ombudsman: 'Energy and Water Ombudsman (EWON / EWOV)'
-    };
-  }
-
-  if (country.includes('United States')) {
-    return {
-      name: safeName,
-      country,
-      email: `customercare@${domain}`,
-      phone: '1-800-000-0000',
-      portalUrl: '',
-      ombudsman: 'Public Utilities Commission Consumer Affairs Branch'
-    };
-  }
-
+  // Non-directory unknown supplier: NEVER invent an email address
+  const safeName = supplierName.trim() || 'Energy Supplier';
   return {
     name: safeName,
-    country: 'United Kingdom',
-    email: `complaints@${domain}`,
-    phone: '0330 000 0000',
+    country,
+    email: null,
+    isDemo: false,
+    isDirectory: false,
+    isUnknown: true,
+    phone: '',
     portalUrl: '',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: getOmbudsmanByCountry(country)
   };
 }

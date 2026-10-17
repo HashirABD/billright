@@ -161,7 +161,11 @@ app.post('/api/analyze', async (req, res) => {
     // 3. Stage 2: Live Regulatory Retrieval (Tavily)
     const regulation = await searchRegulations(country);
 
-    // 4. Stage 3: Constrained Exception Evaluation & Letter Formatting (Gemini)
+    // 4. Resolve verified supplier contact before formatting letter
+    const supplierContact = getSupplierContact(supplierName, country);
+    const resolvedSupplierEmail = req.body.supplierEmail || supplierContact.email;
+
+    // 5. Stage 3: Constrained Exception Evaluation & Letter Formatting (Gemini)
     const evaluation = await evaluateExceptionsAndFormatLetter({
       isMeterObstructed: Boolean(isMeterObstructed),
       isEstimated: Boolean(isEstimated),
@@ -177,11 +181,10 @@ app.post('/api/analyze', async (req, res) => {
       accountNumber,
       supplyAddress,
       noticeDate,
-      country
+      country,
+      supplierEmail: resolvedSupplierEmail,
+      supplierContact
     });
-
-    // 5. Final unified response payload matching spec.md
-    const supplierContact = getSupplierContact(supplierName, country);
 
     return res.json({
       verdict: evaluation.verdict,
@@ -201,6 +204,7 @@ app.post('/api/analyze', async (req, res) => {
       accountNumber,
       supplyAddress,
       supplierContact,
+      supplierEmail: resolvedSupplierEmail,
       noticeDate: evaluation.noticeDate || noticeDate
     });
 
@@ -212,7 +216,7 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
-// Official Multi-Page Ready-to-Send Legal Dispute Packet Generator Endpoint (PDF Engine)
+// Official Multi-Page Dispute Packet (draft) Generator Endpoint (PDF Engine)
 app.post('/api/generate-pdf', async (req, res) => {
   try {
     const {
@@ -233,7 +237,9 @@ app.post('/api/generate-pdf', async (req, res) => {
       isEstimated = false,
       isMeterObstructed = false,
       disputeLetter = '',
-      meterEvidence = null
+      meterEvidence = null,
+      supplierEmail,
+      supplierContact: passedContact
     } = req.body;
 
     if (!consumerName || !supplierName || !accountNumber || !supplyAddress) {
@@ -247,6 +253,9 @@ app.post('/api/generate-pdf', async (req, res) => {
         error: 'billDate and cutOffDate are required to generate legal packet'
       });
     }
+
+    const supplierContact = passedContact || getSupplierContact(supplierName, country);
+    const resolvedEmail = supplierEmail || supplierContact.email;
 
     const pdfBuffer = await generateLegalPacketPdf({
       consumerName,
@@ -266,11 +275,13 @@ app.post('/api/generate-pdf', async (req, res) => {
       isEstimated,
       isMeterObstructed,
       disputeLetter,
-      meterEvidence
+      meterEvidence,
+      supplierEmail: resolvedEmail,
+      supplierContact
     });
 
     const safeRef = (accountNumber || 'Reference').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const filename = `BillRight_Legal_Dispute_Packet_${safeRef}.pdf`;
+    const filename = `BillRight_Dispute_Packet_Draft_${safeRef}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

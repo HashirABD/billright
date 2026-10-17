@@ -227,10 +227,10 @@ const fallbackCase = await evaluateExceptionsAndFormatLetter({
   regulation: builtInUK,
   currency: '£',
   lookbackMonths: 12,
-  consumerName: 'Sarah Jenkins',
+  consumerName: 'Jane Example',
   supplierName: 'Example Energy Ltd',
   accountNumber: 'EX-8849201',
-  supplyAddress: '10 High St',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
   noticeDate: '2026-10-15',
   country: 'United Kingdom'
 });

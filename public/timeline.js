@@ -4,6 +4,11 @@
  * and individual period tracks with pro-rata split segments.
  */
 
+function fmtMoney(amount, currency = '£') {
+  const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+  return `${currency}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function renderTimeline({
   containerId = 'timeline-container',
   tooltipId = 'timeline-tooltip',
@@ -127,7 +132,7 @@ export function renderTimeline({
       label.setAttribute('x', startX + 10);
       label.setAttribute('y', trackY + 20);
       label.setAttribute('class', 'bar-text');
-      label.textContent = `Period ${idx + 1}: ${currency}${item.amount.toFixed(2)} (Disputable)`;
+      label.textContent = `Period ${idx + 1}: ${fmtMoney(item.amount, currency)} (Disputable)`;
       gTrack.appendChild(label);
     }
     // Case 2: 100% Permissible Window
@@ -145,7 +150,7 @@ export function renderTimeline({
       label.setAttribute('x', startX + 10);
       label.setAttribute('y', trackY + 20);
       label.setAttribute('class', 'bar-text');
-      label.textContent = `Period ${idx + 1}: ${currency}${item.amount.toFixed(2)} (Permitted)`;
+      label.textContent = `Period ${idx + 1}: ${fmtMoney(item.amount, currency)} (Permitted)`;
       gTrack.appendChild(label);
     }
     // Case 3: Straddles Cut-off -> Visual Pro-Rata Split
@@ -180,7 +185,7 @@ export function renderTimeline({
         textDisp.setAttribute('x', startX + 8);
         textDisp.setAttribute('y', trackY + 20);
         textDisp.setAttribute('class', 'bar-text');
-        textDisp.textContent = `${currency}${item.disputableAmount.toFixed(2)}`;
+        textDisp.textContent = fmtMoney(item.disputableAmount, currency);
         gTrack.appendChild(textDisp);
       }
 
@@ -190,7 +195,7 @@ export function renderTimeline({
         textPerm.setAttribute('x', splitX + 8);
         textPerm.setAttribute('y', trackY + 20);
         textPerm.setAttribute('class', 'bar-text');
-        textPerm.textContent = `${currency}${(item.amount - item.disputableAmount).toFixed(2)}`;
+        textPerm.textContent = fmtMoney(item.amount - item.disputableAmount, currency);
         gTrack.appendChild(textPerm);
       }
     }
@@ -202,13 +207,13 @@ export function renderTimeline({
       tooltip.innerHTML = `
         <div class="tooltip-header">Period ${idx + 1}: ${item.startDate} &rarr; ${item.endDate}</div>
         <div class="tooltip-row">
-          <span>Total Billed:</span> <strong>${currency}${item.amount.toFixed(2)}</strong> (${item.totalDays} days)
+          <span>Total Billed:</span> <strong>${fmtMoney(item.amount, currency)}</strong> (${item.totalDays} days)
         </div>
         <div class="tooltip-row" style="color: #dc2626;">
-          <span>Disputable Sum:</span> <strong>${currency}${item.disputableAmount.toFixed(2)}</strong> (${item.disputableDays} pre-cutoff days)
+          <span>Disputable Sum:</span> <strong>${fmtMoney(item.disputableAmount, currency)}</strong> (${item.disputableDays} pre-cutoff days)
         </div>
         <div class="tooltip-row" style="color: #059669;">
-          <span>Permissible Sum:</span> <strong>${currency}${permissibleAmt.toFixed(2)}</strong> (${item.totalDays - item.disputableDays} allowed days)
+          <span>Permissible Sum:</span> <strong>${fmtMoney(permissibleAmt, currency)}</strong> (${item.totalDays - item.disputableDays} allowed days)
         </div>
         <div class="tooltip-status">Status: ${item.status.replace(/_/g, ' ')}</div>
       `;

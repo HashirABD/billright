@@ -11,7 +11,7 @@ export const BUILT_IN_CITATIONS = {
     title: 'Ofgem Standard Licence Condition 21BA (Back-billing Principle)',
     clauseReference: 'SLC 21BA',
     summary: 'Under Ofgem Standard Licence Condition 21BA, suppliers cannot demand payment for energy consumed more than 12 months prior to the bill date where the customer has not been previously billed.',
-    sourceUrl: 'https://www.ofgem.gov.uk/node/114480'
+    sourceUrl: 'https://www.ofgem.gov.uk/energy-policy-and-regulation/policy-and-regulatory-programmes/back-billing'
   },
   'Australia': {
     title: 'NERR Rule 30 (Undercharging in NERR States; Victoria Not Covered)',
@@ -57,7 +57,16 @@ export function getBuiltInCitation(country = 'United Kingdom', fallbackReason = 
     summary: ref.summary,
     sourceUrl: ref.sourceUrl,
     fallbackReason,
-    fallbackNotice: 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.'
+    fallbackNotice: 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.',
+    primaryAuthority: {
+      title: ref.title,
+      clauseReference: ref.clauseReference,
+      summary: ref.summary,
+      sourceUrl: ref.sourceUrl,
+      url: ref.sourceUrl,
+      label: 'Primary Statutory Authority'
+    },
+    additionalSource: null
   };
 }
 
@@ -146,14 +155,46 @@ export async function searchRegulations(country = 'United Kingdom') {
     // Best matching result
     const topResult = results[0];
 
+    // Curated primary statutory reference
+    const matchedKey = Object.keys(BUILT_IN_CITATIONS).find(k =>
+      country === k || country.includes(k) || k.includes(country)
+    ) || 'Other Country';
+    const primaryRef = BUILT_IN_CITATIONS[matchedKey];
+
+    // Check if the URL or title indicates a consultation or non-final document
+    const fullTextToCheck = `${topResult.url || ''} ${topResult.title || ''}`.toLowerCase();
+    let docTypeLabel = null;
+    if (fullTextToCheck.includes('2017') && fullTextToCheck.includes('consultation')) {
+      docTypeLabel = '2017 consultation document';
+    } else if (fullTextToCheck.includes('consultation')) {
+      docTypeLabel = 'Consultation document';
+    } else if (fullTextToCheck.includes('draft') || fullTextToCheck.includes('proposed')) {
+      docTypeLabel = 'Draft / non-final document';
+    }
+
     return {
       builtIn: false,
       liveSearch: true,
       jurisdiction: country,
-      title: defaultTitle,
-      summary: data.answer || topResult.content || 'Statutory protections restrict the recovery of unbilled historical charges beyond the statutory window.',
-      clauseReference: defaultClause,
-      sourceUrl: topResult.url || fallbackUrl
+      title: primaryRef.title,
+      clauseReference: primaryRef.clauseReference,
+      summary: primaryRef.summary,
+      sourceUrl: primaryRef.sourceUrl,
+      primaryAuthority: {
+        title: primaryRef.title,
+        clauseReference: primaryRef.clauseReference,
+        summary: primaryRef.summary,
+        sourceUrl: primaryRef.sourceUrl,
+        url: primaryRef.sourceUrl,
+        label: 'Primary Statutory Authority'
+      },
+      additionalSource: {
+        title: topResult.title || defaultTitle,
+        url: topResult.url || fallbackUrl,
+        summary: data.answer || topResult.content || 'Retrieved regulatory source excerpt.',
+        docTypeLabel,
+        isConsultation: Boolean(docTypeLabel)
+      }
     };
 
   } catch (err) {
