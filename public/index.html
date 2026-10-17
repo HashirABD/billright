@@ -331,13 +331,13 @@
 
           <div class="form-group">
             <label for="input-supplier-name" class="form-label">Licensed Energy Supplier</label>
-            <input type="text" id="input-supplier-name" class="form-input" placeholder="e.g. British Gas" required>
+            <input type="text" id="input-supplier-name" class="form-input" placeholder="e.g. Example Energy Ltd" required>
             <span class="form-hint">Supplier against whom the formal statutory notice is served.</span>
           </div>
 
           <div class="form-group">
             <label for="input-account-number" class="form-label">Customer Account Reference Number</label>
-            <input type="text" id="input-account-number" class="form-input tabular-nums" placeholder="e.g. BG-8849201" required>
+            <input type="text" id="input-account-number" class="form-input tabular-nums" placeholder="e.g. EX-8849201" required>
             <span class="form-hint">Unique billing account reference.</span>
           </div>
 
@@ -425,7 +425,6 @@
               <line x1="12" y1="8" x2="12.01" y2="8"/>
             </svg>
             <strong>How this works</strong>
-            <span class="trust-badge trust-code">Calculated by code</span>
           </div>
           <span class="how-it-works-chevron">&#9662;</span>
         </summary>
@@ -437,7 +436,7 @@
             </div>
             <div class="how-it-works-step">
               <div class="how-step-badge">2. Statutory Retrieval</div>
-              <p>Statutory text is retrieved from official regulatory frameworks (e.g. Ofgem SLC 21BA, NERR Rule 30, PG&amp;E Rule 17.1, PUCT §25.28(d)).</p>
+              <p>Statutory text is retrieved live when available, otherwise a built-in reference is shown (please verify).</p>
             </div>
             <div class="how-it-works-step">
               <div class="how-step-badge">3. AI Vision &amp; Drafting</div>
@@ -459,13 +458,13 @@
         <!-- Plain-Language Result Card -->
         <div id="plain-language-result-card" class="plain-result-card" aria-live="polite">
           <div class="plain-result-header">
-            <div class="plain-result-badge-tag" id="plain-result-tag">Assessment</div>
-            <h3 id="plain-result-headline" class="plain-result-headline">Evaluating billing statements...</h3>
-            <p id="plain-result-why" class="plain-result-why">Evaluating consumption periods against governing regulations.</p>
+            <div class="plain-result-badge-tag" id="plain-result-tag" style="display: none;">Assessment</div>
+            <h3 id="plain-result-headline" class="plain-result-headline">Run an audit to see your result</h3>
+            <p id="plain-result-why" class="plain-result-why">Submit your billing records to evaluate charges against statutory back-billing limits.</p>
           </div>
 
           <!-- What to do next 3-step list -->
-          <div class="plain-next-steps" id="plain-next-steps">
+          <div class="plain-next-steps" id="plain-next-steps" style="display: none;">
             <div class="plain-next-steps-header">What to do next:</div>
             <ol class="plain-next-steps-list">
               <li class="plain-next-step-item">
@@ -588,7 +587,7 @@
       <article class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Retrieved Statutory Legal Authority <span id="authority-trust-badge" class="trust-badge trust-builtin">Built-in reference (please verify)</span></h2>
+            <h2 class="card-title">Retrieved Statutory Legal Authority <span id="authority-trust-badge" class="trust-badge trust-builtin" style="display: none;">Built-in reference (please verify)</span></h2>
             <p class="card-subtitle">Official legislative and regulator licence condition grounding</p>
           </div>
         </div>

@@ -14,8 +14,8 @@ const PRESETS = {
     country: 'United Kingdom',
     billDate: '2026-10-01',
     consumerName: 'Sarah Jenkins',
-    supplierName: 'British Gas',
-    accountNumber: 'BG-8849201',
+    supplierName: 'Example Energy Ltd',
+    accountNumber: 'EX-8849201',
     supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
     isEstimated: true,
     isMeterObstructed: false,
@@ -29,8 +29,8 @@ const PRESETS = {
     country: 'United Kingdom',
     billDate: '2026-10-01',
     consumerName: 'James Wood',
-    supplierName: 'Octopus Energy',
-    accountNumber: 'OCT-552109',
+    supplierName: 'Example Energy Ltd',
+    accountNumber: 'EX-552109',
     supplyAddress: '22 Richmond Way, London, SW15 2RF',
     isEstimated: false,
     isMeterObstructed: false,
@@ -73,8 +73,8 @@ const PRESETS = {
     country: 'United Kingdom',
     billDate: '2026-10-01',
     consumerName: 'Sarah Jenkins',
-    supplierName: 'British Gas',
-    accountNumber: 'BG-8849201',
+    supplierName: 'Example Energy Ltd',
+    accountNumber: 'EX-8849201',
     supplyAddress: '14 Windsor Gardens, Bristol, BS8 4UQ',
     isEstimated: true,
     isMeterObstructed: false,
@@ -355,6 +355,44 @@ function validateAndRecalculate() {
 }
 
 /**
+ * Resets the results area to its neutral empty state before an audit is run
+ */
+function resetResultsToEmptyState() {
+  const plainHeadline = document.getElementById('plain-result-headline');
+  const plainWhy = document.getElementById('plain-result-why');
+  const plainTag = document.getElementById('plain-result-tag');
+  const plainNextSteps = document.getElementById('plain-next-steps');
+  const authorityBadge = document.getElementById('authority-trust-badge');
+  const verdictContainer = document.getElementById('verdict-badge-container');
+  const verdictExp = document.getElementById('verdict-explanation');
+  const verdictSum = document.getElementById('verdict-disputable-sum');
+  const verdictCut = document.getElementById('verdict-cutoff-date');
+  const breakdownTb = document.getElementById('breakdown-tbody');
+  const letterCont = document.getElementById('letter-content');
+  const sourcesCont = document.getElementById('sources-container');
+  const timelineCont = document.getElementById('timeline-container');
+  const obsWarning = document.getElementById('obstruction-warning-container');
+  const otherCountryWarning = document.getElementById('other-country-warning-container');
+
+  if (plainHeadline) plainHeadline.textContent = 'Run an audit to see your result';
+  if (plainWhy) plainWhy.textContent = 'Submit your billing records to evaluate charges against statutory back-billing limits.';
+  if (plainTag) plainTag.style.display = 'none';
+  if (plainNextSteps) plainNextSteps.style.display = 'none';
+  if (authorityBadge) authorityBadge.style.display = 'none';
+  if (verdictContainer) verdictContainer.innerHTML = '';
+  if (verdictExp) verdictExp.textContent = '';
+  const currency = getCurrencySymbol(countrySelect ? countrySelect.value : 'United Kingdom');
+  if (verdictSum) verdictSum.textContent = `${currency}0.00`;
+  if (verdictCut) verdictCut.textContent = '--';
+  if (breakdownTb) breakdownTb.innerHTML = '';
+  if (sourcesCont) sourcesCont.innerHTML = '';
+  if (timelineCont) timelineCont.innerHTML = '';
+  if (obsWarning) obsWarning.style.display = 'none';
+  if (otherCountryWarning) otherCountryWarning.style.display = 'none';
+  if (resultsSection) resultsSection.classList.remove('visible');
+}
+
+/**
  * Loads a sample preset into the form
  */
 function loadPreset(presetKey) {
@@ -402,8 +440,8 @@ function loadPreset(presetKey) {
   document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
   document.querySelectorAll('.ocr-review-hint').forEach(el => el.remove());
 
-  // Hide any previous results on preset switch
-  resultsSection.classList.remove('visible');
+  // Reset results area to neutral empty state on preset switch
+  resetResultsToEmptyState();
   validateAndRecalculate();
   showToast(`Loaded ${preset.name}`, 'info', 2200);
 }
@@ -440,7 +478,7 @@ function resetForm() {
 
   periodsTbody.innerHTML = '';
   addRow();
-  resultsSection.classList.remove('visible');
+  resetResultsToEmptyState();
   validateAndRecalculate();
 }
 
@@ -534,10 +572,14 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
   const headlineEl = document.getElementById('plain-result-headline');
   const whyEl = document.getElementById('plain-result-why');
   const tagEl = document.getElementById('plain-result-tag');
+  const nextStepsEl = document.getElementById('plain-next-steps');
   const ombudsmanEl = document.getElementById('plain-ombudsman-name');
   const sendBtn = document.getElementById('btn-plain-send-dispute');
 
   if (!headlineEl || !whyEl) return;
+
+  if (nextStepsEl) nextStepsEl.style.display = 'block';
+  if (tagEl) tagEl.style.display = 'inline-block';
 
   const regClause = data.regulation?.clauseReference || data.regulation?.title || 'statutory rules';
   const cutOff = data.cutOffDate || '--';
@@ -603,6 +645,7 @@ function renderResults(data) {
 
   const authorityTrustBadge = document.getElementById('authority-trust-badge');
   if (authorityTrustBadge) {
+    authorityTrustBadge.style.display = 'inline-flex';
     if (data.regulation?.liveSearch && !data.regulation?.builtIn) {
       authorityTrustBadge.textContent = 'Live source';
       authorityTrustBadge.className = 'trust-badge trust-live';
@@ -896,9 +939,21 @@ billForm.addEventListener('submit', async (e) => {
     noticeDate: localDates.isoDate
   };
 
-  // Button loading state
+  // Button loading state & empty/evaluating state
   btnAnalyze.disabled = true;
   btnAnalyzeText.textContent = 'Analyzing...';
+
+  const plainHeadline = document.getElementById('plain-result-headline');
+  const plainWhy = document.getElementById('plain-result-why');
+  const plainTag = document.getElementById('plain-result-tag');
+  const plainNextSteps = document.getElementById('plain-next-steps');
+  const authorityBadge = document.getElementById('authority-trust-badge');
+
+  if (plainHeadline) plainHeadline.textContent = 'Evaluating...';
+  if (plainWhy) plainWhy.textContent = 'Evaluating consumption periods against governing regulations...';
+  if (plainTag) plainTag.style.display = 'none';
+  if (plainNextSteps) plainNextSteps.style.display = 'none';
+  if (authorityBadge) authorityBadge.style.display = 'none';
 
   try {
     const response = await fetch('/api/analyze', {
@@ -919,6 +974,7 @@ billForm.addEventListener('submit', async (e) => {
 
   } catch (err) {
     console.error('Analysis failed:', err);
+    resetResultsToEmptyState();
     validationErrorBanner.classList.add('visible');
     validationErrorMsg.textContent = err.message.includes('Billing periods overlap')
       ? 'Billing periods overlap. Please check the dates.'
@@ -1407,7 +1463,7 @@ async function processFile(file) {
     }
 
     validateAndRecalculate();
-    resultsSection.classList.remove('visible');
+    resetResultsToEmptyState();
 
     // UI state: Success with Trust Badge
     dropzoneProcessing.style.display = 'none';

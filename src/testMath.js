@@ -228,8 +228,8 @@ const fallbackCase = await evaluateExceptionsAndFormatLetter({
   currency: '£',
   lookbackMonths: 12,
   consumerName: 'Sarah Jenkins',
-  supplierName: 'British Gas',
-  accountNumber: 'BG-1234',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
   supplyAddress: '10 High St',
   noticeDate: '2026-10-15',
   country: 'United Kingdom'

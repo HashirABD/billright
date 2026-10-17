@@ -1290,15 +1290,10 @@ body {
 }
 
 .results-container {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 1.75rem;
   margin-top: 0.5rem;
-}
-
-.results-container.visible {
-  display: flex;
-  animation: fadeIn 300ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .verdict-badge {
