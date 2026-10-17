@@ -274,6 +274,8 @@ function validateAndRecalculate() {
   let errorMessage = '';
   let totalBilled = 0;
 
+  const parsedPeriods = [];
+
   rows.forEach((row, idx) => {
     const startInput = row.querySelector('.row-start-date');
     const endInput = row.querySelector('.row-end-date');
@@ -299,6 +301,8 @@ function validateAndRecalculate() {
       errorMessage = `Row ${idx + 1}: End date cannot precede start date.`;
       endInput.classList.add('error');
       row.classList.add('has-error');
+    } else {
+      parsedPeriods.push({ idx, startDate, endDate, startInput, endInput, row });
     }
 
     if (isNaN(amount) || amount <= 0) {
@@ -311,6 +315,28 @@ function validateAndRecalculate() {
       totalBilled += amount;
     }
   });
+
+  // Check for overlapping billing periods
+  if (!hasErrors && parsedPeriods.length > 1) {
+    for (let i = 0; i < parsedPeriods.length; i++) {
+      for (let j = i + 1; j < parsedPeriods.length; j++) {
+        const p1 = parsedPeriods[i];
+        const p2 = parsedPeriods[j];
+        if (p1.startDate <= p2.endDate && p2.startDate <= p1.endDate) {
+          hasErrors = true;
+          errorMessage = 'Billing periods overlap. Please check the dates.';
+          p1.startInput.classList.add('error');
+          p1.endInput.classList.add('error');
+          p1.row.classList.add('has-error');
+          p2.startInput.classList.add('error');
+          p2.endInput.classList.add('error');
+          p2.row.classList.add('has-error');
+          break;
+        }
+      }
+      if (hasErrors) break;
+    }
+  }
 
   const currencySymbol = getCurrencySymbol(countrySelect.value);
   displayTotalBilled.textContent = `${currencySymbol}${totalBilled.toFixed(2)}`;
@@ -568,12 +594,24 @@ function renderResults(data) {
   const reg = data.regulation || {};
   const sourceDiv = document.createElement('div');
   sourceDiv.className = 'source-item';
+
+  const isLiveSearchUnavailable = reg.liveSearch === false || Boolean(reg.fallbackNotice);
+  const fallbackNoticeHtml = isLiveSearchUnavailable
+    ? `<div class="live-search-fallback-notice" style="margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: var(--bg-surface-subtle); border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.8125rem; color: var(--text-secondary);">
+        <strong style="color: #f59e0b;">Notice:</strong> Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.
+      </div>`
+    : '';
+
   sourceDiv.innerHTML = `
-    <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+      <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
+      ${reg.liveSearch ? '<span class="preset-badge protected" style="font-size: 0.7rem;">Live Search Verified</span>' : '<span class="preset-badge" style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Built-in Citation</span>'}
+    </div>
     <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.35rem 0;">
       ${reg.summary || 'Suppliers cannot back-bill customers for energy used more than 12 months ago.'}
     </p>
-    ${reg.sourceUrl ? `<a href="${reg.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url">${reg.sourceUrl} &nearr;</a>` : '<span style="font-size: 0.8125rem; color: #b45309;">Live search unverified</span>'}
+    ${reg.sourceUrl ? `<a href="${reg.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url">${reg.sourceUrl} &nearr;</a>` : ''}
+    ${fallbackNoticeHtml}
   `;
   sourcesContainer.appendChild(sourceDiv);
 
@@ -734,7 +772,9 @@ billForm.addEventListener('submit', async (e) => {
   } catch (err) {
     console.error('Analysis failed:', err);
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = `Analysis error: ${err.message}`;
+    validationErrorMsg.textContent = err.message.includes('Billing periods overlap')
+      ? 'Billing periods overlap. Please check the dates.'
+      : `Analysis error: ${err.message}`;
   } finally {
     btnAnalyze.disabled = false;
     btnAnalyzeText.textContent = 'Analyze Bill';

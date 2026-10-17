@@ -20,7 +20,7 @@ In many countries and states, energy utility regulators legally restrict how far
 - **United Kingdom**: Under **Ofgem Standard Licence Condition 21BA**, energy suppliers cannot demand payment for energy consumed more than **12 months** prior to the bill date.
 - **Australia**: Under **NERR Rule 30** (National Energy Retail Rules for participating states such as NSW, QLD, SA; Victoria maintains separate local rules), retailers recovering historical undercharges are strictly capped at a maximum of **9 months** before the customer was notified.
 - **United States (California)**: Under **PG&E Electric Rule 17.1** (and equivalent CPUC tariff rules for SCE/SDG&E), adjustment of residential bills for billing errors where the customer was not at fault is restricted to **3 months**.
-- **United States (Texas)**: Under **PUCT §25.28(d)** for electric utilities and **§25.480(e)** for retail electric providers, back-billing adjustments are limited to **6 months**.
+- **United States (Texas)**: Under **PUCT §25.28(d)** for electric utilities, back-billing adjustments are limited to **6 months** from error discovery; for retail electric providers, the limit under **§25.480(e)** must be verified with the PUCT.
 
 Despite these protections, millions of households, tenants, and small businesses receive sudden, intimidating multi-year catch-up bills. Most either panic and pay or struggle to dispute them because utility regulations are dense, suppliers provide estimated meter readings that inflate charges, and consumers miss critical statutory escalation deadlines.
 
@@ -84,7 +84,7 @@ calculateBackBilling.js              tavilyClient.js                         llm
 | **United Kingdom** | Ofgem | Standard Licence Condition 21BA | **12 months** | £ (GBP) | Supplier complaint (8 wks) &rarr; Energy Ombudsman |
 | **Australia** | AER | National Energy Retail Rules (NERR Rule 30) | **9 months** | A$ (AUD) | Retailer dispute &rarr; Energy & Water Ombudsman (EWON/EWOV/EWOQ) |
 | **US (California)** | CPUC | PG&E Electric Rule 17.1 (SCE/SDG&E eq.) | **3 months** | $ (USD) | Utility complaint &rarr; California Public Utilities Commission |
-| **US (Texas)** | PUCT | §25.28(d) utilities / §25.480(e) REPs | **6 months** | $ (USD) | Utility dispute &rarr; Public Utility Commission of Texas |
+| **US (Texas)** | PUCT | §25.28(d) electric utilities (6 mos); §25.480(e) REPs (must be verified with PUCT) | **6 months** *(utilities; verify REP limit)* | $ (USD) | Utility dispute &rarr; Public Utility Commission of Texas |
 | **Other Country** | Regional Regulator | Provisional 12-month benchmark | **12 months** *(Provisional)* | $ (USD) | Regional regulatory authority |
 
 ---
@@ -160,6 +160,12 @@ BillRight was developed following the structured **Build With AI: Basics** metho
 4. **`4-spec`**: Drafted the technical blueprint: Express.js server, vanilla CSS/JS frontend, zero-dependency math engine (`calculateBackBilling.js`), Gemini Vision for multimodal OCR, Tavily for live citation grounding, and PDFKit for vector legal packets.
 5. **`5-build`**: Executed vertical slices step-by-step: Slice 1 (deterministic math), Slice 2 (form UI and SVG timeline), Slice 3 (multimodal bill and meter dial OCR), and Slice 4 (PDF export, email launcher, and calendar integration), verifying each milestone with unit tests.
 6. **`6-ship`**: Conducted end-to-end verification, verified test suites, resolved regulatory citations, eliminated hardcoded mock data, secured credentials, and deployed live to Vercel.
+
+---
+
+## Data Privacy & File Handling
+
+BillRight does not store your files. They are sent to Google Gemini for reading and are subject to Google's data policy.
 
 ---
 

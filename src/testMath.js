@@ -170,6 +170,75 @@ assert.ok(obstructedCase.disputeLetter.includes('earlier bills were based on est
 
 console.log('✔ Obstruction and estimate toggles impact verified.');
 
+// Test 11: Overlapping billing periods detection
+assert.throws(() => {
+  calculateBackBilling({
+    billDate: '2026-10-01',
+    billingPeriods: [
+      { startDate: '2025-01-01', endDate: '2025-06-30', amount: 500 },
+      { startDate: '2025-05-01', endDate: '2025-09-30', amount: 400 }
+    ]
+  });
+}, /Billing periods overlap\. Please check the dates\./, 'Should throw "Billing periods overlap. Please check the dates."');
+console.log('✔ Overlapping billing periods validation verified.');
+
+// Test 12: Texas retail electric provider text under §25.480(e) does not assert a number
+const txCase = await evaluateExceptionsAndFormatLetter({
+  isMeterObstructed: false,
+  isEstimated: false,
+  disputableTotal: 600.00,
+  totalBilled: 1200.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2026-04-01',
+  regulation: {
+    jurisdiction: 'United States (Texas)',
+    title: 'PUCT §25.28(d) / §25.480(e)',
+    clauseReference: 'PUCT §25.28(d) / §25.480(e)',
+    summary: 'For electric utilities under PUCT §25.28(d), underbilling adjustments are limited to 6 months. For REPs, limit under §25.480(e) must be verified with PUCT.'
+  },
+  currency: '$',
+  lookbackMonths: 6,
+  consumerName: 'TX Consumer',
+  supplierName: 'TX Retail Electric',
+  accountNumber: 'TX-9988',
+  supplyAddress: '100 Austin Blvd, Austin, TX',
+  noticeDate: '2026-10-15',
+  country: 'United States (Texas)'
+});
+
+assert.ok(txCase.disputeLetter.includes('limit under §25.480(e) must be verified with the PUCT'), 'Texas letter must state limit under §25.480(e) must be verified with the PUCT');
+assert.ok(!txCase.disputeLetter.includes('retail electric providers under §25.480(e), a 6-month limit applies'), 'Must not assert a 6-month number for REPs');
+console.log('✔ Texas retail electric provider §25.480(e) verification text verified.');
+
+// Test 13: Tavily fallback with missing/failing key provides built-in verified citations (liveSearch: false) and produces letter
+import { getBuiltInCitation } from './tavilyClient.js';
+const builtInUK = getBuiltInCitation('United Kingdom');
+assert.equal(builtInUK.verified, true);
+assert.equal(builtInUK.liveSearch, false);
+assert.equal(builtInUK.fallbackNotice, 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.');
+
+const fallbackCase = await evaluateExceptionsAndFormatLetter({
+  isMeterObstructed: false,
+  isEstimated: false,
+  disputableTotal: 500.00,
+  totalBilled: 800.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  regulation: builtInUK,
+  currency: '£',
+  lookbackMonths: 12,
+  consumerName: 'Sarah Jenkins',
+  supplierName: 'British Gas',
+  accountNumber: 'BG-1234',
+  supplyAddress: '10 High St',
+  noticeDate: '2026-10-15',
+  country: 'United Kingdom'
+});
+
+assert.equal(fallbackCase.badgeType, 'consumer_protected');
+assert.ok(fallbackCase.disputeLetter !== null, 'Letter must be produced when liveSearch is false');
+console.log('✔ Tavily fallback and built-in citation letter generation verified.');
+
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');
 

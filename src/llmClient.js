@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { getBuiltInCitation } from './tavilyClient.js';
 
 /**
  * Localized statutory ombudsman escalation paths by jurisdiction.
@@ -75,7 +76,7 @@ Please note that meter access obstruction was indicated for this account. Under 
 
   const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
   const statutoryRuleText = isTexas
-    ? `Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers under §25.480(e), a 6-month limit applies (verify current limit).`
+    ? `Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.`
     : `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
 
   return `${partyName}
@@ -158,6 +159,23 @@ export async function evaluateExceptionsAndFormatLetter({
   const address = supplyAddress || 'Supply Address On File';
   const letterDate = formatDate(noticeDate);
 
+  const activeReg = (regulation && regulation.title)
+    ? regulation
+    : getBuiltInCitation(country, 'Built-in statutory reference');
+
+  // Case -1: Genuinely missing user data
+  if (!billDate || !consumerName || !supplierName || !accountNumber || !supplyAddress) {
+    return {
+      verdict: 'More evidence needed',
+      badgeType: 'more_evidence_needed',
+      exceptionTriggered: false,
+      exceptionNotes: 'Consumer name, supplier name, account number, supply address, or bill date is missing. Please provide complete billing records.',
+      disputeLetter: null,
+      disputeLetterReason: 'Dispute letter requires complete user evidence.',
+      noticeDate: letterDate
+    };
+  }
+
   // Case 0: Other Country selected -> Explicit provisional placeholder
   if (country === 'Other Country') {
     const letter = generateDeterministicLetter({
@@ -165,7 +183,7 @@ export async function evaluateExceptionsAndFormatLetter({
       totalBilled,
       billDate,
       cutOffDate,
-      regulation,
+      regulation: activeReg,
       isEstimated,
       isMeterObstructed,
       currency,
@@ -194,7 +212,7 @@ export async function evaluateExceptionsAndFormatLetter({
       totalBilled,
       billDate,
       cutOffDate,
-      regulation,
+      regulation: activeReg,
       isEstimated,
       isMeterObstructed: true,
       currency,
@@ -210,21 +228,8 @@ export async function evaluateExceptionsAndFormatLetter({
       verdict: 'Protection may not apply (Obstruction indicated)',
       badgeType: 'rule_does_not_apply',
       exceptionTriggered: true,
-      exceptionNotes: `WARNING: Meter access obstruction was indicated. Under statutory back-billing rules (such as ${regulation.clauseReference || 'applicable regulations'}), protections do not apply if the customer unreasonably prevented meter reading access. If the supplier proves access was denied, this entire catch-up amount may remain payable.`,
+      exceptionNotes: `WARNING: Meter access obstruction was indicated. Under statutory back-billing rules (such as ${activeReg.clauseReference || 'applicable regulations'}), protections do not apply if the customer unreasonably prevented meter reading access. If the supplier proves access was denied, this entire catch-up amount may remain payable.`,
       disputeLetter: letter,
-      noticeDate: letterDate
-    };
-  }
-
-  // Case B: Regulation could not be verified (Search failure / unconfigured)
-  if (!regulation.verified) {
-    return {
-      verdict: 'More evidence needed',
-      badgeType: 'more_evidence_needed',
-      exceptionTriggered: false,
-      exceptionNotes: regulation.summary,
-      disputeLetter: null,
-      disputeLetterReason: 'Dispute letter disabled because official regulatory rules could not be verified for this jurisdiction.',
       noticeDate: letterDate
     };
   }
@@ -253,7 +258,7 @@ export async function evaluateExceptionsAndFormatLetter({
       totalBilled,
       billDate,
       cutOffDate,
-      regulation,
+      regulation: activeReg,
       isEstimated,
       isMeterObstructed: false,
       currency,
@@ -276,7 +281,7 @@ export async function evaluateExceptionsAndFormatLetter({
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const escalation = getEscalationPath(regulation.jurisdiction);
+    const escalation = getEscalationPath(activeReg.jurisdiction);
 
     const prompt = `You are an expert consumer advocacy assistant specializing in energy utility regulations.
 Generate a structured JSON response evaluating a back-billing complaint.
@@ -289,9 +294,9 @@ PARTIES & ACCOUNT:
 - Date of Letter: ${letterDate}
 
 FACTS:
-- Country/Jurisdiction: ${regulation.jurisdiction}
-- Regulation: ${regulation.title} (${regulation.clauseReference || 'Statutory Code'})
-- Regulation Summary: ${regulation.summary}
+- Country/Jurisdiction: ${activeReg.jurisdiction}
+- Regulation: ${activeReg.title} (${activeReg.clauseReference || 'Statutory Code'})
+- Regulation Summary: ${activeReg.summary}
 - Bill Issue Date: ${billDate}
 - Statutory ${lookbackMonths}-Month Lookback Cut-off: ${cutOffDate}
 - Total Billed: ${currency}${totalBilled.toFixed(2)}
@@ -306,12 +311,12 @@ INSTRUCTIONS:
    - Use the exact Consumer Name (${partyName}), Energy Supplier (${supplier}), Account Reference (${accNum}), and Supply Address (${address}).
    - Use the exact letter date: ${letterDate}.
    - DO NOT USE any bracketed placeholders like [Your Name], [Account Number], [Supplier Name], or [Address]. The real details provided above must be directly embedded.
-   - Reference the exact regulation name and clause (${regulation.clauseReference || 'Statutory Code'}).
+   - Reference the exact regulation name and clause (${activeReg.clauseReference || 'Statutory Code'}).
    - Insert the exact pre-calculated disputable sum of ${currency}${disputableTotal.toFixed(2)}.
    - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after 8 weeks.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
-   - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers under §25.480(e), add "verify current limit".
+   - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers, state that the limit under §25.480(e) must be verified with the PUCT.
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
 
 Return strictly a JSON object with this shape:

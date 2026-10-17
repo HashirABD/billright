@@ -73,10 +73,10 @@ export function calculateBackBilling({ billDate, billingPeriods, lookbackMonths 
   let totalBilled = 0;
   let disputableTotal = 0;
 
-  const itemizedBreakdown = billingPeriods.map((period, index) => {
+  // Validate individual rows and ensure dates are valid
+  billingPeriods.forEach((period, index) => {
     const { startDate, endDate, amount } = period;
     const numAmount = parseFloat(amount);
-
     if (isNaN(numAmount) || numAmount <= 0) {
       throw new Error(`Row ${index + 1}: Amount must be a positive number`);
     }
@@ -86,6 +86,22 @@ export function calculateBackBilling({ billDate, billingPeriods, lookbackMonths 
     if (endDate < startDate) {
       throw new Error(`Row ${index + 1}: End date cannot precede start date`);
     }
+  });
+
+  // Check for overlapping billing periods
+  for (let i = 0; i < billingPeriods.length; i++) {
+    for (let j = i + 1; j < billingPeriods.length; j++) {
+      const p1 = billingPeriods[i];
+      const p2 = billingPeriods[j];
+      if (p1.startDate <= p2.endDate && p2.startDate <= p1.endDate) {
+        throw new Error('Billing periods overlap. Please check the dates.');
+      }
+    }
+  }
+
+  const itemizedBreakdown = billingPeriods.map((period) => {
+    const { startDate, endDate, amount } = period;
+    const numAmount = parseFloat(amount);
 
     totalBilled += numAmount;
     const totalDays = getDaysBetween(startDate, endDate);

@@ -32,11 +32,10 @@ function getEscalationDirectory(jurisdiction = '') {
     };
   }
   if (jurisdiction.includes('Texas')) {
-    // TODO verify REP limit in 16 TAC 25.480(e)
     return {
       body: 'Public Utility Commission of Texas (PUCT) Customer Protection Division',
       timeline: 'Upon supplier failure to resolve under utility / REP dispute procedures',
-      statute: 'PUCT §25.28(d) (electric utilities); §25.480(e) for retail electric providers - 6 months',
+      statute: 'PUCT §25.28(d) (electric utilities - 6 mos); limit under §25.480(e) for REPs must be verified with the PUCT',
       website: 'www.puc.texas.gov / 1-888-782-8477'
     };
   }
@@ -220,7 +219,7 @@ A precise calendar audit against statutory utility standards demonstrates that $
       const p2Y = doc.y + 6;
       const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
       const p2Statute = isTexas
-        ? 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers under §25.480(e), a 6-month limit applies (verify current limit).'
+        ? 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.'
         : `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
       const p2 = `${p2Statute}
 
@@ -442,8 +441,11 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       const citesY = 188;
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
         .text('OFFICIAL REGULATORY CITATIONS & VERIFICATION', leftMargin, citesY);
+      const verificationSubtitle = regulation.liveSearch === false
+        ? 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.'
+        : 'Sourced from regulator publications, legislation registers, and ombudsman guidance.';
       doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
-        .text('Sourced from regulator publications, legislation registers, and ombudsman guidance.', leftMargin, citesY + 12);
+        .text(verificationSubtitle, leftMargin, citesY + 12);
 
       let citeY = citesY + 26;
       const defaultUrl = (country === 'United Kingdom' || !country)

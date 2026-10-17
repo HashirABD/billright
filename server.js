@@ -51,10 +51,9 @@ const JURISDICTION_CONFIGS = {
     label: 'United States - California (PG&E Rule 17.1, 3 Mos)' // Residential undercharges due to billing error only, 3 months.
   },
   'United States (Texas)': {
-    // TODO verify REP limit in 16 TAC 25.480(e)
     lookbackMonths: 6,
     currency: '$',
-    label: 'United States - Texas (PUCT §25.28(d), 6 Mos)' // Electric utilities (§25.28(d)): 6 months from error discovery; REPs (§25.480(e)): verify current limit.
+    label: 'United States - Texas (PUCT §25.28(d), 6 Mos)' // Electric utilities (§25.28(d)): 6 months from error discovery; limit under §25.480(e) must be verified with the PUCT.
   },
   'Other Country': {
     lookbackMonths: 12,
