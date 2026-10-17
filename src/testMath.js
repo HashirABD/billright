@@ -210,10 +210,10 @@ assert.ok(txCase.disputeLetter.includes('limit under §25.480(e) must be verifie
 assert.ok(!txCase.disputeLetter.includes('retail electric providers under §25.480(e), a 6-month limit applies'), 'Must not assert a 6-month number for REPs');
 console.log('✔ Texas retail electric provider §25.480(e) verification text verified.');
 
-// Test 13: Tavily fallback with missing/failing key provides built-in verified citations (liveSearch: false) and produces letter
+// Test 13: Tavily fallback with missing/failing key provides built-in citations (liveSearch: false) and produces letter
 import { getBuiltInCitation } from './tavilyClient.js';
 const builtInUK = getBuiltInCitation('United Kingdom');
-assert.equal(builtInUK.verified, true);
+assert.equal(builtInUK.builtIn, true);
 assert.equal(builtInUK.liveSearch, false);
 assert.equal(builtInUK.fallbackNotice, 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.');
 

@@ -101,7 +101,7 @@ Pure, deterministic mathematical calculation module.
 ### Regulatory Retrieval Client (`src/tavilyClient.js`)
 Calls Tavily Search API with queries targeted at national energy regulators (e.g., `"UK Ofgem Standard Licence Condition 21BA back-billing electricity rules 12 months"`).
 - Extracts official rule summary, clause number, and source URL.
-- Handles network errors and unindexed jurisdictions by returning `{ verified: false, fallbackReason: "..." }`.
+- Handles network errors and unindexed jurisdictions by returning `{ builtIn: true, liveSearch: false, fallbackReason: "..." }`.
 - *Implements `prd.md > Features and Behavior (3. Dynamic Regulatory Retrieval)`*
 
 ### LLM Exception & Letter Formatter (`src/llmClient.js`)
@@ -170,7 +170,8 @@ Interacts with Gemini 2.5 Flash via `@google/genai` with temperature 0.0 and JSO
     }
   ],
   "regulation": {
-    "verified": true,
+    "builtIn": false,
+    "liveSearch": true,
     "title": "Ofgem Standard Licence Condition 21BA (Back-billing Principle)",
     "jurisdiction": "United Kingdom",
     "summary": "Suppliers cannot back-bill domestic and microbusiness customers for energy consumed more than 12 months prior to the bill date unless the customer behaved obstructively.",
@@ -221,7 +222,7 @@ billright/
 
 ## Important Failure Modes
 1. **Tavily API Failure / Rate Limit / Unrecognized Country**:
-   - *Behavior*: Backend catches error, returns `regulation.verified = false` with fallback explanation. Frontend displays amber badge (*"More evidence needed"*), renders mathematical calculation for reference, flags sources as unverified, and suppresses the letter.
+   - *Behavior*: Backend falls back to built-in statutory citations with `regulation.builtIn = true, liveSearch = false` and warning notice, continuing to generate the dispute packet and letter.
 2. **Missing or Corrupted Gemini API Key**:
    - *Behavior*: Backend falls back to deterministic rule synthesis template rather than crashing with an unhandled 500 error, ensuring the user still receives their calculation and standard dispute text.
 3. **Client Input Inconsistencies (Reversed Dates, Empty Rows)**:

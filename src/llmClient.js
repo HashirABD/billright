@@ -247,7 +247,7 @@ export async function evaluateExceptionsAndFormatLetter({
     };
   }
 
-  // Case D: Disputable charges exist under verified regulation
+  // Case D: Disputable charges exist under applicable statutory regulation
   const apiKey = process.env.GEMINI_API_KEY;
   const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 

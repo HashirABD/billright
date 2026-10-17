@@ -1,7 +1,7 @@
 /**
  * Tavily Search API client for live energy regulatory retrieval.
  * Grounds analysis in actual regulator rules (e.g. Ofgem SLC 21BA).
- * Provides robust built-in verified fallback citations when live search is unavailable.
+ * Provides robust built-in fallback citations when live search is unavailable.
  */
 
 const TAVILY_ENDPOINT = 'https://api.tavily.com/search';
@@ -40,7 +40,7 @@ export const BUILT_IN_CITATIONS = {
 };
 
 /**
- * Returns built-in verified statutory reference when live search is unavailable or fails.
+ * Returns built-in statutory reference when live search is unavailable or fails.
  */
 export function getBuiltInCitation(country = 'United Kingdom', fallbackReason = 'Live search unavailable') {
   const matchedKey = Object.keys(BUILT_IN_CITATIONS).find(k =>
@@ -49,7 +49,7 @@ export function getBuiltInCitation(country = 'United Kingdom', fallbackReason = 
 
   const ref = BUILT_IN_CITATIONS[matchedKey];
   return {
-    verified: true,
+    builtIn: true,
     liveSearch: false,
     jurisdiction: country,
     title: ref.title,
@@ -63,7 +63,7 @@ export function getBuiltInCitation(country = 'United Kingdom', fallbackReason = 
 
 /**
  * Searches for official back-billing regulations for a given country.
- * Falls back to built-in verified citations if Tavily key is missing or search fails.
+ * Falls back to built-in citations if Tavily key is missing or search fails.
  * 
  * @param {string} country - Target country name
  * @returns {Promise<Object>} Regulation metadata object
@@ -72,7 +72,7 @@ export async function searchRegulations(country = 'United Kingdom') {
   const apiKey = process.env.TAVILY_API_KEY;
 
   if (!apiKey || apiKey === 'your_tavily_key_here') {
-    console.warn('⚠️ TAVILY_API_KEY missing or placeholder. Using built-in verified citations.');
+    console.warn('⚠️ TAVILY_API_KEY missing or placeholder. Using built-in citations.');
     return getBuiltInCitation(country, 'Missing or placeholder TAVILY_API_KEY');
   }
 
@@ -131,7 +131,7 @@ export async function searchRegulations(country = 'United Kingdom') {
     clearTimeout(timeout);
 
     if (!response.ok) {
-      console.warn(`Tavily API returned HTTP status ${response.status}. Using built-in verified fallback.`);
+      console.warn(`Tavily API returned HTTP status ${response.status}. Using built-in fallback.`);
       return getBuiltInCitation(country, `HTTP_${response.status}`);
     }
 
@@ -139,7 +139,7 @@ export async function searchRegulations(country = 'United Kingdom') {
     const results = data.results || [];
 
     if (results.length === 0) {
-      console.warn('No search results returned from Tavily. Using built-in verified fallback.');
+      console.warn('No search results returned from Tavily. Using built-in fallback.');
       return getBuiltInCitation(country, 'No search results found');
     }
 
@@ -147,7 +147,7 @@ export async function searchRegulations(country = 'United Kingdom') {
     const topResult = results[0];
 
     return {
-      verified: true,
+      builtIn: false,
       liveSearch: true,
       jurisdiction: country,
       title: defaultTitle,
@@ -157,7 +157,7 @@ export async function searchRegulations(country = 'United Kingdom') {
     };
 
   } catch (err) {
-    console.warn(`Error querying Tavily API (${err.message}). Using built-in verified fallback.`);
+    console.warn(`Error querying Tavily API (${err.message}). Using built-in fallback.`);
     return getBuiltInCitation(country, err.name === 'AbortError' ? 'Search request timed out' : err.message);
   }
 }

@@ -603,11 +603,11 @@ function renderResults(data) {
 
   const authorityTrustBadge = document.getElementById('authority-trust-badge');
   if (authorityTrustBadge) {
-    if (data.regulation?.liveSearch) {
+    if (data.regulation?.liveSearch && !data.regulation?.builtIn) {
       authorityTrustBadge.textContent = 'Live source';
       authorityTrustBadge.className = 'trust-badge trust-live';
     } else {
-      authorityTrustBadge.textContent = 'Built-in reference';
+      authorityTrustBadge.textContent = 'Built-in reference (please verify)';
       authorityTrustBadge.className = 'trust-badge trust-builtin';
     }
   }
@@ -753,7 +753,7 @@ function renderResults(data) {
   sourceDiv.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
       <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
-      ${reg.liveSearch ? '<span class="trust-badge trust-live" style="font-size: 0.7rem;">Live source</span>' : '<span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Built-in reference</span>'}
+      ${(reg.liveSearch && !reg.builtIn) ? '<span class="trust-badge trust-live" style="font-size: 0.7rem;">Live source</span>' : '<span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Built-in reference (please verify)</span>'}
     </div>
     <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.35rem 0;">
       ${reg.summary || 'Suppliers cannot back-bill customers for energy used more than 12 months ago.'}

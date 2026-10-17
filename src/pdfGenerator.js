@@ -439,9 +439,12 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
 
       // Regulatory Citations
       const citesY = 188;
+      const citationHeading = (regulation.builtIn || regulation.liveSearch === false)
+        ? 'STATUTORY CITATIONS — BUILT-IN REFERENCE (PLEASE VERIFY)'
+        : (regulation.liveSearch ? 'OFFICIAL REGULATORY CITATIONS — LIVE SOURCE' : 'OFFICIAL REGULATORY CITATIONS');
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
-        .text('OFFICIAL REGULATORY CITATIONS & VERIFICATION', leftMargin, citesY);
-      const verificationSubtitle = regulation.liveSearch === false
+        .text(citationHeading, leftMargin, citesY);
+      const verificationSubtitle = (regulation.builtIn || regulation.liveSearch === false)
         ? 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.'
         : 'Sourced from regulator publications, legislation registers, and ombudsman guidance.';
       doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
