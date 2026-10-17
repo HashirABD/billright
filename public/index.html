@@ -182,6 +182,21 @@
             <button type="button" id="btn-clear-file" class="btn-secondary" style="margin-left: auto; font-size: 0.75rem; padding: 0.25rem 0.6rem;">Clear</button>
           </div>
         </div>
+
+        <!-- Sample Bill Instant Loader -->
+        <div class="sample-bill-container">
+          <button type="button" id="btn-try-sample-bill" class="btn-sample-bill">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Try a sample bill
+          </button>
+          <span class="sample-bill-hint">Loads synthetic UK utility bill straddling the 12-month limit (real API extraction)</span>
+        </div>
       </div>
 
       <!-- Tab Pane 2: Physical Meter Photo Dropzone -->
@@ -369,7 +384,7 @@
           </button>
 
           <div class="table-totals">
-            Total Billed: <strong class="tabular-nums" id="display-total-billed">£0.00</strong>
+            Total Billed: <strong class="tabular-nums" id="display-total-billed">£0.00</strong> <span class="trust-badge trust-code">Calculated by code</span>
           </div>
         </div>
 
@@ -400,12 +415,90 @@
     <!-- Results Section -->
     <section id="results-section" class="results-container" aria-live="polite">
       
+      <!-- Collapsible How This Works Section -->
+      <details class="how-it-works-details card" id="how-it-works-details">
+        <summary class="how-it-works-summary">
+          <div class="how-it-works-header-text">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <strong>How this works</strong>
+            <span class="trust-badge trust-code">Calculated by code</span>
+          </div>
+          <span class="how-it-works-chevron">&#9662;</span>
+        </summary>
+        <div class="how-it-works-body">
+          <div class="how-it-works-grid">
+            <div class="how-it-works-step">
+              <div class="how-step-badge">1. Deterministic Engine</div>
+              <p>Deterministic math engine calculates the numbers (exact calendar day counts and pro-rata apportionments calculated by code, not an LLM).</p>
+            </div>
+            <div class="how-it-works-step">
+              <div class="how-step-badge">2. Statutory Retrieval</div>
+              <p>Statutory text is retrieved from official regulatory frameworks (e.g. Ofgem SLC 21BA, NERR Rule 30, PG&amp;E Rule 17.1, PUCT §25.28(d)).</p>
+            </div>
+            <div class="how-it-works-step">
+              <div class="how-step-badge">3. AI Vision &amp; Drafting</div>
+              <p>AI only reads documents (bill OCR / meter photo) and drafts the formal dispute notice letter citing the code-calculated figures.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
       <!-- Executive Verdict Card -->
       <article class="card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Statutory Audit Determination</h2>
             <p class="card-subtitle">Deterministic evaluation against binding energy regulator lookback barriers</p>
+          </div>
+        </div>
+
+        <!-- Plain-Language Result Card -->
+        <div id="plain-language-result-card" class="plain-result-card" aria-live="polite">
+          <div class="plain-result-header">
+            <div class="plain-result-badge-tag" id="plain-result-tag">Assessment</div>
+            <h3 id="plain-result-headline" class="plain-result-headline">Evaluating billing statements...</h3>
+            <p id="plain-result-why" class="plain-result-why">Evaluating consumption periods against governing regulations.</p>
+          </div>
+
+          <!-- What to do next 3-step list -->
+          <div class="plain-next-steps" id="plain-next-steps">
+            <div class="plain-next-steps-header">What to do next:</div>
+            <ol class="plain-next-steps-list">
+              <li class="plain-next-step-item">
+                <span class="step-num">1</span>
+                <div class="step-content">
+                  <div class="step-title-row">
+                    <strong>Send the dispute notice</strong>
+                    <button type="button" id="btn-plain-send-dispute" class="btn-primary btn-sm plain-dispute-btn">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                      Open Dispute Dispatcher
+                    </button>
+                  </div>
+                  <p class="step-desc">Deliver the formal dispute notice and Schedule of Mathematical Evidence to your supplier's complaints team.</p>
+                </div>
+              </li>
+              <li class="plain-next-step-item">
+                <span class="step-num">2</span>
+                <div class="step-content">
+                  <strong>Wait for a reply</strong>
+                  <p class="step-desc">Allow a suggested 14 days for the supplier to investigate the billing records and respond in writing.</p>
+                </div>
+              </li>
+              <li class="plain-next-step-item">
+                <span class="step-num">3</span>
+                <div class="step-content">
+                  <strong>Escalate to the ombudsman after 8 weeks</strong>
+                  <p class="step-desc">If unresolved or upon receiving a deadlock letter, escalate directly to <strong id="plain-ombudsman-name">the Energy Ombudsman</strong>.</p>
+                </div>
+              </li>
+            </ol>
           </div>
         </div>
 
@@ -419,11 +512,11 @@
 
         <div class="verdict-amount-banner">
           <div>
-            <div class="verdict-amount-title">Likely Disputable Amount:</div>
+            <div class="verdict-amount-title">Likely Disputable Amount: <span class="trust-badge trust-code">Calculated by code</span></div>
             <div class="verdict-amount-value tabular-nums" id="verdict-disputable-sum">£0.00</div>
           </div>
           <div style="text-align: right;">
-            <div class="verdict-amount-title" id="verdict-cutoff-title">Statutory Lookback Cut-off Barrier:</div>
+            <div class="verdict-amount-title" id="verdict-cutoff-title">Statutory Lookback Cut-off Barrier: <span class="trust-badge trust-code">Calculated by code</span></div>
             <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin-top: 0.25rem;" class="tabular-nums" id="verdict-cutoff-date">--</div>
           </div>
         </div>
@@ -467,7 +560,7 @@
       <article class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Deterministic Lookback Apportionment Schedule</h2>
+            <h2 class="card-title">Deterministic Lookback Apportionment Schedule <span class="trust-badge trust-code">Calculated by code</span></h2>
             <p class="card-subtitle">Day-by-day pro-rata calculation schedule</p>
           </div>
         </div>
@@ -495,7 +588,7 @@
       <article class="card">
         <div class="card-header">
           <div>
-            <h2 class="card-title">Retrieved Statutory Legal Authority</h2>
+            <h2 class="card-title">Retrieved Statutory Legal Authority <span id="authority-trust-badge" class="trust-badge trust-builtin">Built-in reference</span></h2>
             <p class="card-subtitle">Official legislative and regulator licence condition grounding</p>
           </div>
         </div>

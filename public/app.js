@@ -237,6 +237,7 @@ function addRow(data) {
   const row = createRowElement(data);
   periodsTbody.appendChild(row);
   validateAndRecalculate();
+  return row;
 }
 
 /**
@@ -397,6 +398,10 @@ function loadPreset(presetKey) {
     addRow(period);
   });
 
+  // Clear OCR review highlights on preset load
+  document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
+  document.querySelectorAll('.ocr-review-hint').forEach(el => el.remove());
+
   // Hide any previous results on preset switch
   resultsSection.classList.remove('visible');
   validateAndRecalculate();
@@ -429,6 +434,10 @@ function resetForm() {
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) currencyHeader.textContent = '£';
 
+  // Clear OCR review highlights
+  document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
+  document.querySelectorAll('.ocr-review-hint').forEach(el => el.remove());
+
   periodsTbody.innerHTML = '';
   addRow();
   resultsSection.classList.remove('visible');
@@ -458,11 +467,150 @@ btnAddRow.addEventListener('click', () => {
 btnResetAll.addEventListener('click', resetForm);
 
 /**
+ * Applies subtle highlight and "Review" status hint to an auto-filled field.
+ * Removed once the user interacts with, confirms, or edits the field.
+ */
+function markFieldForOcrReview(inputElem) {
+  if (!inputElem) return;
+  inputElem.classList.add('ocr-highlight');
+
+  const parent = inputElem.closest('.form-group') || inputElem.parentElement;
+  if (!parent) return;
+
+  const existingHint = parent.querySelector('.ocr-review-hint');
+  if (existingHint) existingHint.remove();
+
+  const hint = document.createElement('span');
+  hint.className = 'ocr-review-hint';
+  hint.setAttribute('role', 'status');
+  hint.innerHTML = '<span class="review-tag">Review</span> Read by AI, please verify';
+
+  const label = parent.querySelector('.form-label');
+  if (label) {
+    label.appendChild(hint);
+  } else {
+    inputElem.insertAdjacentElement('afterend', hint);
+  }
+
+  const clearHandler = () => {
+    inputElem.classList.remove('ocr-highlight');
+    if (hint && hint.parentNode) {
+      hint.remove();
+    }
+    inputElem.removeEventListener('input', clearHandler);
+    inputElem.removeEventListener('change', clearHandler);
+  };
+
+  inputElem.addEventListener('input', clearHandler, { once: true });
+  inputElem.addEventListener('change', clearHandler, { once: true });
+}
+
+/**
+ * Resolves the statutory ombudsman or regulatory body name for a jurisdiction
+ */
+function getOmbudsmanForJurisdiction(country, supplierContact) {
+  if (supplierContact && supplierContact.ombudsman) {
+    return supplierContact.ombudsman.split(' (')[0];
+  }
+  if (country === 'United Kingdom') {
+    return 'the Energy Ombudsman';
+  }
+  if (country === 'Australia') {
+    return 'the State Energy and Water Ombudsman (EWON/EWOV/EWOQ/EWOSA)';
+  }
+  if (country && country.includes('California')) {
+    return 'the California Public Utilities Commission (CPUC) Consumer Affairs Branch';
+  }
+  if (country && country.includes('Texas')) {
+    return 'the Public Utility Commission of Texas (PUCT)';
+  }
+  return 'the statutory energy regulator or ombudsman';
+}
+
+/**
+ * Renders the top Plain-Language Result Card and 3-step action guide
+ */
+function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
+  const headlineEl = document.getElementById('plain-result-headline');
+  const whyEl = document.getElementById('plain-result-why');
+  const tagEl = document.getElementById('plain-result-tag');
+  const ombudsmanEl = document.getElementById('plain-ombudsman-name');
+  const sendBtn = document.getElementById('btn-plain-send-dispute');
+
+  if (!headlineEl || !whyEl) return;
+
+  const regClause = data.regulation?.clauseReference || data.regulation?.title || 'statutory rules';
+  const cutOff = data.cutOffDate || '--';
+
+  // Variant 1: Missing data
+  if (data.badgeType === 'incomplete_data' || (data.itemizedBreakdown && data.itemizedBreakdown.some(i => !i.startDate || !i.endDate))) {
+    if (tagEl) tagEl.textContent = 'Action Required';
+    headlineEl.textContent = 'We need more information';
+    whyEl.textContent = 'Start or end dates are missing for one or more billing periods. Please complete the dates to determine statutory protection.';
+    if (sendBtn) sendBtn.style.display = 'none';
+    return;
+  }
+
+  // Variant 2: Obstruction or Exception Flagged
+  const isObstructed = data.isMeterObstructed || inputObstructed.value === 'true' || data.exceptionTriggered;
+  if (isObstructed) {
+    if (tagEl) tagEl.textContent = 'Protection Warning';
+    headlineEl.textContent = 'Your protection may not apply, see warning';
+    whyEl.textContent = `Meter access obstruction or an exception was flagged under ${regClause}. Energy suppliers are generally exempt from back-billing limits when meter access was obstructed.`;
+    if (sendBtn) sendBtn.style.display = 'none';
+    return;
+  }
+
+  // Variant 3: Nothing disputable
+  if (!data.disputableTotal || data.disputableTotal <= 0) {
+    if (tagEl) tagEl.textContent = 'Statutory Assessment';
+    headlineEl.textContent = 'Your bill appears to be within the limit';
+    whyEl.textContent = `Based on the ${lookbackMonths}-month limit (${regClause}), all charges fall after ${cutOff} and appear to be within the permitted window.`;
+    if (sendBtn) sendBtn.style.display = 'none';
+    return;
+  }
+
+  // Variant 4: Disputable (partly or fully disputable)
+  if (tagEl) tagEl.textContent = 'Dispute Eligible';
+  const dispStr = `${currency}${data.disputableTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const totalStr = `${currency}${(data.totalBilled || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  headlineEl.textContent = `You may not have to pay ${dispStr} of your ${totalStr} bill`;
+  whyEl.textContent = `Based on the ${lookbackMonths}-month limit (${regClause}). Charges before ${cutOff} are outside the limit.`;
+
+  if (sendBtn) {
+    sendBtn.style.display = 'inline-flex';
+    sendBtn.onclick = (e) => {
+      e.preventDefault();
+      openEmailDispatcherModal();
+    };
+  }
+
+  if (ombudsmanEl) {
+    ombudsmanEl.textContent = getOmbudsmanForJurisdiction(countrySelect.value, data.supplierContact);
+  }
+}
+
+/**
  * Renders the returned analysis results into the DOM
  */
 function renderResults(data) {
   const currency = data.currency || getCurrencySymbol(countrySelect.value);
   const lookbackMonths = data.lookbackMonths || 12;
+
+  // 0. Plain-Language Result Card & Authority Trust Badge
+  updatePlainLanguageResultCard(data, currency, lookbackMonths);
+
+  const authorityTrustBadge = document.getElementById('authority-trust-badge');
+  if (authorityTrustBadge) {
+    if (data.regulation?.liveSearch) {
+      authorityTrustBadge.textContent = 'Live source';
+      authorityTrustBadge.className = 'trust-badge trust-live';
+    } else {
+      authorityTrustBadge.textContent = 'Built-in reference';
+      authorityTrustBadge.className = 'trust-badge trust-builtin';
+    }
+  }
 
   // 1. Verdict Badge & Explanation
   verdictBadgeContainer.innerHTML = '';
@@ -605,7 +753,7 @@ function renderResults(data) {
   sourceDiv.innerHTML = `
     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
       <div class="source-title">${reg.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})</div>
-      ${reg.liveSearch ? '<span class="preset-badge protected" style="font-size: 0.7rem;">Live Search Verified</span>' : '<span class="preset-badge" style="font-size: 0.7rem; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Built-in Citation</span>'}
+      ${reg.liveSearch ? '<span class="trust-badge trust-live" style="font-size: 0.7rem;">Live source</span>' : '<span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Built-in reference</span>'}
     </div>
     <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.35rem 0;">
       ${reg.summary || 'Suppliers cannot back-bill customers for energy used more than 12 months ago.'}
@@ -729,7 +877,7 @@ billForm.addEventListener('submit', async (e) => {
     validationErrorBanner.classList.add('visible');
     validationErrorMsg.textContent = 'Please provide Consumer Name, Supplier Name, Account Number, and Supply Address.';
     btnAnalyze.disabled = false;
-    btnAnalyzeText.textContent = 'Analyze Bill';
+    btnAnalyzeText.textContent = 'Run Statutory Audit';
     return;
   }
 
@@ -750,7 +898,7 @@ billForm.addEventListener('submit', async (e) => {
 
   // Button loading state
   btnAnalyze.disabled = true;
-  btnAnalyzeText.textContent = 'Verifying with Live Regulations...';
+  btnAnalyzeText.textContent = 'Analyzing...';
 
   try {
     const response = await fetch('/api/analyze', {
@@ -775,9 +923,10 @@ billForm.addEventListener('submit', async (e) => {
     validationErrorMsg.textContent = err.message.includes('Billing periods overlap')
       ? 'Billing periods overlap. Please check the dates.'
       : `Analysis error: ${err.message}`;
+    showToast(`Analysis error: ${err.message}`, 'error', 4000);
   } finally {
     btnAnalyze.disabled = false;
-    btnAnalyzeText.textContent = 'Analyze Bill';
+    btnAnalyzeText.textContent = 'Run Statutory Audit';
   }
 });
 
@@ -1207,17 +1356,20 @@ async function processFile(file) {
 
     const data = await res.json();
 
-    // Populate form with extracted data
+    // Populate form with extracted data and mark for OCR review
     if (data.billDate) {
       billDateInput.value = data.billDate;
+      markFieldForOcrReview(billDateInput);
     }
 
     if (data.supplierName && supplierNameInput) {
       supplierNameInput.value = data.supplierName;
+      markFieldForOcrReview(supplierNameInput);
     }
 
     if (data.accountNumber && accountNumberInput) {
       accountNumberInput.value = data.accountNumber;
+      markFieldForOcrReview(accountNumberInput);
     }
 
     if (typeof data.isEstimated === 'boolean') {
@@ -1236,10 +1388,20 @@ async function processFile(file) {
     const header = document.getElementById('currency-symbol-header');
     if (header) header.textContent = symbol;
 
-    // Populate billing periods table
+    // Populate billing periods table with OCR review hints
     periodsTbody.innerHTML = '';
     if (Array.isArray(data.billingPeriods) && data.billingPeriods.length > 0) {
-      data.billingPeriods.forEach(p => addRow(p));
+      data.billingPeriods.forEach(p => {
+        const row = addRow(p);
+        if (row) {
+          const s = row.querySelector('.row-start-date');
+          const e = row.querySelector('.row-end-date');
+          const a = row.querySelector('.row-amount');
+          if (s) markFieldForOcrReview(s);
+          if (e) markFieldForOcrReview(e);
+          if (a) markFieldForOcrReview(a);
+        }
+      });
     } else {
       addRow();
     }
@@ -1247,17 +1409,18 @@ async function processFile(file) {
     validateAndRecalculate();
     resultsSection.classList.remove('visible');
 
-    // UI state: Success
+    // UI state: Success with Trust Badge
     dropzoneProcessing.style.display = 'none';
     dropzoneSuccess.style.display = 'flex';
     successFilename.textContent = file.name;
-    successSummary.textContent = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. Please verify these values against your document.`;
+    successSummary.innerHTML = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. <span class="trust-badge trust-ai">Read by AI, please verify</span>`;
 
   } catch (err) {
     console.error('Extraction error:', err);
     resetDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
+    validationErrorMsg.textContent = 'Could not read this file, please enter the values manually.';
+    showToast('Could not read this file, please enter the values manually.', 'error', 4000);
   }
 }
 
@@ -1307,6 +1470,35 @@ function setupDropzone() {
     btnClearFile.addEventListener('click', (e) => {
       e.stopPropagation();
       resetDropzone();
+    });
+  }
+
+  // Try a sample bill button handler (loads synthetic sample-bill.png via real API)
+  const btnTrySampleBill = document.getElementById('btn-try-sample-bill');
+  if (btnTrySampleBill) {
+    btnTrySampleBill.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      validationErrorBanner.classList.remove('visible');
+      dropzonePrompt.style.display = 'none';
+      dropzoneSuccess.style.display = 'none';
+      dropzoneProcessing.style.display = 'flex';
+      processingFilename.textContent = 'Loading sample bill (sample-bill.png)...';
+
+      try {
+        const resp = await fetch('/samples/sample-bill.png');
+        if (!resp.ok) {
+          throw new Error(`Failed to load sample image (HTTP ${resp.status})`);
+        }
+        const blob = await resp.blob();
+        const file = new File([blob], 'sample-bill.png', { type: 'image/png' });
+        await processFile(file);
+      } catch (err) {
+        console.error('Sample bill load error:', err);
+        resetDropzone();
+        validationErrorBanner.classList.add('visible');
+        validationErrorMsg.textContent = 'Could not read this file, please enter the values manually.';
+        showToast('Could not read this file, please enter the values manually.', 'error', 4000);
+      }
     });
   }
 }
