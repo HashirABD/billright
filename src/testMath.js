@@ -155,10 +155,10 @@ const obstructedCase = await evaluateExceptionsAndFormatLetter({
   regulation: dummyReg,
   currency: '£',
   lookbackMonths: 12,
-  consumerName: 'Test Consumer',
-  supplierName: 'Test Energy',
-  accountNumber: 'ACC-12345',
-  supplyAddress: '1 Test Street',
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-12345',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
   noticeDate: '2026-10-15',
   country: 'United Kingdom'
 });
@@ -201,10 +201,10 @@ const txCase = await evaluateExceptionsAndFormatLetter({
   },
   currency: '$',
   lookbackMonths: 6,
-  consumerName: 'TX Consumer',
-  supplierName: 'TX Retail Electric',
-  accountNumber: 'TX-9988',
-  supplyAddress: '100 Austin Blvd, Austin, TX',
+  consumerName: 'Jane Example',
+  supplierName: 'Example Utility Co',
+  accountNumber: 'EX-US-9988',
+  supplyAddress: '100 Example Blvd, Austin, TX 78701',
   noticeDate: '2026-10-15',
   country: 'United States (Texas)'
 });
