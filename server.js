@@ -109,6 +109,7 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const {
       country = 'United Kingdom',
+      australiaState = '',
       billDate,
       billingPeriods,
       isEstimated = false,
@@ -121,6 +122,13 @@ app.post('/api/analyze', async (req, res) => {
       supplyAddress,
       noticeDate
     } = req.body;
+
+    // Australia: Block Victoria audits
+    if (country === 'Australia' && String(australiaState).toUpperCase() === 'VIC') {
+      return res.status(400).json({
+        error: 'Victoria has its own code; this tool does not cover it'
+      });
+    }
 
     // 1. Client input validation
     if (!consumerName || !supplierName || !accountNumber || !supplyAddress) {
@@ -162,7 +170,7 @@ app.post('/api/analyze', async (req, res) => {
     const regulation = await searchRegulations(country);
 
     // 4. Resolve verified supplier contact before formatting letter
-    const supplierContact = getSupplierContact(supplierName, country);
+    const supplierContact = getSupplierContact(supplierName, country, australiaState);
     const resolvedSupplierEmail = req.body.supplierEmail || supplierContact.email;
 
     // 5. Stage 3: Constrained Exception Evaluation & Letter Formatting (Gemini)
@@ -183,7 +191,8 @@ app.post('/api/analyze', async (req, res) => {
       noticeDate,
       country,
       supplierEmail: resolvedSupplierEmail,
-      supplierContact
+      supplierContact,
+      state: australiaState
     });
 
     return res.json({
@@ -205,6 +214,7 @@ app.post('/api/analyze', async (req, res) => {
       supplyAddress,
       supplierContact,
       supplierEmail: resolvedSupplierEmail,
+      australiaState,
       noticeDate: evaluation.noticeDate || noticeDate
     });
 
@@ -225,6 +235,7 @@ app.post('/api/generate-pdf', async (req, res) => {
       accountNumber,
       supplyAddress,
       country = 'United Kingdom',
+      australiaState = '',
       billDate,
       cutOffDate,
       noticeDate,
@@ -254,7 +265,7 @@ app.post('/api/generate-pdf', async (req, res) => {
       });
     }
 
-    const supplierContact = passedContact || getSupplierContact(supplierName, country);
+    const supplierContact = passedContact || getSupplierContact(supplierName, country, australiaState);
     const resolvedEmail = supplierEmail || supplierContact.email;
 
     const pdfBuffer = await generateLegalPacketPdf({
@@ -263,6 +274,7 @@ app.post('/api/generate-pdf', async (req, res) => {
       accountNumber,
       supplyAddress,
       country,
+      australiaState,
       billDate,
       cutOffDate,
       noticeDate,

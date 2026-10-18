@@ -164,11 +164,14 @@ const obstructedCase = await evaluateExceptionsAndFormatLetter({
 });
 
 assert.equal(obstructedCase.exceptionTriggered, true, 'Obstruction must trigger exception');
-assert.ok(obstructedCase.exceptionNotes.includes('Meter access obstruction was indicated'), 'Must include obstruction caveat');
-assert.ok(obstructedCase.disputeLetter.includes('IMPORTANT NOTICE REGARDING METER ACCESS'), 'Dispute letter must include meter access notice');
-assert.ok(obstructedCase.disputeLetter.includes('earlier bills were based on estimated rather than actual readings'), 'Must reflect estimated bills');
+assert.ok(obstructedCase.exceptionNotes.includes('Protection may not apply if the supplier shows you unreasonably prevented access'), 'Must include new exact obstruction caveat');
+assert.ok(!obstructedCase.disputeLetter.includes('IMPORTANT NOTICE REGARDING METER ACCESS'), 'Dispute letter must NOT include meter access notice or caution to supplier');
+assert.ok(!obstructedCase.disputeLetter.includes('While meter obstruction was indicated'), 'Must not admit meter obstruction in supplier letter');
+assert.ok(!obstructedCase.disputeLetter.includes('CAUTION: Meter access obstruction was indicated'), 'Must not include caution paragraph in supplier letter');
+assert.ok(!obstructedCase.disputeLetter.includes('I confirm that I have not acted obstructively'), 'Must not claim I have never obstructed access when obstructed');
+assert.ok(obstructedCase.disputeLetter.includes('Previous statements were rendered on estimated rather than actual meter readings.'), 'Must reflect estimated bills');
 
-console.log('✔ Obstruction and estimate toggles impact verified.');
+console.log('✔ Obstruction and estimate toggles impact verified (supplier-facing letter does not admit obstruction).');
 
 // Test 11: Overlapping billing periods detection
 assert.throws(() => {
@@ -238,6 +241,99 @@ const fallbackCase = await evaluateExceptionsAndFormatLetter({
 assert.equal(fallbackCase.badgeType, 'consumer_protected');
 assert.ok(fallbackCase.disputeLetter !== null, 'Letter must be produced when liveSearch is false');
 console.log('✔ Tavily fallback and built-in citation letter generation verified.');
+
+// Test 14: Letter Grammar Across All 4 Toggle Combinations
+const toggleCases = [
+  { isEstimated: false, isMeterObstructed: false },
+  { isEstimated: true, isMeterObstructed: false },
+  { isEstimated: false, isMeterObstructed: true },
+  { isEstimated: true, isMeterObstructed: true }
+];
+
+for (const tCase of toggleCases) {
+  const result = await evaluateExceptionsAndFormatLetter({
+    ...tCase,
+    disputableTotal: 750.00,
+    totalBilled: 1200.00,
+    billDate: '2026-10-01',
+    cutOffDate: '2025-10-01',
+    regulation: dummyReg,
+    currency: '£',
+    lookbackMonths: 12,
+    consumerName: 'Jane Example',
+    supplierName: 'Example Energy Ltd',
+    accountNumber: 'EX-8849201',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+    noticeDate: '2026-10-15',
+    country: 'United Kingdom'
+  });
+
+  const letter = result.disputeLetter;
+  assert.ok(!letter.includes('.,'), `Letter must not contain broken punctuation ".," (case: est=${tCase.isEstimated}, obs=${tCase.isMeterObstructed})`);
+  assert.ok(!letter.includes('..'), `Letter must not contain double periods ".." (case: est=${tCase.isEstimated}, obs=${tCase.isMeterObstructed})`);
+
+  if (tCase.isMeterObstructed) {
+    assert.ok(!letter.includes('I confirm that I have not acted obstructively'), 'Obstructed case must NOT claim non-obstruction');
+    assert.ok(!letter.includes('While meter obstruction was indicated'), 'Obstructed case must NOT admit obstruction to supplier');
+    assert.ok(!letter.includes('CAUTION: Meter access obstruction'), 'Obstructed case must NOT include caution notes in letter');
+  } else {
+    assert.ok(letter.includes('I confirm that I have not acted obstructively'), 'Non-obstructed case confirms no obstruction');
+  }
+
+  if (tCase.isEstimated) {
+    assert.ok(letter.includes('estimated rather than actual'), 'Estimated case must mention estimated readings');
+  }
+}
+console.log('✔ Grammar and syntax verified across all 4 toggle combinations (no ".," or "..").');
+
+// Test 15: Australia State Ombudsman Routing & NERR Rule 30 Specific Wording
+import { getOmbudsmanByCountry } from './supplierDirectory.js';
+
+assert.equal(getOmbudsmanByCountry('Australia', 'NSW'), 'Energy and Water Ombudsman NSW (EWON)');
+assert.equal(getOmbudsmanByCountry('Australia', 'QLD'), 'Energy and Water Ombudsman Queensland (EWOQ)');
+assert.equal(getOmbudsmanByCountry('Australia', 'SA'), 'Energy and Water Ombudsman SA (EWOSA)');
+
+// Verify no "e.g." in ombudsman names
+['NSW', 'QLD', 'SA'].forEach(st => {
+  const omb = getOmbudsmanByCountry('Australia', st);
+  assert.ok(!omb.includes('e.g.'), `AU state ${st} ombudsman must not contain "e.g."`);
+});
+
+const auReg = getBuiltInCitation('Australia');
+const auLetterResult = await evaluateExceptionsAndFormatLetter({
+  isEstimated: true,
+  isMeterObstructed: false,
+  disputableTotal: 900.00,
+  totalBilled: 1800.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2026-01-01',
+  regulation: auReg,
+  currency: 'A$',
+  lookbackMonths: 9,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Pty Ltd',
+  accountNumber: 'EX-AU-992140',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  noticeDate: '2026-10-15',
+  country: 'Australia',
+  state: 'NSW'
+});
+
+const auLetter = auLetterResult.disputeLetter;
+assert.ok(auLetter.includes('Under NERR Rule 30, charges more than 9 months before the date the customer was notified of the undercharge cannot be recovered unless the customer was at fault.'), 'AU letter must use exact NERR Rule 30 wording');
+assert.ok(!auLetter.includes('where the consumer has not previously received an accurate bill'), 'AU letter must omit the UK-specific phrase');
+assert.ok(auLetter.includes('Energy and Water Ombudsman NSW (EWON)'), 'AU NSW letter must escalate to EWON');
+// Verify no duplicate "(NERR Rule 30)" label at the end of the letter
+const countNERRInEscalation = (auLetter.match(/EWON.*NERR/i) || []).length;
+assert.equal(countNERRInEscalation, 0, 'AU letter must not duplicate "(NERR Rule 30)" label in escalation sentence');
+console.log('✔ Australia state ombudsman mapping and NERR Rule 30 wording verified.');
+
+// Test 16: No Generic Placeholder Citation Snippet
+const ukCitation = getBuiltInCitation('United Kingdom');
+assert.ok(!ukCitation.summary.includes('Suppliers must not bill consumers for unbilled energy used beyond the statutory lookback window'), 'Must not contain generic placeholder snippet');
+assert.ok(!ukCitation.summary.endsWith('...'), 'Summary must not end with trailing "..."');
+
+console.log('✔ Absence of placeholder citation snippets verified.');
 
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');

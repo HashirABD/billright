@@ -42,6 +42,7 @@ const PRESETS = {
   D: {
     name: 'Australia (NERR Rule 30, 9 Mos)',
     country: 'Australia',
+    australiaState: 'NSW',
     billDate: '2026-10-01',
     consumerName: 'Jane Example',
     supplierName: 'Example Energy Pty Ltd',
@@ -128,6 +129,11 @@ const groupEstimated = document.getElementById('group-estimated');
 const inputEstimated = document.getElementById('input-estimated');
 const groupObstructed = document.getElementById('group-obstructed');
 const inputObstructed = document.getElementById('input-obstructed');
+
+// Australia jurisdiction state elements
+const groupAustraliaState = document.getElementById('group-australia-state');
+const inputAustraliaState = document.getElementById('input-australia-state');
+const victoriaBlockedBanner = document.getElementById('victoria-blocked-banner');
 
 // Party details DOM
 const consumerNameInput = document.getElementById('input-consumer-name');
@@ -360,13 +366,20 @@ function validateAndRecalculate() {
   const currencySymbol = getCurrencySymbol(countrySelect.value);
   displayTotalBilled.textContent = formatMoney(totalBilled, currencySymbol);
 
+  const isVicBlocked = countrySelect.value === 'Australia' && inputAustraliaState && inputAustraliaState.value === 'VIC';
+
   if (hasErrors) {
     validationErrorBanner.classList.add('visible');
     validationErrorMsg.textContent = errorMessage;
     btnAnalyze.disabled = true;
+  } else if (isVicBlocked) {
+    btnAnalyze.disabled = true;
+    btnAnalyze.title = 'Victoria has its own code; this tool does not cover it';
+    return false;
   } else {
     validationErrorBanner.classList.remove('visible');
     btnAnalyze.disabled = false;
+    btnAnalyze.removeAttribute('title');
   }
 
   return !hasErrors;
@@ -392,9 +405,16 @@ function resetResultsToEmptyState() {
   const obsWarning = document.getElementById('obstruction-warning-container');
   const otherCountryWarning = document.getElementById('other-country-warning-container');
 
+  const cardEl = document.querySelector('.plain-result-card');
+  if (cardEl) cardEl.classList.remove('warning');
+  const amountTitleEl = document.getElementById('verdict-disputable-title') || document.querySelector('.verdict-amount-title');
+  if (amountTitleEl) {
+    amountTitleEl.innerHTML = 'Likely Disputable Amount: <span class="trust-badge trust-code">Calculated by code</span>';
+  }
+
   if (plainHeadline) plainHeadline.textContent = 'Run an audit to see your result';
   if (plainWhy) plainWhy.textContent = 'Submit your billing records to evaluate charges against statutory back-billing limits.';
-  if (plainTag) plainTag.style.display = 'none';
+  if (plainTag) { plainTag.style.display = 'none'; plainTag.className = 'plain-result-badge-tag'; }
   if (plainNextSteps) plainNextSteps.style.display = 'none';
   if (authorityBadge) authorityBadge.style.display = 'none';
   if (verdictContainer) verdictContainer.innerHTML = '';
@@ -442,6 +462,10 @@ function loadPreset(presetKey) {
   // Fill form values
   countrySelect.value = preset.country;
   billDateInput.value = preset.billDate;
+  if (preset.country === 'Australia' && inputAustraliaState) {
+    inputAustraliaState.value = preset.australiaState || 'NSW';
+  }
+  updateAustraliaStateVisibility();
   setToggleValue(groupEstimated, inputEstimated, preset.isEstimated);
   setToggleValue(groupObstructed, inputObstructed, preset.isMeterObstructed);
 
@@ -474,6 +498,28 @@ function loadPreset(presetKey) {
 }
 
 /**
+ * Updates Australia state selector visibility and checks for blocked Victoria code
+ */
+function updateAustraliaStateVisibility() {
+  const isAustralia = countrySelect.value === 'Australia';
+  if (groupAustraliaState) {
+    groupAustraliaState.style.display = isAustralia ? 'block' : 'none';
+  }
+  if (isAustralia && inputAustraliaState && inputAustraliaState.value === 'VIC') {
+    if (victoriaBlockedBanner) victoriaBlockedBanner.style.display = 'flex';
+    btnAnalyze.disabled = true;
+    btnAnalyze.title = 'Victoria has its own code; this tool does not cover it';
+    resetResultsToEmptyState();
+    return true; // blocked
+  } else {
+    if (victoriaBlockedBanner) victoriaBlockedBanner.style.display = 'none';
+    btnAnalyze.disabled = false;
+    btnAnalyze.removeAttribute('title');
+    return false;
+  }
+}
+
+/**
  * Resets the entire form to clean defaults
  */
 function resetForm() {
@@ -487,6 +533,8 @@ function resetForm() {
 
   countrySelect.value = 'United Kingdom';
   billDateInput.value = '2026-10-01';
+  if (inputAustraliaState) inputAustraliaState.value = 'NSW';
+  updateAustraliaStateVisibility();
   setToggleValue(groupEstimated, inputEstimated, false);
   setToggleValue(groupObstructed, inputObstructed, false);
   showToast('Audit form reset to defaults', 'info', 2000);
@@ -517,13 +565,25 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
   });
 });
 
-// Update currency on country change
+// Update currency and Australia state visibility on country change
 countrySelect.addEventListener('change', () => {
   const symbol = getCurrencySymbol(countrySelect.value);
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) currencyHeader.textContent = symbol;
+  updateAustraliaStateVisibility();
   validateAndRecalculate();
 });
+
+if (inputAustraliaState) {
+  inputAustraliaState.addEventListener('change', () => {
+    const isBlocked = updateAustraliaStateVisibility();
+    if (isBlocked) {
+      showToast('Victoria has its own code; this tool does not cover it', 'error', 4000);
+    } else {
+      validateAndRecalculate();
+    }
+  });
+}
 
 btnAddRow.addEventListener('click', () => {
   addRow();
@@ -581,7 +641,10 @@ function getOmbudsmanForJurisdiction(country, supplierContact) {
     return 'the Energy Ombudsman';
   }
   if (country === 'Australia') {
-    return 'the State Energy and Water Ombudsman (EWON/EWOV/EWOQ/EWOSA)';
+    const state = inputAustraliaState ? inputAustraliaState.value : 'NSW';
+    if (state === 'QLD') return 'the Energy and Water Ombudsman Queensland (EWOQ)';
+    if (state === 'SA') return 'the Energy and Water Ombudsman SA (EWOSA)';
+    return 'the Energy and Water Ombudsman NSW (EWON)';
   }
   if (country && country.includes('California')) {
     return 'the California Public Utilities Commission (CPUC) Consumer Affairs Branch';
@@ -602,11 +665,16 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
   const nextStepsEl = document.getElementById('plain-next-steps');
   const ombudsmanEl = document.getElementById('plain-ombudsman-name');
   const sendBtn = document.getElementById('btn-plain-send-dispute');
+  const cardEl = document.querySelector('.plain-result-card');
 
   if (!headlineEl || !whyEl) return;
 
+  if (cardEl) cardEl.classList.remove('warning');
   if (nextStepsEl) nextStepsEl.style.display = 'block';
-  if (tagEl) tagEl.style.display = 'inline-block';
+  if (tagEl) {
+    tagEl.style.display = 'inline-block';
+    tagEl.className = 'plain-result-badge-tag';
+  }
 
   const regClause = data.regulation?.clauseReference || data.regulation?.title || 'statutory rules';
   const cutOff = data.cutOffDate || '--';
@@ -620,12 +688,16 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
     return;
   }
 
-  // Variant 2: Obstruction or Exception Flagged
+  // Variant 2: Obstruction or Exception Flagged (Merged Single Clear Warning Block)
   const isObstructed = data.isMeterObstructed || inputObstructed.value === 'true' || data.exceptionTriggered;
   if (isObstructed) {
-    if (tagEl) tagEl.textContent = 'Protection Warning';
-    headlineEl.textContent = 'Your protection may not apply, see warning';
-    whyEl.textContent = `Meter access obstruction or an exception was flagged under ${regClause}. Energy suppliers are generally exempt from back-billing limits when meter access was obstructed.`;
+    if (cardEl) cardEl.classList.add('warning');
+    if (tagEl) {
+      tagEl.textContent = 'Protection Warning';
+      tagEl.className = 'plain-result-badge-tag warning';
+    }
+    headlineEl.textContent = 'Protection may not apply';
+    whyEl.textContent = 'Protection may not apply if the supplier shows you unreasonably prevented access to read the meter. Consider getting advice before sending.';
     if (sendBtn) sendBtn.style.display = 'none';
     return;
   }
@@ -670,6 +742,18 @@ function renderResults(data) {
   // 0. Plain-Language Result Card & Authority Trust Badge
   updatePlainLanguageResultCard(data, currency, lookbackMonths);
 
+  const isObstructed = Boolean(data.isMeterObstructed || inputObstructed.value === 'true' || data.exceptionTriggered);
+
+  // Update amount title
+  const amountTitleEl = document.getElementById('verdict-disputable-title') || document.querySelector('.verdict-amount-title');
+  if (amountTitleEl) {
+    if (isObstructed) {
+      amountTitleEl.innerHTML = 'Amount in dispute (if protection applies): <span class="trust-badge trust-code">Calculated by code</span>';
+    } else {
+      amountTitleEl.innerHTML = 'Likely Disputable Amount: <span class="trust-badge trust-code">Calculated by code</span>';
+    }
+  }
+
   const authorityTrustBadge = document.getElementById('authority-trust-badge');
   if (authorityTrustBadge) {
     authorityTrustBadge.style.display = 'inline-flex';
@@ -682,64 +766,54 @@ function renderResults(data) {
     }
   }
 
-  // 1. Verdict Badge & Explanation
+  // 1. Verdict Badge & Explanation (when obstruction is flagged, merged into the single clear block above)
   verdictBadgeContainer.innerHTML = '';
-  const badge = document.createElement('div');
-
-  if (data.badgeType === 'consumer_protected') {
-    badge.className = 'verdict-badge protected';
-    badge.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-      <span>${data.verdict}</span>
-    `;
-    verdictExplanation.textContent = `Under statutory back-billing protections in ${data.regulation?.jurisdiction || 'this jurisdiction'}, energy suppliers cannot demand payment for charges older than ${lookbackMonths} calendar months prior to the bill date.`;
-  } else if (data.badgeType === 'rule_does_not_apply') {
-    badge.className = 'verdict-badge valid';
-    badge.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="16" x2="12" y2="12"/>
-        <line x1="12" y1="8" x2="12.01" y2="8"/>
-      </svg>
-      <span>${data.verdict}</span>
-    `;
-    verdictExplanation.textContent = data.exceptionNotes || `All billing periods fall within the permitted statutory ${lookbackMonths}-month billing window.`;
+  if (isObstructed) {
+    verdictExplanation.textContent = '';
   } else {
-    badge.className = 'verdict-badge incomplete';
-    badge.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-        <line x1="12" y1="9" x2="12" y2="13"/>
-        <line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-      <span>${data.verdict}</span>
-    `;
-    verdictExplanation.textContent = data.exceptionNotes || 'Official regulatory rules could not be verified for this jurisdiction. Analysis paused to avoid guesswork.';
-  }
+    const badge = document.createElement('div');
 
-  verdictBadgeContainer.appendChild(badge);
+    if (data.badgeType === 'consumer_protected') {
+      badge.className = 'verdict-badge protected';
+      badge.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>${data.verdict}</span>
+      `;
+      verdictExplanation.textContent = `Under statutory back-billing protections in ${data.regulation?.jurisdiction || 'this jurisdiction'}, energy suppliers cannot demand payment for charges older than ${lookbackMonths} calendar months prior to the bill date.`;
+    } else if (data.badgeType === 'rule_does_not_apply') {
+      badge.className = 'verdict-badge valid';
+      badge.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>${data.verdict}</span>
+      `;
+      verdictExplanation.textContent = data.exceptionNotes || `All billing periods fall within the permitted statutory ${lookbackMonths}-month billing window.`;
+    } else {
+      badge.className = 'verdict-badge incomplete';
+      badge.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span>${data.verdict}</span>
+      `;
+      verdictExplanation.textContent = data.exceptionNotes || 'Official regulatory rules could not be verified for this jurisdiction. Analysis paused to avoid guesswork.';
+    }
+
+    verdictBadgeContainer.appendChild(badge);
+  }
 
   // Render obstruction or provisional country notices
   const obstructionContainer = document.getElementById('obstruction-warning-container');
   if (obstructionContainer) {
-    if (data.exceptionTriggered || data.isMeterObstructed || inputObstructed.value === 'true') {
-      obstructionContainer.style.display = 'flex';
-      obstructionContainer.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-        <div>
-          <strong>Caution: Meter Access Obstructed.</strong> Statutory back-billing protection rules generally exempt suppliers where the consumer obstructed or prevented physical access to read the meter. The supplier may dispute your back-billing rights on these grounds.
-        </div>
-      `;
-    } else {
-      obstructionContainer.style.display = 'none';
-      obstructionContainer.innerHTML = '';
-    }
+    obstructionContainer.style.display = 'none';
+    obstructionContainer.innerHTML = '';
   }
 
   const otherCountryContainer = document.getElementById('other-country-warning-container');
@@ -1049,10 +1123,16 @@ billForm.addEventListener('submit', async (e) => {
     return;
   }
 
+  if (countrySelect.value === 'Australia' && inputAustraliaState && inputAustraliaState.value === 'VIC') {
+    showToast('Victoria has its own code; this tool does not cover it', 'error', 4000);
+    return;
+  }
+
   const localDates = getLocalEscalationDates();
 
   const payload = {
     country: countrySelect.value,
+    australiaState: countrySelect.value === 'Australia' && inputAustraliaState ? inputAustraliaState.value : '',
     billDate: billDateInput.value,
     isEstimated: inputEstimated.value === 'true',
     isMeterObstructed: inputObstructed.value === 'true',
@@ -1580,6 +1660,7 @@ if (btnDownloadPdf) {
         accountNumber: aNum,
         supplyAddress: sAddr,
         country: countrySelect.value,
+        australiaState: countrySelect.value === 'Australia' && inputAustraliaState ? inputAustraliaState.value : '',
         billDate: currentAnalysisResult.billDate || billDateInput.value,
         cutOffDate: currentAnalysisResult.cutOffDate,
         noticeDate: currentAnalysisResult.noticeDate || localDates.isoDate,
@@ -1626,12 +1707,6 @@ if (btnDownloadPdf) {
     } catch (err) {
       console.error('PDF generation error:', err);
       showToast(`Could not generate PDF packet: ${err.message}`, 'error');
-    } finally {
-      btnDownloadPdf.disabled = false;
-      if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;
-    }
-  });
-}
     } finally {
       btnDownloadPdf.disabled = false;
       if (btnDownloadPdfText) btnDownloadPdfText.textContent = originalBtnText;

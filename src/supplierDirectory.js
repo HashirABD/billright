@@ -148,10 +148,15 @@ export const SUPPLIER_DIRECTORY = {
 };
 
 /**
- * Resolves a country to its default ombudsman body.
+ * Resolves a country and optional state to its default ombudsman body without "e.g.".
  */
-function getOmbudsmanByCountry(country = 'United Kingdom') {
-  if (country === 'Australia') return 'Energy and Water Ombudsman (EWON / EWOV)';
+export function getOmbudsmanByCountry(country = 'United Kingdom', state = '') {
+  if (country === 'Australia') {
+    const s = String(state || '').toUpperCase();
+    if (s === 'QLD') return 'Energy and Water Ombudsman Queensland (EWOQ)';
+    if (s === 'SA') return 'Energy and Water Ombudsman SA (EWOSA)';
+    return 'Energy and Water Ombudsman NSW (EWON)';
+  }
   if (country.includes('California')) return 'California Public Utilities Commission (CPUC)';
   if (country.includes('Texas')) return 'Public Utility Commission of Texas (PUCT)';
   return 'Energy Ombudsman (www.energyombudsman.org)';
@@ -164,10 +169,12 @@ function getOmbudsmanByCountry(country = 'United Kingdom') {
  * 
  * @param {string} supplierName 
  * @param {string} country 
+ * @param {string} [state]
  * @returns {Object}
  */
-export function getSupplierContact(supplierName = '', country = 'United Kingdom') {
+export function getSupplierContact(supplierName = '', country = 'United Kingdom', state = '') {
   const normalized = supplierName.trim().toLowerCase();
+  const ombudsmanBody = getOmbudsmanByCountry(country, state);
 
   // Fictional demo suppliers: reserved address complaints@example.com
   if (
@@ -187,14 +194,16 @@ export function getSupplierContact(supplierName = '', country = 'United Kingdom'
       isUnknown: false,
       phone: '',
       portalUrl: '',
-      ombudsman: getOmbudsmanByCountry(country)
+      ombudsman: ombudsmanBody
     };
   }
 
   // Exact directory match
   if (SUPPLIER_DIRECTORY[normalized]) {
+    const entry = SUPPLIER_DIRECTORY[normalized];
     return {
-      ...SUPPLIER_DIRECTORY[normalized],
+      ...entry,
+      ombudsman: country === 'Australia' ? ombudsmanBody : entry.ombudsman,
       isDemo: false,
       isDirectory: true,
       isUnknown: false
@@ -206,6 +215,7 @@ export function getSupplierContact(supplierName = '', country = 'United Kingdom'
     if (normalized.includes(key) || key.includes(normalized)) {
       return {
         ...value,
+        ombudsman: country === 'Australia' ? ombudsmanBody : value.ombudsman,
         isDemo: false,
         isDirectory: true,
         isUnknown: false
@@ -224,6 +234,7 @@ export function getSupplierContact(supplierName = '', country = 'United Kingdom'
     isUnknown: true,
     phone: '',
     portalUrl: '',
-    ombudsman: getOmbudsmanByCountry(country)
+    ombudsman: ombudsmanBody
   };
 }
+

@@ -14,13 +14,23 @@ import PDFDocument from 'pdfkit';
 /**
  * Returns ombudsman and regulatory escalation directory information.
  */
-function getEscalationDirectory(jurisdiction = '') {
+function getEscalationDirectory(jurisdiction = '', state = '') {
   if (jurisdiction === 'Australia') {
+    const s = String(state || '').toUpperCase();
+    let body = 'Energy and Water Ombudsman NSW (EWON)';
+    let website = 'www.ewon.com.au / 1800 246 545';
+    if (s === 'QLD') {
+      body = 'Energy and Water Ombudsman Queensland (EWOQ)';
+      website = 'www.ewoq.com.au / 1800 662 837';
+    } else if (s === 'SA') {
+      body = 'Energy and Water Ombudsman SA (EWOSA)';
+      website = 'www.ewosa.com.au / 1800 665 565';
+    }
     return {
-      body: 'State Energy and Water Ombudsman (e.g. EWON in NSW, EWOQ in QLD, EWOSA in SA)',
+      body,
       timeline: 'If unresolved after the standard 8-week complaints timeframe or upon receipt of formal deadlock / dispute response',
-      statute: 'National Energy Retail Rules (NERR Rule 30) - Scope: NERR states (NSW, QLD, SA). Note: Victoria has its own code and is not covered.',
-      website: 'www.ewon.com.au / www.ewosa.com.au / www.ewoq.com.au'
+      statute: 'National Energy Retail Rules (NERR Rule 30) - Scope: NERR participating states (NSW, QLD, SA). Note: Victoria has its own code and is not covered.',
+      website
     };
   }
   if (jurisdiction.includes('California')) {
@@ -98,7 +108,7 @@ function drawHeaderFooter(doc, { pageNum, totalPages, accountNumber, consumerNam
 }
 
 /**
- * Generates the complete 3-page Dispute Packet (draft) PDF as a Buffer.
+ * Generates the complete Dispute Packet (draft) PDF as a Buffer.
  * 
  * @param {Object} data
  * @returns {Promise<Buffer>}
@@ -126,11 +136,14 @@ export async function generateLegalPacketPdf(data) {
         disputeLetter = '',
         meterEvidence = null,
         supplierEmail,
-        supplierContact
+        supplierContact,
+        australiaState = '',
+        state = ''
       } = data;
 
-      const escalation = getEscalationDirectory(regulation.jurisdiction || country);
-      const totalPages = 3;
+      const resolvedState = australiaState || state;
+      const escalation = getEscalationDirectory(regulation.jurisdiction || country, resolvedState);
+      const totalPages = isMeterObstructed ? 4 : 3;
       const formattedNoticeDate = formatDate(noticeDate);
 
       const doc = new PDFDocument({
@@ -230,13 +243,34 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       doc.text(p1, leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
 
       const p2Y = doc.y + 6;
+      const isAustralia = Boolean(country === 'Australia' || (regulation.clauseReference && regulation.clauseReference.includes('NERR')));
       const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
-      const p2Statute = isTexas
-        ? 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.'
-        : `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
-      const p2 = `${p2Statute}
 
-${isMeterObstructed ? 'While meter obstruction was indicated, I formally request full documentation of all attempted visits and read records.' : 'I expressly confirm that I have never obstructed or prevented meter reader access'}${isEstimated ? ', and previous statements were rendered on estimated rather than actual readings' : ''}. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.`;
+      let p2Statute;
+      if (isAustralia) {
+        p2Statute = 'Under NERR Rule 30, charges more than 9 months before the date the customer was notified of the undercharge cannot be recovered unless the customer was at fault.';
+      } else if (isTexas) {
+        p2Statute = 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.';
+      } else {
+        p2Statute = `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
+      }
+
+      let p2Access;
+      if (isMeterObstructed) {
+        if (isEstimated) {
+          p2Access = 'Previous statements were rendered on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+        } else {
+          p2Access = 'In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+        }
+      } else {
+        if (isEstimated) {
+          p2Access = 'I expressly confirm that I have never obstructed or prevented meter reader access, and previous statements were rendered on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+        } else {
+          p2Access = 'I expressly confirm that I have never obstructed or prevented meter reader access. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+        }
+      }
+
+      const p2 = `${p2Statute}\n\n${p2Access}`;
 
       doc.text(p2, leftMargin, p2Y, { width: contentWidth, lineGap: 3.5 });
 
@@ -254,19 +288,15 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
 
       // Suggested Response Deadline Box
       const alertY = doc.y + 12;
-      const alertH = isMeterObstructed ? 88 : 74;
-      const alertBg = isMeterObstructed ? '#fef2f2' : '#f8fafc';
-      const alertStroke = isMeterObstructed ? '#dc2626' : '#94a3b8';
+      const alertH = 74;
+      const alertBg = '#f8fafc';
+      const alertStroke = '#94a3b8';
       doc.roundedRect(leftMargin, alertY, contentWidth, alertH, 4).fillAndStroke(alertBg, alertStroke);
 
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor(isMeterObstructed ? '#b91c1c' : '#1e293b')
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1e3a8a')
         .text('SUGGESTED RESPONSE DEADLINE & OMBUDSMAN PROTOCOL', leftMargin + 14, alertY + 8);
-      
-      const obstructionNote = isMeterObstructed
-        ? 'CAUTION: Meter access obstruction was indicated. Under statutory rules, protections do not apply if the customer unreasonably denied or obstructed meter reading access.\n'
-        : '';
 
-      const alertMsg = `${obstructionNote}Please provide your written confirmation of bill review within a suggested 14-day timeframe. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, this dispute, together with the attached Schedule of Mathematical Evidence, will be formally submitted to the ${escalation.body} for independent determination.`;
+      const alertMsg = `Please provide your written confirmation of bill review within a suggested 14-day timeframe. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, this dispute, together with the attached Schedule of Mathematical Evidence, will be formally submitted to the ${escalation.body} for independent determination.`;
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
         .text(alertMsg, leftMargin + 14, alertY + 22, { width: contentWidth - 28, lineGap: 2.5 });
@@ -481,7 +511,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
           .text(`ADDITIONAL RETRIEVED SOURCE${docTypeBadge}`, leftMargin, citesY);
 
         const snippetText = (addSource.summary && addSource.summary !== 'Retrieved regulatory source excerpt.')
-          ? String(addSource.summary).trim()
+          ? String(addSource.summary).trim().replace(/\s*(\.{3,}|…)$/, '')
           : '';
 
         const isConsultation = Boolean(addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')));
@@ -538,13 +568,14 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
 
       // Statutory Exception & Consumer Compliance Audit
       const auditY = nextY;
-      doc.roundedRect(leftMargin, auditY, contentWidth, 80, 4).fillAndStroke('#f1f5f9', '#cbd5e1');
+      const auditH = isMeterObstructed ? 70 : 82;
+      doc.roundedRect(leftMargin, auditY, contentWidth, auditH, 4).fillAndStroke('#f1f5f9', '#cbd5e1');
 
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a')
         .text('STATUTORY EXCEPTION EVALUATION & CONSUMER COMPLIANCE AUDIT', leftMargin + 14, auditY + 10);
 
       const auditLines = [
-        `• Physical Meter Obstruction: ${isMeterObstructed ? 'CAUTION: Obstruction indicated (protections may not apply if supplier proves access was denied).' : 'COMPLIANT: No obstruction; customer permitted physical access.'}`,
+        ...(isMeterObstructed ? [] : ['• Physical Meter Obstruction: COMPLIANT: No obstruction; customer permitted physical access.']),
         `• Historical Billing Basis: ${isEstimated ? 'ESTIMATED: Previous bills were rendered on estimates; supports dispute regarding delayed actual meter readings.' : 'ACTUAL: Previous bills recorded normally.'}`,
         ...(meterEvidence ? [`• Meter Photo Evidence: Serial ${meterEvidence.serialNumber || 'Recorded'} (${meterEvidence.meterType || 'Physical meter'}). Physical reading ${meterEvidence.readingValue} ${meterEvidence.unit || 'kWh'} attached as supporting evidence.`] : []),
         `• Statutory Regulatory Standing: Consumer seeks resolution under ${regulation.clauseReference || 'statutory back-billing rules'}.`,
@@ -555,7 +586,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
         .text(auditLines.join('\n'), leftMargin + 14, auditY + 24, { width: contentWidth - 28, lineGap: 3 });
 
       // Statutory Ombudsman Escalation Directory
-      const ombY = auditY + 90;
+      const ombY = auditY + auditH + 10;
       doc.roundedRect(leftMargin, ombY, contentWidth, 84, 4).fillAndStroke('#f8fafc', '#bfdbfe');
 
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1e3a8a')
@@ -567,7 +598,7 @@ Escalation Threshold: ${escalation.timeline}
 Official Online Portal / Contact: ${escalation.website}
 
 Escalation Protocol Instructions:
-If the energy supplier fails to resolve this dispute within the standard 8-week complaints timeframe, lodge a formal dispute directly with the ombudsman above. Attach this complete 3-page dossier including the Schedule of Mathematical Evidence.`;
+If the energy supplier fails to resolve this dispute within the standard 8-week complaints timeframe, lodge a formal dispute directly with the ombudsman above. Attach this complete dossier including the Schedule of Mathematical Evidence.`;
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b')
         .text(ombText, leftMargin + 14, ombY + 24, { width: contentWidth - 28, lineGap: 2.5 });
@@ -578,6 +609,59 @@ If the energy supplier fails to resolve this dispute within the standard 8-week 
       doc.fontSize(6.5).font('Helvetica').fillColor('#64748b')
         .text('NON-LEGAL ADVICE DISCLAIMER: This document was produced using BillRight, an AI-assisted consumer advocacy utility. The mathematical calculations reflect strict calendar pro-rata apportionment against statutory lookback rules. This document is designed for consumer dispute resolution and does not constitute formal legal counsel. For complex claims, contact your statutory ombudsman.', leftMargin + 8, discY + 6, { width: contentWidth - 16, lineGap: 2 });
 
+      // =========================================================================
+      // PAGE 4: INTERNAL RISK SUMMARY (FOR YOUR RECORDS - DO NOT SEND TO THE SUPPLIER)
+      // =========================================================================
+      if (isMeterObstructed) {
+        doc.addPage();
+        drawHeaderFooter(doc, { pageNum: 4, totalPages, accountNumber, consumerName });
+
+        // Title Banner (Internal Records Only)
+        doc.rect(leftMargin, 42, contentWidth, 48).fill('#450a0a');
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('#ffffff')
+          .text('For your records - do not send to the supplier', leftMargin + 16, 52);
+        doc.fontSize(8.5).font('Helvetica').fillColor('#fca5a5')
+          .text('INTERNAL CONSUMER RISK SUMMARY • METER ACCESS EXCEPTION ADVISORY', leftMargin + 16, 70);
+
+        // Warning Callout Box
+        const warnY = 98;
+        const warnH = 76;
+        doc.roundedRect(leftMargin, warnY, contentWidth, warnH, 4).fillAndStroke('#fef2f2', '#ef4444');
+        doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#991b1b')
+          .text('CRITICAL NOTICE: POTENTIAL STATUTORY EXCEPTION APPLIES', leftMargin + 14, warnY + 10);
+        doc.fontSize(8).font('Helvetica').fillColor('#7f1d1d')
+          .text('Protection may not apply if the supplier shows you unreasonably prevented access to read the meter. Consider getting advice before sending.', leftMargin + 14, warnY + 26, { width: contentWidth - 28, lineGap: 3 });
+        doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#b91c1c')
+          .text('This internal risk assessment page has been generated for your personal records only and must not be sent to your energy supplier.', leftMargin + 14, warnY + 54, { width: contentWidth - 28 });
+
+        // Detailed Guidance Box
+        const guideY = warnY + warnH + 16;
+        const guideH = 260;
+        doc.roundedRect(leftMargin, guideY, contentWidth, guideH, 4).fillAndStroke('#f8fafc', '#cbd5e1');
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
+          .text('CONSUMER ADVOCACY & EVIDENCE RECOMMENDATIONS', leftMargin + 14, guideY + 12);
+
+        const guidancePoints = [
+          '1. Statutory Exception Principle: Across all covered jurisdictions (Ofgem SLC 21BA in the UK, NERR Rule 30 in Australia, and CPUC Electric Rule 17.1 in California), statutory back-billing caps protect consumers from delayed billing errors. However, statutory rules contain an express exception where the consumer unreasonably prevented or denied meter reading access.',
+          '2. Burden of Proof on Retailer: The legal burden rests on the energy supplier to prove that access was unreasonably prevented. Mere unfulfilled appointments or failure to read without proof of attempted visits with calling cards do not automatically forfeit consumer protection.',
+          '3. What the Supplier Must Produce: If the retailer claims obstruction, request contemporaneous records: specific dates and times of alleged visits, meter reader GPS timestamps, logs of customer contact, and physical proof that notification was left.',
+          '4. Preserving Your Legal Position: The accompanying formal dispute notice (Pages 1–3) disputes the unbilled back-billing sum without volunteering or admitting obstruction. Do not concede access issues in oral or written communications without verifying the supplier\'s logs.',
+          '5. Independent Escalation: If the supplier produces credible evidence of obstruction, consult your statutory ombudsman (' + escalation.body + ') or a certified consumer advice service before proceeding to formal arbitration.'
+        ];
+
+        doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
+          .text(guidancePoints.join('\n\n'), leftMargin + 14, guideY + 30, { width: contentWidth - 28, lineGap: 2.5 });
+
+        // Contact Directory Box
+        const ctcY = guideY + guideH + 14;
+        doc.roundedRect(leftMargin, ctcY, contentWidth, 70, 4).fillAndStroke('#eff6ff', '#93c5fd');
+        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1e40af')
+          .text('FREE INDEPENDENT ADVICE RESOURCES', leftMargin + 14, ctcY + 10);
+        const adviceText = `• Designated Statutory Ombudsman: ${escalation.body}\n• Official Portal: ${escalation.website}\n• Consumer Advisory: For confidential, free assistance with energy disputes, contact Citizens Advice (UK), your state community legal centre (AU), or the CPUC Public Advisor's Office (US).`;
+        doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b')
+          .text(adviceText, leftMargin + 14, ctcY + 24, { width: contentWidth - 28, lineGap: 2.5 });
+      }
+
       doc.end();
 
     } catch (err) {
@@ -585,3 +669,4 @@ If the energy supplier fails to resolve this dispute within the standard 8-week 
     }
   });
 }
+

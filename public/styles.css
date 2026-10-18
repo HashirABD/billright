@@ -1190,6 +1190,16 @@ body {
   box-shadow: var(--shadow-xs);
 }
 
+.plain-result-card.warning {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+
+[data-theme="dark"] .plain-result-card.warning {
+  border-left-color: #ef4444;
+  background: rgba(220, 38, 38, 0.12);
+}
+
 .plain-result-header {
   margin-bottom: 1.15rem;
 }
@@ -1203,6 +1213,14 @@ body {
   letter-spacing: 0.06em;
   color: var(--text-muted);
   margin-bottom: 0.35rem;
+}
+
+.plain-result-badge-tag.warning {
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .plain-result-badge-tag.warning {
+  color: #fca5a5;
 }
 
 .plain-result-headline {

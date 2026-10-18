@@ -10,9 +10,16 @@ import { getBuiltInCitation } from './tavilyClient.js';
 /**
  * Localized statutory ombudsman escalation paths by jurisdiction.
  */
-function getEscalationPath(jurisdiction = '') {
+function getEscalationPath(jurisdiction = '', state = '') {
   if (jurisdiction === 'Australia') {
-    return 'State Energy and Water Ombudsman (e.g. EWON, EWOQ, EWOSA) under the National Energy Retail Rules (NERR Rule 30)';
+    const s = String(state || '').toUpperCase();
+    if (s === 'QLD') {
+      return 'Energy and Water Ombudsman Queensland (EWOQ)';
+    }
+    if (s === 'SA') {
+      return 'Energy and Water Ombudsman SA (EWOSA)';
+    }
+    return 'Energy and Water Ombudsman NSW (EWON)';
   }
   if (jurisdiction.includes('California')) {
     return 'California Public Utilities Commission (CPUC) Consumer Affairs Branch under PG&E Electric Rule 17.1 (or equivalent SCE/SDG&E tariffs)';
@@ -64,11 +71,12 @@ function generateDeterministicLetter({
   supplyAddress,
   noticeDate,
   supplierEmail,
-  supplierContact
+  supplierContact,
+  state = ''
 }) {
   const formattedDisputable = fmtMoney(disputableTotal, currency);
   const formattedTotal = fmtMoney(totalBilled, currency);
-  const escalation = getEscalationPath(regulation.jurisdiction);
+  const escalation = getEscalationPath(regulation.jurisdiction, state);
   const letterDate = formatDate(noticeDate);
 
   const partyName = consumerName || 'Account Holder';
@@ -86,15 +94,32 @@ function generateDeterministicLetter({
     emailLine = `Email: ${supplierContact.email}`;
   }
 
-  const obstructionWarningParagraph = isMeterObstructed
-    ? `\nIMPORTANT NOTICE REGARDING METER ACCESS:
-Please note that meter access obstruction was indicated for this account. Under statutory rules (such as ${regulation.clauseReference || 'statutory utility codes'}), back-billing protections may not apply if the supplier indicates that the customer acted obstructively or prevented meter access. This letter is submitted without prejudice to investigate whether access attempts were legitimately made.\n`
-    : '';
-
+  const isAustralia = Boolean(regulation.jurisdiction === 'Australia' || (regulation.clauseReference && regulation.clauseReference.includes('NERR')));
   const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
-  const statutoryRuleText = isTexas
-    ? `Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.`
-    : `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
+
+  let statutoryRuleText;
+  if (isAustralia) {
+    statutoryRuleText = 'Under NERR Rule 30, charges more than 9 months before the date the customer was notified of the undercharge cannot be recovered unless the customer was at fault.';
+  } else if (isTexas) {
+    statutoryRuleText = 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.';
+  } else {
+    statutoryRuleText = `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
+  }
+
+  let meterReadingStatement;
+  if (isMeterObstructed) {
+    if (isEstimated) {
+      meterReadingStatement = 'Previous statements were rendered on estimated rather than actual meter readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+    } else {
+      meterReadingStatement = 'In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+    }
+  } else {
+    if (isEstimated) {
+      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time, and earlier bills were based on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+    } else {
+      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+    }
+  }
 
   return `${partyName}
 ${address}
@@ -112,12 +137,12 @@ Account Reference: ${accNum}
 Supply Address: ${address}
 
 I am writing to formally raise a complaint regarding my recent energy bill dated ${billDate} for the total amount of ${formattedTotal}.
-${obstructionWarningParagraph}
+
 A precise calendar audit against statutory utility standards indicates that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
 
 ${statutoryRuleText}
 
-${isMeterObstructed ? 'While meter access issues were noted, I request full disclosure of all alleged visit records and meter reading attempts.' : 'I confirm that I have not acted obstructively or prevented meter access at any time'}${isEstimated ? ', and earlier bills were based on estimated rather than actual readings' : ''}.
+${meterReadingStatement}
 
 In light of these back-billing rules, I formally request that you:
 1. Revise the bill to remove the ${formattedDisputable} accrued prior to ${cutOffDate}.
@@ -170,7 +195,8 @@ export async function evaluateExceptionsAndFormatLetter({
   noticeDate,
   country = 'United Kingdom',
   supplierEmail,
-  supplierContact
+  supplierContact,
+  state = ''
 }) {
   const partyName = consumerName || 'Account Holder';
   const supplier = supplierName || 'Energy Supplier';
@@ -213,7 +239,8 @@ export async function evaluateExceptionsAndFormatLetter({
       supplyAddress: address,
       noticeDate: letterDate,
       supplierEmail,
-      supplierContact
+      supplierContact,
+      state
     });
 
     return {
@@ -226,7 +253,7 @@ export async function evaluateExceptionsAndFormatLetter({
     };
   }
 
-  // Case A: Meter obstruction triggered -> show clear warning that protection may not apply, but include letter with warning
+  // Case A: Meter obstruction triggered -> UI shows warning that protection may not apply, letter omits obstruction
   if (isMeterObstructed) {
     const letter = generateDeterministicLetter({
       disputableTotal,
@@ -244,14 +271,15 @@ export async function evaluateExceptionsAndFormatLetter({
       supplyAddress: address,
       noticeDate: letterDate,
       supplierEmail,
-      supplierContact
+      supplierContact,
+      state
     });
 
     return {
-      verdict: 'Protection may not apply (Obstruction indicated)',
+      verdict: 'Protection may not apply',
       badgeType: 'rule_does_not_apply',
       exceptionTriggered: true,
-      exceptionNotes: `WARNING: Meter access obstruction was indicated. Under statutory back-billing rules (such as ${activeReg.clauseReference || 'applicable regulations'}), protections do not apply if the customer unreasonably prevented meter reading access. If the supplier proves access was denied, this entire catch-up amount may remain payable.`,
+      exceptionNotes: 'Protection may not apply if the supplier shows you unreasonably prevented access to read the meter. Consider getting advice before sending.',
       disputeLetter: letter,
       noticeDate: letterDate
     };
@@ -292,7 +320,8 @@ export async function evaluateExceptionsAndFormatLetter({
       supplyAddress: address,
       noticeDate: letterDate,
       supplierEmail,
-      supplierContact
+      supplierContact,
+      state
     });
     return {
       verdict: 'Likely Disputable Amount',
@@ -306,7 +335,7 @@ export async function evaluateExceptionsAndFormatLetter({
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const escalation = getEscalationPath(activeReg.jurisdiction);
+    const escalation = getEscalationPath(activeReg.jurisdiction, state);
 
     const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplier && supplier.toLowerCase().includes('example'));
     let emailLine = '';
@@ -398,7 +427,8 @@ Return strictly a JSON object with this shape:
         supplierName: supplier,
         accountNumber: accNum,
         supplyAddress: address,
-        noticeDate: letterDate
+        noticeDate: letterDate,
+        state
       }),
       noticeDate: letterDate
     };
@@ -419,7 +449,8 @@ Return strictly a JSON object with this shape:
       supplierName: supplier,
       accountNumber: accNum,
       supplyAddress: address,
-      noticeDate: letterDate
+      noticeDate: letterDate,
+      state
     });
     return {
       verdict: 'Likely Disputable Amount',
