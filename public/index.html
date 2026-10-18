@@ -81,14 +81,17 @@
 
     <!-- Sample Presets Section (Radio Group Semantics) -->
     <section class="presets-card" aria-labelledby="presets-heading">
-      <h2 id="presets-heading" class="presets-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-        Select Benchmark Regulatory Case:
-      </h2>
+      <div class="presets-header-row">
+        <h2 id="presets-heading" class="presets-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          Select Benchmark Regulatory Case:
+        </h2>
+        <div id="demo-data-note" class="demo-data-note">Demo data loaded. Edit it or upload your own bill.</div>
+      </div>
       <div class="presets-grid" role="radiogroup" aria-label="Benchmark cases">
         <button type="button" class="preset-btn active" id="preset-a" data-preset="A" role="radio" aria-checked="true" tabindex="0">
           <span class="preset-badge protected">🇬🇧 UK: Exceeds 12 Mos</span>
@@ -462,7 +465,7 @@
       </details>
 
       <!-- Executive Verdict Card -->
-      <article class="card">
+      <article class="card" id="verdict-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Statutory Audit Determination</h2>
@@ -550,7 +553,7 @@
       </article>
 
       <!-- Interactive Dispute Timeline Card -->
-      <article class="card" id="timeline-card">
+      <article class="card result-dependent-card" id="timeline-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Statutory Lookback Cut-off Barrier Timeline</h2>
@@ -571,7 +574,7 @@
       </article>
 
       <!-- Itemized Math Breakdown Table -->
-      <article class="card">
+      <article class="card result-dependent-card" id="apportionment-schedule-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Deterministic Lookback Apportionment Schedule <span class="trust-badge trust-code">Calculated by code</span></h2>
@@ -580,7 +583,7 @@
         </div>
 
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" id="table-breakdown">
             <thead>
               <tr>
                 <th scope="col">Consumption Period</th>
@@ -599,7 +602,7 @@
       </article>
 
       <!-- Retrieved Regulatory Sources Citation -->
-      <article class="card">
+      <article class="card result-dependent-card" id="retrieved-authority-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Retrieved Statutory Legal Authority <span id="authority-trust-badge" class="trust-badge trust-builtin" style="display: none;">Built-in reference (please verify)</span></h2>
@@ -613,7 +616,7 @@
       </article>
 
       <!-- Actionable Dispute Letter & Evidence Dossier Box -->
-      <article class="card">
+      <article class="card result-dependent-card" id="dispute-letter-card">
         <div class="card-header">
           <div>
             <h2 class="card-title">Formal Notice of Dispute</h2>
@@ -658,7 +661,7 @@
         <div id="unknown-supplier-email-box" class="unknown-supplier-email-box" style="display: none; margin-bottom: 1rem; padding: 0.875rem 1rem; background: var(--bg-surface-subtle); border: 1px solid var(--border-color); border-radius: 6px;">
           <label for="input-unknown-supplier-email" class="form-label" style="font-weight: 600; margin-bottom: 0.35rem;">Enter your supplier's complaints email</label>
           <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-            <input type="email" id="input-unknown-supplier-email" class="form-input" placeholder="e.g. complaints@supplier.co.uk" style="flex: 1; min-width: 240px;">
+            <input type="email" id="input-unknown-supplier-email" class="form-input" placeholder="e.g. complaints@supplier.co.uk" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
           </div>
           <span class="form-hint" style="margin-top: 0.35rem; display: block; color: var(--text-muted); font-size: 0.8125rem;">Check your supplier's website</span>
         </div>
@@ -669,7 +672,7 @@
       </article>
 
       <!-- Statutory Escalation & Ombudsman Timeline Tracker -->
-      <article class="card escalation-tracker-card" id="escalation-tracker-card">
+      <article class="card escalation-tracker-card result-dependent-card" id="escalation-tracker-card">
         <div class="card-header" style="align-items: flex-start;">
           <div>
             <span class="brand-badge">Statutory Procedural Timeline</span>

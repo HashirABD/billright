@@ -215,6 +215,7 @@ app.post('/api/analyze', async (req, res) => {
       supplierContact,
       supplierEmail: resolvedSupplierEmail,
       australiaState,
+      billDate,
       noticeDate: evaluation.noticeDate || noticeDate
     });
 

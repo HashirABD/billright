@@ -212,24 +212,47 @@ const meterNotesText = document.getElementById('meter-notes-text');
 /**
  * Creates a table row element for a billing period
  */
+let isPresetLoading = false;
+
+/**
+ * Clears preset active highlights when user edits the form
+ */
+function clearPresetSelection() {
+  if (isPresetLoading) return;
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.classList.remove('active');
+    btn.setAttribute('aria-checked', 'false');
+    btn.setAttribute('tabindex', '-1');
+  });
+  const demoNote = document.getElementById('demo-data-note');
+  if (demoNote) demoNote.style.display = 'none';
+}
+
+/**
+ * Creates a table row element for a billing period
+ */
 function createRowElement(data = { startDate: '', endDate: '', amount: '' }) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td>
+      <span class="mobile-field-label">Start date</span>
       <input type="date" class="form-input row-start-date" value="${data.startDate || ''}" aria-label="Start date" required>
     </td>
     <td>
+      <span class="mobile-field-label">End date</span>
       <input type="date" class="form-input row-end-date" value="${data.endDate || ''}" aria-label="End date" required>
     </td>
     <td>
+      <span class="mobile-field-label">Amount</span>
       <input type="number" step="0.01" min="0.01" class="form-input row-amount tabular-nums" placeholder="0.00" value="${data.amount !== '' ? data.amount : ''}" aria-label="Amount in pounds" required>
     </td>
-    <td style="text-align: center;">
+    <td class="cell-action" style="text-align: center;">
       <button type="button" class="btn-icon btn-delete-row" title="Delete period" aria-label="Delete period">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
         </svg>
+        <span class="mobile-btn-label">Delete period</span>
       </button>
     </td>
   `;
@@ -238,12 +261,14 @@ function createRowElement(data = { startDate: '', endDate: '', amount: '' }) {
   const inputs = tr.querySelectorAll('input');
   inputs.forEach(input => {
     input.addEventListener('input', () => {
+      clearPresetSelection();
       validateAndRecalculate();
     });
   });
 
   const btnDelete = tr.querySelector('.btn-delete-row');
   btnDelete.addEventListener('click', () => {
+    clearPresetSelection();
     tr.remove();
     if (periodsTbody.querySelectorAll('tr').length === 0) {
       addRow();
@@ -271,9 +296,14 @@ function setupToggle(groupElem, hiddenInput) {
   const buttons = groupElem.querySelectorAll('.toggle-btn');
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
+      buttons.forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-checked', 'false');
+      });
       btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
       hiddenInput.value = btn.getAttribute('data-value');
+      clearPresetSelection();
     });
   });
 }
@@ -284,8 +314,10 @@ function setToggleValue(groupElem, hiddenInput, value) {
   buttons.forEach(btn => {
     if (btn.getAttribute('data-value') === String(value)) {
       btn.classList.add('active');
+      btn.setAttribute('aria-checked', 'true');
     } else {
       btn.classList.remove('active');
+      btn.setAttribute('aria-checked', 'false');
     }
   });
 }
@@ -436,6 +468,12 @@ function resetResultsToEmptyState() {
   if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
   if (inputUnknownSupplierEmail) inputUnknownSupplierEmail.value = '';
 
+  // Hide result-dependent sections
+  document.querySelectorAll('.result-dependent-card').forEach(card => {
+    card.classList.remove('visible');
+    card.style.display = 'none';
+  });
+
   if (resultsSection) resultsSection.classList.remove('visible');
 }
 
@@ -446,55 +484,65 @@ function loadPreset(presetKey) {
   const preset = PRESETS[presetKey];
   if (!preset) return;
 
-  // Highlight active preset button with radio group semantics
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.classList.remove('active');
-    btn.setAttribute('aria-checked', 'false');
-    btn.setAttribute('tabindex', '-1');
-  });
-  const activeBtn = document.getElementById(`preset-${presetKey.toLowerCase()}`);
-  if (activeBtn) {
-    activeBtn.classList.add('active');
-    activeBtn.setAttribute('aria-checked', 'true');
-    activeBtn.setAttribute('tabindex', '0');
+  isPresetLoading = true;
+  try {
+    // Highlight active preset button with radio group semantics
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.remove('active');
+      btn.setAttribute('aria-checked', 'false');
+      btn.setAttribute('tabindex', '-1');
+    });
+    const activeBtn = document.getElementById(`preset-${presetKey.toLowerCase()}`);
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+      activeBtn.setAttribute('aria-checked', 'true');
+      activeBtn.setAttribute('tabindex', '0');
+    }
+
+    const demoNote = document.getElementById('demo-data-note');
+    if (demoNote) {
+      demoNote.style.display = 'inline-flex';
+    }
+
+    // Fill form values
+    countrySelect.value = preset.country;
+    billDateInput.value = preset.billDate;
+    if (preset.country === 'Australia' && inputAustraliaState) {
+      inputAustraliaState.value = preset.australiaState || 'NSW';
+    }
+    updateAustraliaStateVisibility();
+    setToggleValue(groupEstimated, inputEstimated, preset.isEstimated);
+    setToggleValue(groupObstructed, inputObstructed, preset.isMeterObstructed);
+
+    // Fill party identity details
+    if (consumerNameInput && preset.consumerName) consumerNameInput.value = preset.consumerName;
+    if (supplierNameInput && preset.supplierName) supplierNameInput.value = preset.supplierName;
+    if (accountNumberInput && preset.accountNumber) accountNumberInput.value = preset.accountNumber;
+    if (supplyAddressInput && preset.supplyAddress) supplyAddressInput.value = preset.supplyAddress;
+
+    // Update table header currency
+    const currencyHeader = document.getElementById('currency-symbol-header');
+    if (currencyHeader) {
+      currencyHeader.textContent = getCurrencySymbol(preset.country);
+    }
+
+    // Clear and populate rows
+    periodsTbody.innerHTML = '';
+    preset.periods.forEach(period => {
+      addRow(period);
+    });
+
+    // Clear OCR review highlights on preset load
+    document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
+    document.querySelectorAll('.ocr-review-hint').forEach(el => el.remove());
+
+    // Reset results area to neutral empty state on preset switch
+    resetResultsToEmptyState();
+    validateAndRecalculate();
+    showToast(`Loaded ${preset.name}`, 'info', 2200);
+  } finally {
+    isPresetLoading = false;
   }
-
-  // Fill form values
-  countrySelect.value = preset.country;
-  billDateInput.value = preset.billDate;
-  if (preset.country === 'Australia' && inputAustraliaState) {
-    inputAustraliaState.value = preset.australiaState || 'NSW';
-  }
-  updateAustraliaStateVisibility();
-  setToggleValue(groupEstimated, inputEstimated, preset.isEstimated);
-  setToggleValue(groupObstructed, inputObstructed, preset.isMeterObstructed);
-
-  // Fill party identity details
-  if (consumerNameInput && preset.consumerName) consumerNameInput.value = preset.consumerName;
-  if (supplierNameInput && preset.supplierName) supplierNameInput.value = preset.supplierName;
-  if (accountNumberInput && preset.accountNumber) accountNumberInput.value = preset.accountNumber;
-  if (supplyAddressInput && preset.supplyAddress) supplyAddressInput.value = preset.supplyAddress;
-
-  // Update table header currency
-  const currencyHeader = document.getElementById('currency-symbol-header');
-  if (currencyHeader) {
-    currencyHeader.textContent = getCurrencySymbol(preset.country);
-  }
-
-  // Clear and populate rows
-  periodsTbody.innerHTML = '';
-  preset.periods.forEach(period => {
-    addRow(period);
-  });
-
-  // Clear OCR review highlights on preset load
-  document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
-  document.querySelectorAll('.ocr-review-hint').forEach(el => el.remove());
-
-  // Reset results area to neutral empty state on preset switch
-  resetResultsToEmptyState();
-  validateAndRecalculate();
-  showToast(`Loaded ${preset.name}`, 'info', 2200);
 }
 
 /**
@@ -531,6 +579,9 @@ function resetForm() {
   const firstPreset = document.getElementById('preset-a');
   if (firstPreset) firstPreset.setAttribute('tabindex', '0');
 
+  const demoNote = document.getElementById('demo-data-note');
+  if (demoNote) demoNote.style.display = 'none';
+
   countrySelect.value = 'United Kingdom';
   billDateInput.value = '2026-10-01';
   if (inputAustraliaState) inputAustraliaState.value = 'NSW';
@@ -565,6 +616,14 @@ document.querySelectorAll('.preset-btn').forEach(btn => {
   });
 });
 
+// Remove preset highlight whenever user edits the form
+billForm.addEventListener('input', () => {
+  clearPresetSelection();
+});
+billForm.addEventListener('change', () => {
+  clearPresetSelection();
+});
+
 // Update currency and Australia state visibility on country change
 countrySelect.addEventListener('change', () => {
   const symbol = getCurrencySymbol(countrySelect.value);
@@ -586,6 +645,7 @@ if (inputAustraliaState) {
 }
 
 btnAddRow.addEventListener('click', () => {
+  clearPresetSelection();
   addRow();
 });
 
@@ -871,12 +931,12 @@ function renderResults(data) {
     }
 
     tr.innerHTML = `
-      <td>${item.startDate} &rarr; ${item.endDate}</td>
-      <td class="tabular-nums">${item.totalDays} days</td>
-      <td class="tabular-nums">${item.disputableDays} days</td>
-      <td class="tabular-nums">${formatMoney(item.amount, currency)}</td>
-      <td class="tabular-nums"><strong>${formatMoney(item.disputableAmount, currency)}</strong></td>
-      <td>${statusBadge}</td>
+      <td><span class="mobile-field-label">Period</span><span class="breakdown-val">${item.startDate} &rarr; ${item.endDate}</span></td>
+      <td class="tabular-nums"><span class="mobile-field-label">Total Days</span><span class="breakdown-val">${item.totalDays} days</span></td>
+      <td class="tabular-nums"><span class="mobile-field-label">Pre-Cutoff Days</span><span class="breakdown-val">${item.disputableDays} days</span></td>
+      <td class="tabular-nums"><span class="mobile-field-label">Period Billed</span><span class="breakdown-val">${formatMoney(item.amount, currency)}</span></td>
+      <td class="tabular-nums"><span class="mobile-field-label">Disputable Amount</span><span class="breakdown-val"><strong>${formatMoney(item.disputableAmount, currency)}</strong></span></td>
+      <td><span class="mobile-field-label">Statutory Finding</span><span class="breakdown-val">${statusBadge}</span></td>
     `;
     breakdownTbody.appendChild(tr);
   });
@@ -1017,6 +1077,7 @@ function renderResults(data) {
 
     // Statutory Escalation & Ombudsman Timeline Tracker
     if (escalationTrackerCard) {
+      escalationTrackerCard.classList.add('visible');
       escalationTrackerCard.style.display = 'block';
       updateEscalationDates();
     }
@@ -1040,15 +1101,37 @@ Reason: ${data.exceptionNotes || 'Charges are within statutory limits or meter a
       btnEmailSupplier.style.display = 'none';
     }
     if (unknownSupplierEmailBox) unknownSupplierEmailBox.style.display = 'none';
-    if (escalationTrackerCard) escalationTrackerCard.style.display = 'none';
+    if (escalationTrackerCard) {
+      escalationTrackerCard.classList.remove('visible');
+      escalationTrackerCard.style.display = 'none';
+    }
+  }
+
+  // Show result-dependent sections with fade-in
+  const timelineCard = document.getElementById('timeline-card');
+  const apportionmentCard = document.getElementById('apportionment-schedule-card');
+  const retrievedAuthCard = document.getElementById('retrieved-authority-card');
+  const disputeLetterCard = document.getElementById('dispute-letter-card');
+
+  if (timelineCard) { timelineCard.classList.add('visible'); timelineCard.style.display = 'block'; }
+  if (apportionmentCard) { apportionmentCard.classList.add('visible'); apportionmentCard.style.display = 'block'; }
+  if (retrievedAuthCard) { retrievedAuthCard.classList.add('visible'); retrievedAuthCard.style.display = 'block'; }
+
+  if (data.disputeLetter) {
+    if (disputeLetterCard) { disputeLetterCard.classList.add('visible'); disputeLetterCard.style.display = 'block'; }
+  } else {
+    if (disputeLetterCard) { disputeLetterCard.classList.remove('visible'); disputeLetterCard.style.display = 'none'; }
   }
 
   // Cache current analysis result for PDF export & email dispatch
   currentAnalysisResult = data;
 
-  // Reveal results
+  // Reveal results section & scroll smoothly to result card
   resultsSection.classList.add('visible');
-  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const verdictCard = document.getElementById('verdict-card') || document.getElementById('plain-language-result-card') || resultsSection;
+  if (verdictCard) {
+    verdictCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 /**
@@ -1821,6 +1904,7 @@ async function processFile(file) {
       addRow();
     }
 
+    clearPresetSelection();
     validateAndRecalculate();
     resetResultsToEmptyState();
 
