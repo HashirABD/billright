@@ -1,7 +1,7 @@
 /**
- * BillRight Ready-to-Send Legal Dispute Packet Generator (PDF Engine)
+ * BillRight Dispute Packet (draft) Generator (PDF Engine)
  * 
- * Generates an official, publication-quality 3-page ready-to-send dispute packet:
+ * Generates an official, publication-quality 3-page Dispute Packet (draft):
  * - Page 1: Personalized Formal Notice of Dispute & Suggested Response Deadline
  * - Page 2: Schedule of Mathematical Evidence with clean vector table & lookback barrier
  * - Page 3: Statutory Authority Annexure with live regulatory citations & ombudsman protocol
@@ -442,7 +442,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#ffffff')
         .text('ANNEXURE A: STATUTORY AUTHORITY & REGULATORY COMPLIANCE AUDIT', leftMargin + 16, 52);
       doc.fontSize(8).font('Helvetica').fillColor('#94a3b8')
-        .text(`Grounding Framework for ${regulation.jurisdiction || country} Utility Regulations`, leftMargin + 16, 68);
+        .text('Statutory reference and retrieved sources', leftMargin + 16, 68);
 
       // Curated Primary Statutory Authority Box (shown first)
       const primaryAuth = regulation.primaryAuthority || {
@@ -484,14 +484,22 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
           ? String(addSource.summary).trim()
           : '';
 
+        const isConsultation = Boolean(addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')));
         const itemY = citesY + 14;
-        const itemH = snippetText ? 64 : 44;
+        let itemH = snippetText ? 64 : 44;
+        if (isConsultation) itemH += 12;
 
         doc.roundedRect(leftMargin, itemY, contentWidth, itemH, 3).fillAndStroke('#f8fafc', '#e2e8f0');
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a')
           .text(`Summary of retrieved source: ${addSource.title || 'Official Regulatory Documentation'}`, leftMargin + 10, itemY + 8, { width: contentWidth - 20 });
 
         let currentTextY = itemY + 20;
+        if (isConsultation) {
+          doc.fontSize(6.5).font('Helvetica-Oblique').fillColor('#b45309')
+            .text(`Note: Retrieved source URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). Primary statutory authority is cited above.`, leftMargin + 10, currentTextY, { width: contentWidth - 20 });
+          currentTextY += 12;
+        }
+
         if (snippetText) {
           doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
             .text(snippetText, leftMargin + 10, currentTextY, { width: contentWidth - 20, lineGap: 1.5 });

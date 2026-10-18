@@ -88,7 +88,7 @@ function generateDeterministicLetter({
 
   const obstructionWarningParagraph = isMeterObstructed
     ? `\nIMPORTANT NOTICE REGARDING METER ACCESS:
-Please note that meter access obstruction was indicated for this account. Under statutory rules (such as ${regulation.clauseReference || 'statutory utility codes'}), back-billing protections may not apply if the supplier can demonstrate that the customer acted obstructively or prevented meter access. This letter is submitted without prejudice to investigate whether access attempts were legitimately made.\n`
+Please note that meter access obstruction was indicated for this account. Under statutory rules (such as ${regulation.clauseReference || 'statutory utility codes'}), back-billing protections may not apply if the supplier indicates that the customer acted obstructively or prevented meter access. This letter is submitted without prejudice to investigate whether access attempts were legitimately made.\n`
     : '';
 
   const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
@@ -113,7 +113,7 @@ Supply Address: ${address}
 
 I am writing to formally raise a complaint regarding my recent energy bill dated ${billDate} for the total amount of ${formattedTotal}.
 ${obstructionWarningParagraph}
-Upon reviewing the itemized breakdown against statutory regulatory standards, I have identified that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
+A precise calendar audit against statutory utility standards indicates that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
 
 ${statutoryRuleText}
 
@@ -308,6 +308,16 @@ export async function evaluateExceptionsAndFormatLetter({
     const ai = new GoogleGenAI({ apiKey });
     const escalation = getEscalationPath(activeReg.jurisdiction);
 
+    const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplier && supplier.toLowerCase().includes('example'));
+    let emailLine = '';
+    if (isDemo) {
+      emailLine = 'Email: complaints@example.com (demo address)';
+    } else if (supplierEmail) {
+      emailLine = `Email: ${supplierEmail}`;
+    } else if (supplierContact?.email) {
+      emailLine = `Email: ${supplierContact.email}`;
+    }
+
     const prompt = `You are an expert consumer advocacy assistant specializing in energy utility regulations.
 Generate a structured JSON response evaluating a back-billing complaint.
 
@@ -315,7 +325,7 @@ PARTIES & ACCOUNT:
 - Consumer Full Name: ${partyName}
 - Supply Address: ${address}
 - Account Reference Number: ${accNum}
-- Energy Supplier: ${supplier}
+- Energy Supplier: ${supplier}${emailLine ? `\n- Supplier Complaints Email: ${emailLine.replace('Email: ', '')}` : ''}
 - Date of Letter: ${letterDate}
 
 FACTS:
@@ -335,9 +345,11 @@ INSTRUCTIONS:
 3. Formulate a polite, professional, formal complaint letter from ${partyName} to the ${supplier} Complaints Department.
    - Use the exact Consumer Name (${partyName}), Energy Supplier (${supplier}), Account Reference (${accNum}), and Supply Address (${address}).
    - Use the exact letter date: ${letterDate}.
+   ${emailLine ? `- In the recipient header block under ${supplier}, include: ${emailLine}` : ''}
    - DO NOT USE any bracketed placeholders like [Your Name], [Account Number], [Supplier Name], or [Address]. The real details provided above must be directly embedded.
    - Reference the exact regulation name and clause (${activeReg.clauseReference || 'Statutory Code'}).
    - Insert the exact pre-calculated disputable sum of ${fmtMoney(disputableTotal, currency)}.
+   - Always format currency amounts with commas and two decimal places (e.g. £1,000.00).
    - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after the standard 8-week complaints timeframe.
    - Use "indicates" rather than "demonstrates" when describing audit findings.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.

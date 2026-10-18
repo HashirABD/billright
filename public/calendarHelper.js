@@ -43,7 +43,7 @@ export function generateIcsCalendar({
     `DTSTART:${formatIcsDate(day14)}`,
     `DTEND:${formatIcsDate(new Date(day14.getTime() + 3600000))}`,
     `SUMMARY:📅 Suggested Response Deadline: ${supplierName} (${accountNumber})`,
-    `DESCRIPTION:Suggested 14-day response deadline for ${supplierName} to reply in writing to back-billing dispute for ${currency}${disputableTotal.toFixed(2)}. If no acceptable resolution is reached after 8 weeks, initiate ombudsman escalation.`,
+    `DESCRIPTION:Suggested 14-day response deadline for ${supplierName} to reply in writing to back-billing dispute for ${currency}${(typeof disputableTotal === 'number' ? disputableTotal : parseFloat(disputableTotal) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. If no acceptable resolution is reached after the standard 8-week complaints timeframe, initiate ombudsman escalation.`,
     'STATUS:CONFIRMED',
     'BEGIN:VALARM',
     'TRIGGER:-PT9H',

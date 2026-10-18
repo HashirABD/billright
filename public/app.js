@@ -861,6 +861,10 @@ function renderResults(data) {
       <div style="margin-top: 0.25rem;">
         <a href="${addSource.url}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${addSource.url} &nearr;</a>
       </div>
+      ${addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')) ? `
+      <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 0.35rem 0.5rem; margin-top: 0.35rem;">
+        <strong>Document Note:</strong> This retrieved URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). The binding regulatory rule is cited in the primary statutory authority above.
+      </div>` : ''}
       <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.5rem;">Summary of retrieved source:</div>
       <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin: 0.2rem 0; line-height: 1.45;">
         ${addSource.summary}
@@ -1444,7 +1448,7 @@ if (btnLaunchGmail) {
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -1470,7 +1474,7 @@ if (btnLaunchOutlook) {
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
@@ -1496,7 +1500,7 @@ if (btnLaunchMailto) {
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
-    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding unlawful back-billing under ${clause} (Account ${acc}).\n\n[Complete Dispute Packet (draft) copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
+    const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Complete Dispute Packet (draft) copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
       await navigator.clipboard.writeText(fullText);
