@@ -238,7 +238,7 @@ export async function generateLegalPacketPdf(data) {
 
 I am writing to formally dispute the catch-up charges itemized on my recent energy statement dated ${billDate} in the total sum of ${fmtCurr(totalBilled, currency)}.
 
-A precise calendar audit against statutory utility standards indicates that ${fmtCurr(disputableTotal, currency)} of this billed balance relates exclusively to energy consumption accrued prior to ${cutOffDate}—exceeding the statutory ${lookbackMonths}-month lookback limitation prescribed by ${regulation.title || 'statutory back-billing regulations'} (${regulation.clauseReference || 'Applicable Standard'}).`;
+A precise calendar audit against statutory utility standards indicates that ${fmtCurr(disputableTotal, currency)} of this billed balance relates exclusively to energy consumption accrued prior to ${cutOffDate}—exceeding the statutory ${lookbackMonths}-month lookback limitation prescribed by ${regulation.title || regulation.clauseReference || 'statutory back-billing regulations'}.`;
 
       doc.text(p1, leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
 
@@ -510,38 +510,42 @@ A precise calendar audit against statutory utility standards indicates that ${fm
         doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
           .text(`ADDITIONAL RETRIEVED SOURCE${docTypeBadge}`, leftMargin, citesY);
 
-        const snippetText = (addSource.summary && addSource.summary !== 'Retrieved regulatory source excerpt.')
-          ? String(addSource.summary).trim().replace(/\s*(\.{3,}|…)$/, '')
-          : '';
+        const hostName = addSource.host || (() => {
+          try { return new URL(addSource.url).hostname.replace(/^www\./, ''); } catch { return ''; }
+        })();
 
         const isConsultation = Boolean(addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')));
         const itemY = citesY + 14;
-        let itemH = snippetText ? 64 : 44;
+        let itemH = 56;
         if (isConsultation) itemH += 12;
 
         doc.roundedRect(leftMargin, itemY, contentWidth, itemH, 3).fillAndStroke('#f8fafc', '#e2e8f0');
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a')
-          .text(`Summary of retrieved source: ${addSource.title || 'Official Regulatory Documentation'}`, leftMargin + 10, itemY + 8, { width: contentWidth - 20 });
+          .text(`Title: ${addSource.title || 'Official Regulatory Documentation'}`, leftMargin + 10, itemY + 8, { width: contentWidth - 20 });
 
         let currentTextY = itemY + 20;
-        if (isConsultation) {
-          doc.fontSize(6.5).font('Helvetica-Oblique').fillColor('#b45309')
-            .text(`Note: Retrieved source URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). Primary statutory authority is cited above.`, leftMargin + 10, currentTextY, { width: contentWidth - 20 });
-          currentTextY += 12;
-        }
-
-        if (snippetText) {
+        if (hostName) {
           doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
-            .text(snippetText, leftMargin + 10, currentTextY, { width: contentWidth - 20, lineGap: 1.5 });
-          currentTextY += 26;
+            .text(`Host: ${hostName}`, leftMargin + 10, currentTextY, { width: contentWidth - 20 });
+          currentTextY += 10;
         }
 
         doc.fontSize(7).font('Helvetica').fillColor('#2563eb')
-          .text(`Source URL: ${addSource.url}`, leftMargin + 10, currentTextY, {
+          .text(`URL: ${addSource.url}`, leftMargin + 10, currentTextY, {
             width: contentWidth - 20,
             link: addSource.url,
             underline: true
           });
+        currentTextY += 10;
+
+        doc.fontSize(6.5).font('Helvetica-Oblique').fillColor('#64748b')
+          .text('Retrieved by search, not verified', leftMargin + 10, currentTextY, { width: contentWidth - 20 });
+        currentTextY += 9;
+
+        if (isConsultation) {
+          doc.fontSize(6.5).font('Helvetica-Oblique').fillColor('#b45309')
+            .text(`Note: Retrieved source URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). Primary statutory authority is cited above.`, leftMargin + 10, currentTextY, { width: contentWidth - 20 });
+        }
 
         nextY = itemY + itemH + 10;
       } else {

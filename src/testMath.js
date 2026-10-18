@@ -333,7 +333,83 @@ const ukCitation = getBuiltInCitation('United Kingdom');
 assert.ok(!ukCitation.summary.includes('Suppliers must not bill consumers for unbilled energy used beyond the statutory lookback window'), 'Must not contain generic placeholder snippet');
 assert.ok(!ukCitation.summary.endsWith('...'), 'Summary must not end with trailing "..."');
 
-console.log('✔ Absence of placeholder citation snippets verified.');
+// Test 17: Official-source allowlist & title mismatch filters
+import {
+  OFFICIAL_DOMAIN_ALLOWLIST,
+  isAllowedOfficialHost,
+  isMismatchedDocumentTitle,
+  filterRegulatoryResults
+} from './tavilyClient.js';
+
+// 17a: amazonaws.com and cloud-storage hosts rejected
+assert.equal(isAllowedOfficialHost('https://s3.amazonaws.com/regulatory-docs/rule30.pdf'), false, 's3.amazonaws.com must be rejected');
+assert.equal(isAllowedOfficialHost('https://my-bucket.s3.us-west-2.amazonaws.com/doc.pdf'), false, 'subdomain.s3.amazonaws.com must be rejected');
+assert.equal(isAllowedOfficialHost('https://amazonaws.com/file'), false, 'amazonaws.com root must be rejected');
+assert.equal(isAllowedOfficialHost('https://untrusted-utility-blog.com/rules'), false, 'Non-allowlisted domain must be rejected');
+
+// 17b: Official allowed hosts accepted
+assert.equal(isAllowedOfficialHost('https://www.ofgem.gov.uk/energy-policy-and-regulation'), true, 'ofgem.gov.uk must be allowed');
+assert.equal(isAllowedOfficialHost('https://www.aer.gov.au/consumers'), true, 'aer.gov.au must be allowed');
+assert.equal(isAllowedOfficialHost('https://www.cpuc.ca.gov/consumer-support'), true, 'cpuc.ca.gov must be allowed');
+assert.equal(isAllowedOfficialHost('https://www.puc.texas.gov/consumer'), true, 'puc.texas.gov must be allowed');
+assert.equal(isAllowedOfficialHost('https://www.energyombudsman.org/'), true, 'energyombudsman.org must be allowed');
+assert.equal(isAllowedOfficialHost('https://www.ewon.com.au/'), true, 'ewon.com.au must be allowed');
+
+// 17c: "Version 30" rejected for NERR Rule 30
+assert.equal(isMismatchedDocumentTitle('National Energy Retail Rules Version 30', 'Australia', 'NERR Rule 30'), true, '"Version 30" must be rejected for NERR Rule 30');
+assert.equal(isMismatchedDocumentTitle('AEMC NERR v30 Consolidated Rules', 'Australia', 'NERR Rule 30'), true, '"v30" must be rejected for NERR Rule 30');
+assert.equal(isMismatchedDocumentTitle('AER Guidance on NERR Rule 30 Undercharging', 'Australia', 'NERR Rule 30'), false, 'Valid Rule 30 title must be accepted');
+
+// 17d: filterRegulatoryResults drops amazonaws.com and Version 30
+const sampleResults = [
+  { title: 'NERR Version 30 PDF', url: 'https://www.aer.gov.au/doc/v30.pdf' },
+  { title: 'Rule 30 Guidance', url: 'https://s3.amazonaws.com/bucket/rule30.pdf' },
+  { title: 'Unrelated Blog', url: 'https://energyblog.example.com/rule30' },
+  { title: 'Billing Problems and Disputes', url: 'https://www.aer.gov.au/consumers/billing-disputes' }
+];
+
+const filtered = filterRegulatoryResults(sampleResults, 'Australia', 'NERR Rule 30');
+assert.equal(filtered.length, 1, 'Only official matching result should remain');
+assert.equal(filtered[0].title, 'Billing Problems and Disputes');
+console.log('✔ Official-source allowlist, cloud-storage rejection, and "Version 30" filter verified.');
+
+// Test 18: Additional source formatting in letter without LLM summary
+const regWithAdditional = {
+  ...auReg,
+  additionalSource: {
+    title: 'AER Retail Billing Guideline',
+    host: 'aer.gov.au',
+    url: 'https://www.aer.gov.au/consumers/billing-disputes',
+    summary: 'LLM generated excerpt that must NOT appear in PDF or letter',
+    note: 'Retrieved by search, not verified'
+  }
+};
+
+const letterWithSource = await evaluateExceptionsAndFormatLetter({
+  isEstimated: false,
+  isMeterObstructed: false,
+  disputableTotal: 900.00,
+  totalBilled: 1800.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2026-01-01',
+  regulation: regWithAdditional,
+  currency: 'A$',
+  lookbackMonths: 9,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Pty Ltd',
+  accountNumber: 'EX-AU-992140',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  noticeDate: '2026-10-15',
+  country: 'Australia',
+  state: 'NSW'
+});
+
+assert.ok(letterWithSource.disputeLetter.includes('Additional Reference:'), 'Letter must include Additional Reference header');
+assert.ok(letterWithSource.disputeLetter.includes('Host: aer.gov.au'), 'Letter must include host name');
+assert.ok(letterWithSource.disputeLetter.includes('URL: https://www.aer.gov.au/consumers/billing-disputes'), 'Letter must include URL');
+assert.ok(letterWithSource.disputeLetter.includes('Retrieved by search, not verified'), 'Letter must include verification disclaimer note');
+assert.ok(!letterWithSource.disputeLetter.includes('LLM generated excerpt that must NOT appear'), 'Letter must not contain raw LLM excerpt');
+console.log('✔ Additional source letter formatting verified (title, host, URL, and note without LLM summary).');
 
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');

@@ -121,6 +121,19 @@ function generateDeterministicLetter({
     }
   }
 
+  let additionalSourceSection = '';
+  if (regulation.additionalSource && regulation.additionalSource.url) {
+    const add = regulation.additionalSource;
+    const host = add.host || (() => {
+      try { return new URL(add.url).hostname.replace(/^www\./, ''); } catch { return ''; }
+    })();
+    additionalSourceSection = `\n\nAdditional Reference:
+Title: ${add.title || 'Regulatory Documentation'}
+Host: ${host}
+URL: ${add.url}
+Note: Retrieved by search, not verified`;
+  }
+
   return `${partyName}
 ${address}
 Account Reference: ${accNum}
@@ -154,7 +167,7 @@ Please treat this as a formal complaint in accordance with your complaint handli
 Yours sincerely,
 
 ${partyName}
-Account Holder`;
+Account Holder${additionalSourceSection}`;
 }
 
 /**
@@ -385,6 +398,7 @@ INSTRUCTIONS:
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
    - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers, state that the limit under §25.480(e) must be verified with the PUCT.
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
+   - If citing an additional retrieved source, show ONLY its title, host name and URL, plus the note "Retrieved by search, not verified". Do NOT include an LLM summary of the retrieved source.
 
 Return strictly a JSON object with this shape:
 {

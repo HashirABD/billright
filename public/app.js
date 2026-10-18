@@ -841,7 +841,23 @@ function renderResults(data) {
         </svg>
         <span>${data.verdict}</span>
       `;
-      verdictExplanation.textContent = `Under statutory back-billing protections in ${data.regulation?.jurisdiction || 'this jurisdiction'}, energy suppliers cannot demand payment for charges older than ${lookbackMonths} calendar months prior to the bill date.`;
+      const jur = data.regulation?.jurisdiction || countrySelect.value || '';
+      const isAU = jur === 'Australia' || jur.includes('Australia') || (data.regulation?.clauseReference && data.regulation.clauseReference.includes('NERR'));
+      const isCA = jur.includes('California');
+      const isTX = jur.includes('Texas');
+
+      let explanationHtml = '';
+      if (isAU) {
+        explanationHtml = `Under statutory back-billing protections in Australia (NERR Rule 30), energy retailers cannot recover undercharged amounts from more than 9 months before the date the customer was notified.
+        <div style="font-size: 0.8125rem; color: var(--color-text-muted); margin-top: 0.35rem; font-style: italic;">For this estimate we treat the bill issue date as the notification date.</div>`;
+      } else if (isCA) {
+        explanationHtml = `Under California utility tariff rules (PG&E Electric Rule 17.1 and equivalent CPUC rules), adjustments for residential billing errors where the customer was not at fault are restricted to 3 months.`;
+      } else if (isTX) {
+        explanationHtml = `Under PUCT §25.28(d) for electric utilities, underbilling adjustments are limited to 6 months; for retail electric providers, the limit under §25.480(e) must be verified with the PUCT.`;
+      } else {
+        explanationHtml = `Under statutory back-billing protections in ${jur || 'the United Kingdom'}, energy suppliers cannot demand payment for charges older than ${lookbackMonths} calendar months prior to the bill date.`;
+      }
+      verdictExplanation.innerHTML = explanationHtml;
     } else if (data.badgeType === 'rule_does_not_apply') {
       badge.className = 'verdict-badge valid';
       badge.innerHTML = `
@@ -981,6 +997,10 @@ function renderResults(data) {
       ? `<span class="preset-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.6875rem; margin-left: 0.5rem;">${addSource.docTypeLabel}</span>`
       : '';
 
+    const hostName = addSource.host || (() => {
+      try { return new URL(addSource.url).hostname.replace(/^www\./, ''); } catch { return ''; }
+    })();
+
     addDiv.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; flex-wrap: wrap;">
@@ -992,14 +1012,16 @@ function renderResults(data) {
       <div class="source-title" style="font-size: 0.875rem; font-weight: 600; margin-top: 0.25rem;">
         ${addSource.title || 'Retrieved Document'}
       </div>
+      ${hostName ? `<div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.2rem;"><strong>Host:</strong> ${hostName}</div>` : ''}
       <div style="margin-top: 0.25rem;">
         <a href="${addSource.url}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${addSource.url} &nearr;</a>
       </div>
+      <div style="font-size: 0.75rem; font-style: italic; color: var(--color-text-muted); margin-top: 0.25rem;">Retrieved by search, not verified</div>
       ${addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')) ? `
       <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 0.35rem 0.5rem; margin-top: 0.35rem;">
         <strong>Document Note:</strong> This retrieved URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). The binding regulatory rule is cited in the primary statutory authority above.
       </div>` : ''}
-      <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.5rem;">Summary of retrieved source:</div>
+      <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.5rem;">Summary of retrieved source (AI-generated, please check against the link):</div>
       <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin: 0.2rem 0; line-height: 1.45;">
         ${addSource.summary}
       </p>

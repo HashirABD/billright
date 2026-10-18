@@ -39,6 +39,98 @@ export const BUILT_IN_CITATIONS = {
   }
 };
 
+export const OFFICIAL_DOMAIN_ALLOWLIST = [
+  'ofgem.gov.uk',
+  'aer.gov.au',
+  'aemc.gov.au',
+  'energy.gov.au',
+  'cpuc.ca.gov',
+  'pge.com',
+  'puc.texas.gov',
+  'texas.gov',
+  'energyombudsman.org',
+  'ewon.com.au',
+  'ewoq.com.au',
+  'ewosa.com.au',
+  'legislation.gov.au',
+  'law.cornell.edu'
+];
+
+/**
+ * Validates whether a URL belongs to the official regulatory domain allowlist.
+ * Drops any non-allowlist host and strictly rejects raw cloud-storage hosts.
+ * 
+ * @param {string} urlStr 
+ * @returns {boolean}
+ */
+export function isAllowedOfficialHost(urlStr) {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+  try {
+    const parsed = new URL(urlStr);
+    const host = parsed.hostname.toLowerCase();
+
+    // Strictly reject cloud-storage hosts (AWS S3, etc.)
+    if (
+      host === 'amazonaws.com' ||
+      host.endsWith('.amazonaws.com') ||
+      host.startsWith('s3.') ||
+      host.includes('.s3.') ||
+      host.startsWith('s3-') ||
+      host.includes('.s3-')
+    ) {
+      return false;
+    }
+
+    // Must match an official domain on the allowlist
+    return OFFICIAL_DOMAIN_ALLOWLIST.some(allowed => 
+      host === allowed || host.endsWith('.' + allowed)
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Checks whether a document title indicates a different document than the rule cited.
+ * (e.g. "Version 30" for NERR Rule 30).
+ * 
+ * @param {string} title 
+ * @param {string} country 
+ * @param {string} clauseRef 
+ * @returns {boolean} True if mismatched (should be dropped)
+ */
+export function isMismatchedDocumentTitle(title = '', country = '', clauseRef = '') {
+  if (!title || typeof title !== 'string') return false;
+  const t = title.toLowerCase();
+
+  const isNERR = country === 'Australia' || (clauseRef && clauseRef.toLowerCase().includes('nerr'));
+  if (isNERR) {
+    if (/\bversion\s+30\b/i.test(t) || /\bv30\b/i.test(t)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Filters live search results to only allowed official hosts and non-mismatched titles.
+ * 
+ * @param {Array} results 
+ * @param {string} country 
+ * @param {string} clauseRef 
+ * @returns {Array}
+ */
+export function filterRegulatoryResults(results = [], country = '', clauseRef = '') {
+  if (!Array.isArray(results)) return [];
+  return results.filter(result => {
+    if (!result || !result.url) return false;
+    if (!isAllowedOfficialHost(result.url)) return false;
+    if (isMismatchedDocumentTitle(result.title, country, clauseRef)) return false;
+    return true;
+  });
+}
+
 /**
  * Returns built-in statutory reference when live search is unavailable or fails.
  */
@@ -145,21 +237,25 @@ export async function searchRegulations(country = 'United Kingdom') {
     }
 
     const data = await response.json();
-    const results = data.results || [];
-
-    if (results.length === 0) {
-      console.warn('No search results returned from Tavily. Using built-in fallback.');
-      return getBuiltInCitation(country, 'No search results found');
-    }
-
-    // Best matching result
-    const topResult = results[0];
+    const rawResults = data.results || [];
 
     // Curated primary statutory reference
     const matchedKey = Object.keys(BUILT_IN_CITATIONS).find(k =>
       country === k || country.includes(k) || k.includes(country)
     ) || 'Other Country';
     const primaryRef = BUILT_IN_CITATIONS[matchedKey];
+
+    // Filter results using official allowlist and title mismatch check
+    const validResults = filterRegulatoryResults(rawResults, country, primaryRef.clauseReference);
+
+    if (validResults.length === 0) {
+      console.warn('No search results passed official domain allowlist. Showing curated primary authority.');
+      return getBuiltInCitation(country, 'No search results passed official regulatory domain allowlist');
+    }
+
+    // Best matching valid result
+    const topResult = validResults[0];
+    const hostName = new URL(topResult.url).hostname.replace(/^www\./, '');
 
     // Check if the URL or title indicates a consultation or non-final document
     const fullTextToCheck = `${topResult.url || ''} ${topResult.title || ''}`.toLowerCase();
@@ -190,10 +286,12 @@ export async function searchRegulations(country = 'United Kingdom') {
       },
       additionalSource: {
         title: topResult.title || defaultTitle,
+        host: hostName,
         url: topResult.url || fallbackUrl,
         summary: data.answer || topResult.content || 'Retrieved regulatory source excerpt.',
         docTypeLabel,
-        isConsultation: Boolean(docTypeLabel)
+        isConsultation: Boolean(docTypeLabel),
+        note: 'Retrieved by search, not verified'
       }
     };
 

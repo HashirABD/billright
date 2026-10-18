@@ -2501,7 +2501,10 @@ summary:focus-visible,
   }
 
   .timeline-svg {
-    min-width: 580px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
   }
 }
 
