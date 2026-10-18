@@ -77,7 +77,8 @@ function generateDeterministicLetter({
   const address = supplyAddress || 'Supply Address On File';
 
   let emailLine = '';
-  if (supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierName === 'Example Energy Ltd' || supplierContact?.email === 'complaints@example.com') {
+  const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplierName && supplierName.toLowerCase().includes('example'));
+  if (isDemo) {
     emailLine = 'Email: complaints@example.com (demo address)';
   } else if (supplierEmail) {
     emailLine = `Email: ${supplierEmail}`;
@@ -123,7 +124,7 @@ In light of these back-billing rules, I formally request that you:
 2. Issue an updated statement showing only charges legitimately recoverable within the statutory ${lookbackMonths}-month permitted window.
 3. Place a temporary hold on collection action for the disputed sum while this complaint is investigated.
 
-Please treat this as a formal complaint in accordance with your complaint handling procedure. I suggest a written response within 14 calendar days. Should we not reach an agreed resolution within 8 weeks, I reserve the right to escalate this matter to the ${escalation}.
+Please treat this as a formal complaint in accordance with your complaint handling procedure. I suggest a written response within 14 calendar days. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, I reserve the right to escalate this matter to the ${escalation}.
 
 Yours sincerely,
 
@@ -337,7 +338,8 @@ INSTRUCTIONS:
    - DO NOT USE any bracketed placeholders like [Your Name], [Account Number], [Supplier Name], or [Address]. The real details provided above must be directly embedded.
    - Reference the exact regulation name and clause (${activeReg.clauseReference || 'Statutory Code'}).
    - Insert the exact pre-calculated disputable sum of ${fmtMoney(disputableTotal, currency)}.
-   - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after 8 weeks.
+   - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after the standard 8-week complaints timeframe.
+   - Use "indicates" rather than "demonstrates" when describing audit findings.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
    - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers, state that the limit under §25.480(e) must be verified with the PUCT.

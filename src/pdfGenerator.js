@@ -18,7 +18,7 @@ function getEscalationDirectory(jurisdiction = '') {
   if (jurisdiction === 'Australia') {
     return {
       body: 'State Energy and Water Ombudsman (e.g. EWON in NSW, EWOQ in QLD, EWOSA in SA)',
-      timeline: 'If unresolved after 8 weeks or upon receipt of formal deadlock / dispute response',
+      timeline: 'If unresolved after the standard 8-week complaints timeframe or upon receipt of formal deadlock / dispute response',
       statute: 'National Energy Retail Rules (NERR Rule 30) - Scope: NERR states (NSW, QLD, SA). Note: Victoria has its own code and is not covered.',
       website: 'www.ewon.com.au / www.ewosa.com.au / www.ewoq.com.au'
     };
@@ -163,7 +163,7 @@ export async function generateLegalPacketPdf(data) {
       doc.fontSize(13).font('Helvetica-Bold').fillColor('#ffffff')
         .text('FORMAL NOTICE OF BACK-BILLING DISPUTE', leftMargin + 16, 52);
       doc.fontSize(8.5).font('Helvetica').fillColor('#94a3b8')
-        .text(`STATUTORY LOOKBACK DISPUTE PURSUANT TO ${regulation.clauseReference || 'APPLICABLE STATUTORY CODE'}`, leftMargin + 16, 70);
+        .text(`STATUTORY LOOKBACK DISPUTE PURSUANT TO ${regulation.clauseReference || 'APPLICABLE STATUTORY CODE'} | DRAFT, NOT LEGAL ADVICE`, leftMargin + 16, 70);
 
       // Party Identification Box (2 Columns)
       const partyBoxY = 98;
@@ -195,7 +195,8 @@ export async function generateLegalPacketPdf(data) {
         .text(supplierName || 'Energy Retailer', col2X, partyBoxY + 22);
 
       let emailText = '';
-      if (supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierName === 'Example Energy Ltd' || supplierContact?.email === 'complaints@example.com') {
+      const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplierName && supplierName.toLowerCase().includes('example'));
+      if (isDemo) {
         emailText = 'Email: complaints@example.com (demo address)';
       } else if (supplierEmail) {
         emailText = `Email: ${supplierEmail}`;
@@ -224,7 +225,7 @@ export async function generateLegalPacketPdf(data) {
 
 I am writing to formally dispute the catch-up charges itemized on my recent energy statement dated ${billDate} in the total sum of ${fmtCurr(totalBilled, currency)}.
 
-A precise calendar audit against statutory utility standards demonstrates that ${fmtCurr(disputableTotal, currency)} of this billed balance relates exclusively to energy consumption accrued prior to ${cutOffDate}—exceeding the statutory ${lookbackMonths}-month lookback limitation prescribed by ${regulation.title || 'statutory back-billing regulations'} (${regulation.clauseReference || 'Applicable Standard'}).`;
+A precise calendar audit against statutory utility standards indicates that ${fmtCurr(disputableTotal, currency)} of this billed balance relates exclusively to energy consumption accrued prior to ${cutOffDate}—exceeding the statutory ${lookbackMonths}-month lookback limitation prescribed by ${regulation.title || 'statutory back-billing regulations'} (${regulation.clauseReference || 'Applicable Standard'}).`;
 
       doc.text(p1, leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
 
@@ -275,6 +276,10 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       doc.fontSize(8.5).font('Helvetica').fillColor('#1e293b').text('Yours sincerely,', leftMargin, signY);
       doc.fontSize(10).font('Helvetica-Bold').fillColor('#0f172a').text(consumerName || 'Account Holder', leftMargin, signY + 13);
       doc.fontSize(8).font('Helvetica').fillColor('#475569').text(`Registered Account Holder • ${accountNumber || 'Reference On File'}`, leftMargin, signY + 25);
+
+      // One-line draft note on Page 1
+      doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b')
+        .text('Draft, not legal advice. Review before sending.', leftMargin, 792, { width: contentWidth, align: 'center' });
 
       // =========================================================================
       // PAGE 2: SCHEDULE OF MATHEMATICAL EVIDENCE
@@ -390,7 +395,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
         doc.strokeColor('#e2e8f0').lineWidth(0.5).rect(leftMargin, currRowY, contentWidth, rowH).stroke();
 
         doc.fontSize(7).font('Helvetica').fillColor('#1e293b');
-        doc.text(`${item.startDate} → ${item.endDate}`, leftMargin + 8, currRowY + 7, { width: 130, align: 'left' });
+        doc.text(`${item.startDate} to ${item.endDate}`, leftMargin + 8, currRowY + 7, { width: 130, align: 'left' });
         doc.text(`${item.totalDays}d`, leftMargin + 142, currRowY + 7, { width: 45, align: 'center' });
         doc.text(`${item.disputableDays}d`, leftMargin + 192, currRowY + 7, { width: 55, align: 'center' });
         doc.text(fmtCurr(item.amount, currency), leftMargin + 252, currRowY + 7, { width: 75, align: 'right' });
@@ -424,7 +429,7 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#334155')
         .text('DAILY PRO-RATA APPORTIONMENT METHODOLOGY:', leftMargin + 10, mathNoteY + 7);
       doc.fontSize(7).font('Helvetica').fillColor('#64748b')
-        .text('Where a billing period straddles the statutory lookback cut-off barrier, charges are apportioned on a uniform daily consumption basis: Disputable Charge = Total Period Charge × (Days Elapsed Prior to Cut-off ÷ Total Days in Billing Period). This provides an equitable, deterministic partition compliant with regulatory principles.', leftMargin + 10, mathNoteY + 18, { width: contentWidth - 20, lineGap: 2 });
+        .text('Where a billing period straddles the statutory lookback cut-off barrier, charges are apportioned on a uniform daily consumption basis: Disputable Charge = Total Period Charge * (Days Elapsed Prior to Cut-off / Total Days in Billing Period). This provides an equitable, deterministic partition compliant with regulatory principles.', leftMargin + 10, mathNoteY + 18, { width: contentWidth - 20, lineGap: 2 });
 
       // =========================================================================
       // PAGE 3: STATUTORY AUTHORITY ANNEXURE
@@ -439,66 +444,92 @@ ${isMeterObstructed ? 'While meter obstruction was indicated, I formally request
       doc.fontSize(8).font('Helvetica').fillColor('#94a3b8')
         .text(`Grounding Framework for ${regulation.jurisdiction || country} Utility Regulations`, leftMargin + 16, 68);
 
-      // Primary Governing Statute Box
-      const statBoxY = 96;
-      doc.roundedRect(leftMargin, statBoxY, contentWidth, 78, 4).fillAndStroke('#eff6ff', '#bfdbfe');
+      // Curated Primary Statutory Authority Box (shown first)
+      const primaryAuth = regulation.primaryAuthority || {
+        title: regulation.title || 'Statutory Utility Code',
+        clauseReference: regulation.clauseReference || 'Applicable Code',
+        summary: regulation.summary || 'Under mandatory back-billing rules, energy suppliers are barred from seeking recovery of charges for energy consumed more than the statutory limit prior to the bill date where previous accurate billing was not provided.',
+        sourceUrl: regulation.sourceUrl
+      };
+
+      const statBoxY = 94;
+      const statBoxH = primaryAuth.sourceUrl ? 78 : 66;
+      doc.roundedRect(leftMargin, statBoxY, contentWidth, statBoxH, 4).fillAndStroke('#eff6ff', '#bfdbfe');
       doc.fontSize(9).font('Helvetica-Bold').fillColor('#1e40af')
-        .text(`PRIMARY GOVERNING STATUTE: ${regulation.title || 'Statutory Utility Code'}`, leftMargin + 14, statBoxY + 10);
+        .text(`PRIMARY STATUTORY AUTHORITY: ${primaryAuth.title}`, leftMargin + 14, statBoxY + 9);
       doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#1d4ed8')
-        .text(`Regulatory Reference: ${regulation.clauseReference || 'Applicable Code'} • Statutory Limitation: ${lookbackMonths} Calendar Months`, leftMargin + 14, statBoxY + 23);
+        .text(`Regulatory Reference: ${primaryAuth.clauseReference} | Statutory Limitation: ${lookbackMonths} Calendar Months`, leftMargin + 14, statBoxY + 22);
       doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b')
-        .text(regulation.summary || 'Under mandatory back-billing rules, energy suppliers are barred from seeking recovery of charges for energy consumed more than the statutory limit prior to the bill date where previous accurate billing was not provided.', leftMargin + 14, statBoxY + 36, { width: contentWidth - 28, lineGap: 2.5 });
+        .text(primaryAuth.summary, leftMargin + 14, statBoxY + 35, { width: contentWidth - 28, lineGap: 2 });
+      if (primaryAuth.sourceUrl) {
+        doc.fontSize(7).font('Helvetica-Bold').fillColor('#2563eb')
+          .text(`Official Reference URL: ${primaryAuth.sourceUrl}`, leftMargin + 14, statBoxY + 63, {
+            width: contentWidth - 28,
+            link: primaryAuth.sourceUrl,
+            underline: true
+          });
+      }
 
-      // Regulatory Citations
-      const citesY = 188;
-      const citationHeading = (regulation.builtIn || regulation.liveSearch === false)
-        ? 'STATUTORY CITATIONS — BUILT-IN REFERENCE (PLEASE VERIFY)'
-        : (regulation.liveSearch ? 'OFFICIAL REGULATORY CITATIONS — LIVE SOURCE' : 'OFFICIAL REGULATORY CITATIONS');
-      doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
-        .text(citationHeading, leftMargin, citesY);
-      const verificationSubtitle = (regulation.builtIn || regulation.liveSearch === false)
-        ? 'Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.'
-        : 'Sourced from regulator publications, legislation registers, and ombudsman guidance.';
-      doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
-        .text(verificationSubtitle, leftMargin, citesY + 12);
+      // Live Retrieved Results under "Additional retrieved source" or Built-in Reference Note
+      const citesY = statBoxY + statBoxH + 12;
+      const addSource = regulation.additionalSource;
+      let nextY = citesY;
 
-      let citeY = citesY + 26;
-      const defaultUrl = (country === 'United Kingdom' || !country)
-        ? 'https://www.ofgem.gov.uk/node/114480'
-        : 'https://www.aer.gov.au/consumers/energy-bills-and-charges/billing-problems-and-disputes';
+      if (addSource && addSource.url) {
+        const docTypeBadge = addSource.docTypeLabel ? ` (${addSource.docTypeLabel})` : '';
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
+          .text(`ADDITIONAL RETRIEVED SOURCE${docTypeBadge}`, leftMargin, citesY);
 
-      const sources = Array.isArray(regulation.sources) && regulation.sources.length > 0
-        ? regulation.sources
-        : [
-            {
-              title: `${regulation.title || 'Energy Back-Billing Protection Rule'}`,
-              url: regulation.sourceUrl || defaultUrl,
-              snippet: 'Suppliers must not bill consumers for unbilled energy used beyond the statutory lookback window.'
-            }
-          ];
+        const snippetText = (addSource.summary && addSource.summary !== 'Retrieved regulatory source excerpt.')
+          ? String(addSource.summary).trim()
+          : '';
 
-      sources.slice(0, 3).forEach((src, idx) => {
-        const itemH = 50;
-        doc.roundedRect(leftMargin, citeY, contentWidth, itemH, 3).fillAndStroke('#f8fafc', '#e2e8f0');
+        const itemY = citesY + 14;
+        const itemH = snippetText ? 64 : 44;
 
+        doc.roundedRect(leftMargin, itemY, contentWidth, itemH, 3).fillAndStroke('#f8fafc', '#e2e8f0');
         doc.fontSize(8).font('Helvetica-Bold').fillColor('#0f172a')
-          .text(`[Citation ${idx + 1}] ${src.title || 'Official Regulatory Documentation'}`, leftMargin + 10, citeY + 8, { width: contentWidth - 20 });
-        
-        doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
-          .text(src.snippet ? src.snippet.substring(0, 160) + '...' : 'Mandatory rule preventing unbilled utility charges beyond statutory lookback.', leftMargin + 10, citeY + 20, { width: contentWidth - 20 });
+          .text(`Summary of retrieved source: ${addSource.title || 'Official Regulatory Documentation'}`, leftMargin + 10, itemY + 8, { width: contentWidth - 20 });
+
+        let currentTextY = itemY + 20;
+        if (snippetText) {
+          doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
+            .text(snippetText, leftMargin + 10, currentTextY, { width: contentWidth - 20, lineGap: 1.5 });
+          currentTextY += 26;
+        }
 
         doc.fontSize(7).font('Helvetica').fillColor('#2563eb')
-          .text(`Official Source URL: ${src.url}`, leftMargin + 10, citeY + 36, {
+          .text(`Source URL: ${addSource.url}`, leftMargin + 10, currentTextY, {
             width: contentWidth - 20,
-            link: src.url,
+            link: addSource.url,
             underline: true
           });
 
-        citeY += itemH + 8;
-      });
+        nextY = itemY + itemH + 10;
+      } else {
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#0f172a')
+          .text('STATUTORY CITATION REFERENCE', leftMargin, citesY);
+
+        const itemY = citesY + 14;
+        const itemH = primaryAuth.sourceUrl ? 44 : 32;
+
+        doc.roundedRect(leftMargin, itemY, contentWidth, itemH, 3).fillAndStroke('#f8fafc', '#e2e8f0');
+        doc.fontSize(7.5).font('Helvetica').fillColor('#64748b')
+          .text('Live search unavailable. Showing built-in statutory reference. Please verify with the regulator.', leftMargin + 10, itemY + 8, { width: contentWidth - 20 });
+        if (primaryAuth.sourceUrl) {
+          doc.fontSize(7).font('Helvetica').fillColor('#2563eb')
+            .text(`Official Reference URL: ${primaryAuth.sourceUrl}`, leftMargin + 10, itemY + 24, {
+              width: contentWidth - 20,
+              link: primaryAuth.sourceUrl,
+              underline: true
+            });
+        }
+
+        nextY = itemY + itemH + 10;
+      }
 
       // Statutory Exception & Consumer Compliance Audit
-      const auditY = citeY + 6;
+      const auditY = nextY;
       doc.roundedRect(leftMargin, auditY, contentWidth, 80, 4).fillAndStroke('#f1f5f9', '#cbd5e1');
 
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a')
@@ -528,7 +559,7 @@ Escalation Threshold: ${escalation.timeline}
 Official Online Portal / Contact: ${escalation.website}
 
 Escalation Protocol Instructions:
-If the energy supplier fails to resolve this dispute within the 8-week statutory window, lodge a formal dispute directly with the ombudsman above. Attach this complete 3-page dossier including the Schedule of Mathematical Evidence.`;
+If the energy supplier fails to resolve this dispute within the standard 8-week complaints timeframe, lodge a formal dispute directly with the ombudsman above. Attach this complete 3-page dossier including the Schedule of Mathematical Evidence.`;
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b')
         .text(ombText, leftMargin + 14, ombY + 24, { width: contentWidth - 28, lineGap: 2.5 });

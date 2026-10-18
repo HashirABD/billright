@@ -43,10 +43,10 @@ const PRESETS = {
     name: 'Australia (NERR Rule 30, 9 Mos)',
     country: 'Australia',
     billDate: '2026-10-01',
-    consumerName: 'David Miller',
-    supplierName: 'Origin Energy',
-    accountNumber: 'ORG-992140',
-    supplyAddress: '45 St Kilda Road, Melbourne, VIC 3004',
+    consumerName: 'Jane Example',
+    supplierName: 'Example Energy Pty Ltd',
+    accountNumber: 'EX-AU-992140',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
     isEstimated: true,
     isMeterObstructed: false,
     periods: [
@@ -58,10 +58,10 @@ const PRESETS = {
     name: 'United States - California (PG&E Rule 17.1, 3 Mos)',
     country: 'United States (California)',
     billDate: '2026-10-01',
-    consumerName: 'Elena Rodriguez',
-    supplierName: 'Pacific Gas and Electric (PG&E)',
-    accountNumber: 'PGE-7740129',
-    supplyAddress: '108 Mission Street, San Francisco, CA 94105',
+    consumerName: 'Jane Example',
+    supplierName: 'Example Utility Co',
+    accountNumber: 'EX-US-7740129',
+    supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
     isEstimated: false,
     isMeterObstructed: false,
     periods: [
@@ -891,7 +891,7 @@ function renderResults(data) {
 
     // Direct Supplier Email Handling
     const contact = data.supplierContact || {};
-    const isDemoSupplier = contact.isDemo || data.supplierName === 'Example Energy Ltd' || contact.name === 'Example Energy Ltd';
+    const isDemoSupplier = contact.isDemo || data.supplierEmail === 'complaints@example.com' || (data.supplierName && data.supplierName.toLowerCase().includes('example'));
     const isDirectorySupplier = contact.isDirectory && Boolean(contact.email);
 
     if (btnEmailSupplier) {
@@ -1215,7 +1215,7 @@ function openEmailDispatcherModal() {
 
   const contact = currentAnalysisResult.supplierContact || {};
   const supplierName = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
-  const isDemoSupplier = contact.isDemo || supplierName === 'Example Energy Ltd' || contact.name === 'Example Energy Ltd';
+  const isDemoSupplier = contact.isDemo || (supplierName && supplierName.toLowerCase().includes('example')) || currentAnalysisResult.supplierEmail === 'complaints@example.com';
   const isDirectorySupplier = contact.isDirectory && Boolean(contact.email);
 
   let targetEmail = '';
@@ -1241,10 +1241,14 @@ function openEmailDispatcherModal() {
   const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n`;
   const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
 
+  const modalEmailToLabel = document.getElementById('modal-email-to-label');
   if (modalEmailTo) {
     modalEmailTo.value = targetEmail;
     if (isDemoSupplier) {
       modalEmailTo.readOnly = true;
+      if (modalEmailToLabel) {
+        modalEmailToLabel.innerHTML = 'Complaints email: <span class="modal-label-badge valid" id="modal-email-to-badge">demo address</span>';
+      }
       if (modalEmailToBadge) {
         modalEmailToBadge.textContent = 'demo address';
         modalEmailToBadge.className = 'modal-label-badge valid';
@@ -1252,16 +1256,22 @@ function openEmailDispatcherModal() {
       if (modalEmailToHint) modalEmailToHint.style.display = 'none';
     } else if (isDirectorySupplier) {
       modalEmailTo.readOnly = true;
+      if (modalEmailToLabel) {
+        modalEmailToLabel.innerHTML = 'Complaints email: <span class="modal-label-badge valid" id="modal-email-to-badge">Complaints email</span>';
+      }
       if (modalEmailToBadge) {
-        modalEmailToBadge.textContent = 'Verified Supplier Channel';
+        modalEmailToBadge.textContent = 'Complaints email';
         modalEmailToBadge.className = 'modal-label-badge valid';
       }
       if (modalEmailToHint) modalEmailToHint.style.display = 'none';
     } else {
       modalEmailTo.readOnly = false;
-      modalEmailTo.placeholder = "e.g. complaints@supplier.co.uk";
+      modalEmailTo.placeholder = "Enter your supplier's complaints email";
+      if (modalEmailToLabel) {
+        modalEmailToLabel.innerHTML = 'Enter your supplier\'s complaints email: <span class="modal-label-badge" id="modal-email-to-badge">Complaints email</span>';
+      }
       if (modalEmailToBadge) {
-        modalEmailToBadge.textContent = "Check your supplier's website";
+        modalEmailToBadge.textContent = "Complaints email";
         modalEmailToBadge.className = 'modal-label-badge';
       }
       if (modalEmailToHint) {
@@ -1295,8 +1305,8 @@ function openEmailDispatcherModal() {
           <div style="font-size: 0.75rem; color: var(--color-text-muted); margin-top: 0.25rem;">Check your supplier's website for the complaints email address</div>
         </div>
         <div style="font-size: 0.8125rem; color: var(--color-text-muted);">
-          ${contact.phone ? `<span>📞 Phone: <a href="tel:${contact.phone}" style="color: #2563eb; font-weight: 500;">${contact.phone}</a></span> &bull; ` : ''}
-          ${contact.portalUrl ? `<a href="${contact.portalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">Online Portal &nearr;</a> &bull; ` : ''}
+          ${contact.phone && isDirectorySupplier ? `<span>📞 Phone: <a href="tel:${contact.phone}" style="color: #2563eb; font-weight: 500;">${contact.phone}</a></span> &bull; ` : ''}
+          ${contact.portalUrl && isDirectorySupplier ? `<a href="${contact.portalUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">Online Portal &nearr;</a> &bull; ` : ''}
           <span style="color: #475569;">⚖️ ${contact.ombudsman || 'Independent Ombudsman'}</span>
         </div>
       </div>

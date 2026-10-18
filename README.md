@@ -180,7 +180,7 @@ BillRight does not store your files. They are sent to Google Gemini for reading 
 - **Dual-Fuel Splitting**: Separate gas and electricity tariffs, standing charges, and calorific value conversions on combined utility statements.
 - **Supplier API Inboxes**: Direct REST integrations with energy supplier customer service ticketing systems for automated delivery confirmation and tracking.
 - **Multi-Language Notices**: Localized statutory dispute letters in Spanish, Welsh, and other regional languages.
-- **Ombudsman Case Tracking**: Webhook-based tracking for the 8-week statutory escalation window with automated status notifications.
+- **Ombudsman Case Tracking**: Webhook-based tracking for the standard 8-week complaints timeframe with automated status notifications.
 
 ---
 

@@ -106,7 +106,7 @@ Source: `scope.md > Inspiration & Identity`
 - Generates a courteous, legally sound dispute letter.
 - Automatically inserts the supplier name (or placeholder), account/reference placeholder, exact calculated disputed sum, and official regulatory clause citation.
 - Explicitly outlines the required UK dispute escalation path:
-  1. Formal complaint submission to the supplier's internal complaints team (with statutory 8-week resolution window).
+  1. Formal complaint submission to the supplier's internal complaints team (with standard 8-week complaints timeframe).
   2. Subsequent escalation to the Energy Ombudsman if unresolved.
 - Contains a prominent "Copy Letter" button with visual feedback ("Copied!").
 

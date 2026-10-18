@@ -169,17 +169,23 @@ function getOmbudsmanByCountry(country = 'United Kingdom') {
 export function getSupplierContact(supplierName = '', country = 'United Kingdom') {
   const normalized = supplierName.trim().toLowerCase();
 
-  // Fictional demo supplier: reserved address complaints@example.com
-  if (normalized === 'example energy ltd' || normalized.includes('example energy')) {
+  // Fictional demo suppliers: reserved address complaints@example.com
+  if (
+    normalized === 'example energy ltd' ||
+    normalized === 'example energy pty ltd' ||
+    normalized === 'example utility co' ||
+    normalized.includes('example energy') ||
+    normalized.includes('example utility')
+  ) {
     return {
-      name: 'Example Energy Ltd',
+      name: supplierName.trim() || 'Example Energy Ltd',
       country: country || 'United Kingdom',
       email: 'complaints@example.com',
       isDemo: true,
       demoLabel: 'demo address',
       isDirectory: false,
       isUnknown: false,
-      phone: '0800 000 0000',
+      phone: '',
       portalUrl: '',
       ombudsman: getOmbudsmanByCountry(country)
     };
