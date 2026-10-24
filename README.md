@@ -171,7 +171,7 @@ BillRight does not store your files. They are sent to Google Gemini for reading 
 
 ## Notice & Informational Disclaimer
 
-> **Not legal advice.** BillRight is an informational consumer calculation tool designed to assist consumers in identifying catch-up utility charges and assembling formal dispute notices. It does not provide legal advice, judicial determinations, or financial guarantees. Consumers should verify official utility rules with their regional energy regulator (e.g. Ofgem, AER, CPUC, PUCT) or independent ombudsman service.
+> **Not legal advice.** BillRight is an informational consumer calculation tool designed to assist consumers in identifying catch-up utility charges and assembling formal dispute notices. It does not provide legal advice, judicial decisions, or financial guarantees. Consumers should verify official utility rules with their regional energy regulator (e.g. Ofgem, AER, CPUC, PUCT) or independent ombudsman service.
 
 ---
 

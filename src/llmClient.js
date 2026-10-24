@@ -53,7 +53,7 @@ function fmtMoney(amount, currency = '£') {
 }
 
 /**
- * Sanitizes dispute letter text to ensure regulatory compliance and plain text standards
+ * Sanitizes dispute letter text to ensure neutral regulatory standards and plain text format
  */
 function sanitizeDisputeLetter(text, isMeterObstructed) {
   if (!text || typeof text !== 'string') return text;
@@ -70,6 +70,9 @@ function sanitizeDisputeLetter(text, isMeterObstructed) {
   if (isMeterObstructed) {
     cleaned = cleaned.replace(/I (?:confirm|expressly confirm) that I have (?:not acted obstructively or |never )?prevented meter (?:reader )?access(?: at any time)?(?:, and (?:earlier|previous) (?:bills|statements) were based on estimated rather than actual readings)?\./gi, '');
   }
+  // UK rule: replace where the customer has not been previously billed with where the delay or error was the supplier's responsibility
+  cleaned = cleaned.replace(/where the customer has not been (?:previously )?billed(?: previously)?(?: and has not obstructed meter access)?/gi, "where the delay or error was the supplier's responsibility");
+  cleaned = cleaned.replace(/where previous accurate billing was not provided/gi, "where the delay or error was the supplier's responsibility");
   return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -124,7 +127,7 @@ function generateDeterministicLetter({
   } else if (isTexas) {
     statutoryRuleText = 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.';
   } else {
-    statutoryRuleText = `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
+    statutoryRuleText = `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the delay or error was the supplier's responsibility.`;
   }
 
   let meterReadingStatement = '';
@@ -401,13 +404,14 @@ INSTRUCTIONS:
    - Explicitly cite the escalation path: internal supplier dispute followed by ${escalation} after the standard 8-week complaints timeframe.
    - Use "indicates" rather than "demonstrates" when describing audit findings.
    - Include a suggested 14-day response deadline and polite request to pause debt recovery actions on the disputed amount while under investigation.
-   - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
+   - Do NOT claim the supplier is statutorily required to pause debt collection or that non-response constitutes a regulatory breach.
    - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers, state that the limit under §25.480(e) must be verified with the PUCT.
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
    - Do NOT include the sentence "In accordance with published regulatory precedents, the retailer bears responsibility for timely billing." or any similar unverified claim.
    - Do NOT include any "Additional Reference" block or retrieved sources in the letter. Retrieved sources are only presented in the application interface and the statutory annexure.
    - The ombudsman website must be plain text "www.energyombudsman.org" with no Markdown link syntax like [text](url).
    - The sentence "I confirm that I have not acted obstructively or prevented meter access at any time" must appear in the letter ONLY when meter access was not obstructed. Do not state anything about obstruction if obstruction occurred.
+   - For UK rules, state that charges are unrecoverable beyond 12 months where the delay or error was the supplier's responsibility (do not use "where the customer has not been previously billed").
 
 Return strictly a JSON object with this shape:
 {

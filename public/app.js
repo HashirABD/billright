@@ -112,7 +112,7 @@ function isValidEmail(email) {
 }
 
 /**
- * Sanitizes dispute letter text to ensure regulatory compliance and plain text standards
+ * Sanitizes dispute letter text to ensure neutral regulatory standards and plain text format
  */
 function cleanLetterText(text) {
   if (!text || typeof text !== 'string') return '';
@@ -125,6 +125,9 @@ function cleanLetterText(text) {
   // Remove Additional Reference block if present in letter
   cleaned = cleaned.replace(/\n*Additional Reference:[\s\S]*?(?=\n\n[A-Z]|\n*$)/gi, '');
   cleaned = cleaned.replace(/Note: Retrieved by search, not verified/gi, '');
+  // Replace where the customer has not been previously billed with where the delay or error was the supplier's responsibility
+  cleaned = cleaned.replace(/where the customer has not been (?:previously )?billed(?: previously)?(?: and has not obstructed meter access)?/gi, "where the delay or error was the supplier's responsibility");
+  cleaned = cleaned.replace(/where previous accurate billing was not provided/gi, "where the delay or error was the supplier's responsibility");
   return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -465,6 +468,22 @@ function resetResultsToEmptyState() {
   if (plainWhy) plainWhy.textContent = 'Submit your billing records to evaluate charges against statutory back-billing limits.';
   if (plainTag) { plainTag.style.display = 'none'; plainTag.className = 'plain-result-badge-tag'; }
   if (plainNextSteps) plainNextSteps.style.display = 'none';
+  const step1ContentEl = document.getElementById('plain-step-1-content');
+  if (step1ContentEl) {
+    step1ContentEl.innerHTML = `
+      <div class="step-title-row">
+        <strong>Send the dispute notice</strong>
+        <button type="button" id="btn-plain-send-dispute" class="btn-primary btn-sm plain-dispute-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+          Open Dispute Dispatcher
+        </button>
+      </div>
+      <p class="step-desc">Deliver the formal dispute notice and Schedule of Mathematical Evidence to your supplier's complaints team.</p>
+    `;
+  }
   if (authorityBadge) authorityBadge.style.display = 'none';
   if (verdictContainer) verdictContainer.innerHTML = '';
   if (verdictExp) verdictExp.textContent = '';
@@ -768,7 +787,50 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
   }
 
   // Variant 2: Obstruction or Exception Flagged (Merged Single Clear Warning Block)
-  const isObstructed = data.isMeterObstructed || inputObstructed.value === 'true' || data.exceptionTriggered;
+  const isObstructed = Boolean(data.isMeterObstructed || inputObstructed.value === 'true' || data.exceptionTriggered);
+
+  // Update Step 1 based on obstruction state
+  const step1ContentEl = document.getElementById('plain-step-1-content');
+  if (step1ContentEl) {
+    if (isObstructed) {
+      step1ContentEl.innerHTML = `
+        <p class="step-desc" style="margin: 0; color: var(--text-primary); font-size: 0.875rem; line-height: 1.5;">
+          Before sending anything, consider free advice (for example Citizens Advice). Ask the supplier for the billing breakdown and meter reading history, and when and how they tried to read the meter.
+        </p>
+      `;
+    } else {
+      step1ContentEl.innerHTML = `
+        <div class="step-title-row">
+          <strong>Send the dispute notice</strong>
+          <button type="button" id="btn-plain-send-dispute" class="btn-primary btn-sm plain-dispute-btn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            Open Dispute Dispatcher
+          </button>
+        </div>
+        <p class="step-desc">Deliver the formal dispute notice and Schedule of Mathematical Evidence to your supplier's complaints team.</p>
+      `;
+      const plainSendBtn = document.getElementById('btn-plain-send-dispute');
+      if (plainSendBtn) {
+        if (!data.disputableTotal || data.disputableTotal <= 0) {
+          plainSendBtn.style.display = 'none';
+        } else {
+          plainSendBtn.style.display = 'inline-flex';
+          plainSendBtn.onclick = (e) => {
+            e.preventDefault();
+            openEmailDispatcherModal();
+          };
+        }
+      }
+    }
+  }
+
+  if (ombudsmanEl) {
+    ombudsmanEl.textContent = getOmbudsmanForJurisdiction(countrySelect.value, data.supplierContact);
+  }
+
   if (isObstructed) {
     if (cardEl) cardEl.classList.add('warning');
     if (tagEl) {
@@ -777,7 +839,6 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
     }
     headlineEl.textContent = 'Protection may not apply';
     whyEl.textContent = 'Protection may not apply if the supplier shows you unreasonably prevented access to read the meter. Consider getting advice before sending.';
-    if (sendBtn) sendBtn.style.display = 'none';
     return;
   }
 
@@ -786,7 +847,6 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
     if (tagEl) tagEl.textContent = 'Statutory Assessment';
     headlineEl.textContent = 'Your bill appears to be within the limit';
     whyEl.textContent = `Based on the ${lookbackMonths}-month limit (${regClause}), all charges fall after ${cutOff} and appear to be within the permitted window.`;
-    if (sendBtn) sendBtn.style.display = 'none';
     return;
   }
 
@@ -797,18 +857,6 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
 
   headlineEl.textContent = `You may not have to pay ${dispStr} of your ${totalStr} bill`;
   whyEl.textContent = `Based on the ${lookbackMonths}-month limit (${regClause}). Charges before ${cutOff} are outside the limit.`;
-
-  if (sendBtn) {
-    sendBtn.style.display = 'inline-flex';
-    sendBtn.onclick = (e) => {
-      e.preventDefault();
-      openEmailDispatcherModal();
-    };
-  }
-
-  if (ombudsmanEl) {
-    ombudsmanEl.textContent = getOmbudsmanForJurisdiction(countrySelect.value, data.supplierContact);
-  }
 }
 
 /**
@@ -836,13 +884,8 @@ function renderResults(data) {
   const authorityTrustBadge = document.getElementById('authority-trust-badge');
   if (authorityTrustBadge) {
     authorityTrustBadge.style.display = 'inline-flex';
-    if (data.regulation?.liveSearch && !data.regulation?.builtIn) {
-      authorityTrustBadge.textContent = 'Live source';
-      authorityTrustBadge.className = 'trust-badge trust-live';
-    } else {
-      authorityTrustBadge.textContent = 'Built-in reference (please verify)';
-      authorityTrustBadge.className = 'trust-badge trust-builtin';
-    }
+    authorityTrustBadge.textContent = 'Curated rule';
+    authorityTrustBadge.className = 'trust-badge trust-builtin';
   }
 
   // 1. Verdict Badge & Explanation (when obstruction is flagged, merged into the single clear block above)
@@ -986,6 +1029,18 @@ function renderResults(data) {
     sourceUrl: reg.sourceUrl
   };
 
+  const isUkJurisdiction = Boolean(
+    (reg.jurisdiction && reg.jurisdiction === 'United Kingdom') ||
+    countrySelect.value === 'United Kingdom' ||
+    (reg.clauseReference && reg.clauseReference.includes('SLC 21BA'))
+  );
+
+  const ukObstructionNotice = (isObstructed && isUkJurisdiction)
+    ? `<div style="font-size: 0.8125rem; color: #b45309; margin-top: 0.45rem; padding-top: 0.45rem; border-top: 1px dashed var(--border-color); line-height: 1.45;">
+        Exception: protection may not apply where the consumer has been obstructive or manifestly unreasonable (SLC 21BA). Check the Ofgem text.
+      </div>`
+    : '';
+
   // Curated built-in statutory summary as primary authority
   const primaryDiv = document.createElement('div');
   primaryDiv.className = 'source-item primary-source-item';
@@ -994,23 +1049,25 @@ function renderResults(data) {
       <div class="source-title" style="font-weight: 700; color: var(--text-primary); font-size: 0.9375rem;">
         ${primary.title || 'Official Back-billing Principle'} (${reg.jurisdiction || 'General'})
       </div>
-      <span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Primary Statutory Authority</span>
+      <span class="trust-badge trust-builtin" style="font-size: 0.7rem;">Curated rule</span>
     </div>
     <p style="font-size: 0.875rem; color: var(--color-text-muted); margin: 0.5rem 0 0.4rem 0; line-height: 1.5;">
-      ${primary.summary || 'Under mandatory back-billing rules, energy suppliers are barred from seeking recovery of charges for energy consumed more than the statutory limit prior to the bill date where previous accurate billing was not provided.'}
+      ${primary.summary || "Under mandatory back-billing rules, energy suppliers are barred from seeking recovery of charges for energy consumed more than the statutory limit prior to the bill date where the delay or error was the supplier's responsibility."}
     </p>
     ${primary.sourceUrl ? `<a href="${primary.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${primary.sourceUrl} &nearr;</a>` : ''}
+    ${ukObstructionNotice}
   `;
   sourcesContainer.appendChild(primaryDiv);
 
   // Live Tavily additional retrieved source
   if (reg.additionalSource && reg.additionalSource.url) {
     const addSource = reg.additionalSource;
-    const addDiv = document.createElement('div');
-    addDiv.className = 'source-item additional-source-item';
-    addDiv.style.marginTop = '0.75rem';
-    addDiv.style.borderTop = '1px solid var(--border-color)';
-    addDiv.style.paddingTop = '0.75rem';
+    const isConsultation = Boolean(
+      addSource.isConsultation ||
+      addSource.docTypeLabel ||
+      (addSource.url && addSource.url.toLowerCase().includes('consultation')) ||
+      (addSource.title && addSource.title.toLowerCase().includes('consultation'))
+    );
 
     const docTypeBadge = addSource.docTypeLabel
       ? `<span class="preset-badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a; font-size: 0.6875rem; margin-left: 0.5rem;">${addSource.docTypeLabel}</span>`
@@ -1020,7 +1077,7 @@ function renderResults(data) {
       try { return new URL(addSource.url).hostname.replace(/^www\./, ''); } catch { return ''; }
     })();
 
-    addDiv.innerHTML = `
+    const sourceCardContent = `
       <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; flex-wrap: wrap;">
           <span style="font-weight: 600; font-size: 0.8125rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Additional retrieved source</span>
@@ -1036,16 +1093,28 @@ function renderResults(data) {
         <a href="${addSource.url}" target="_blank" rel="noopener noreferrer" class="source-url" style="color: #2563eb; font-size: 0.8125rem; word-break: break-all;">${addSource.url} &nearr;</a>
       </div>
       <div style="font-size: 0.75rem; font-style: italic; color: var(--color-text-muted); margin-top: 0.25rem;">Retrieved by search, not verified</div>
-      ${addSource.docTypeLabel || (addSource.url && addSource.url.toLowerCase().includes('consultation')) ? `
-      <div style="font-size: 0.75rem; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px; padding: 0.35rem 0.5rem; margin-top: 0.35rem;">
-        <strong>Document Note:</strong> This retrieved URL is a consultation document (${addSource.docTypeLabel || 'consultation'}). The binding regulatory rule is cited in the primary statutory authority above.
-      </div>` : ''}
-      <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-top: 0.5rem;">Summary of retrieved source (AI-generated, please check against the link):</div>
-      <p style="font-size: 0.8125rem; color: var(--color-text-muted); margin: 0.2rem 0; line-height: 1.45;">
-        ${addSource.summary}
-      </p>
     `;
-    sourcesContainer.appendChild(addDiv);
+
+    if (isConsultation) {
+      const detailsEl = document.createElement('details');
+      detailsEl.className = 'consultation-details';
+      detailsEl.style.cssText = 'margin-top: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.5rem 0.75rem; background: var(--bg-surface-subtle);';
+      detailsEl.innerHTML = `
+        <summary style="font-weight: 600; font-size: 0.8125rem; color: var(--text-secondary); cursor: pointer; user-select: none;">Background (proposal stage, not the current rule)</summary>
+        <div class="source-item additional-source-item" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+          ${sourceCardContent}
+        </div>
+      `;
+      sourcesContainer.appendChild(detailsEl);
+    } else {
+      const addDiv = document.createElement('div');
+      addDiv.className = 'source-item additional-source-item';
+      addDiv.style.marginTop = '0.75rem';
+      addDiv.style.borderTop = '1px solid var(--border-color)';
+      addDiv.style.paddingTop = '0.75rem';
+      addDiv.innerHTML = sourceCardContent;
+      sourcesContainer.appendChild(addDiv);
+    }
   } else if (reg.liveSearch === false || Boolean(reg.fallbackNotice)) {
     const fallbackDiv = document.createElement('div');
     fallbackDiv.className = 'live-search-fallback-notice';

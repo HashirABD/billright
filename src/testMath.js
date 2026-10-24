@@ -328,10 +328,12 @@ const countNERRInEscalation = (auLetter.match(/EWON.*NERR/i) || []).length;
 assert.equal(countNERRInEscalation, 0, 'AU letter must not duplicate "(NERR Rule 30)" label in escalation sentence');
 console.log('✔ Australia state ombudsman mapping and NERR Rule 30 wording verified.');
 
-// Test 16: No Generic Placeholder Citation Snippet
+// Test 16: No Generic Placeholder Citation Snippet & Correct UK Rule Wording
 const ukCitation = getBuiltInCitation('United Kingdom');
 assert.ok(!ukCitation.summary.includes('Suppliers must not bill consumers for unbilled energy used beyond the statutory lookback window'), 'Must not contain generic placeholder snippet');
 assert.ok(!ukCitation.summary.endsWith('...'), 'Summary must not end with trailing "..."');
+assert.ok(ukCitation.summary.includes("where the delay or error was the supplier's responsibility"), 'UK citation summary must state where the delay or error was the supplier\'s responsibility');
+assert.ok(!ukCitation.summary.includes('where the customer has not been previously billed'), 'UK citation summary must not contain where the customer has not been previously billed');
 
 // Test 17: Official-source allowlist & title mismatch filters
 import {
@@ -429,7 +431,29 @@ const obstructedLetter = await evaluateExceptionsAndFormatLetter({
 });
 assert.ok(!obstructedLetter.disputeLetter.includes('I confirm that I have not acted obstructively'), 'Letter must NOT state non-obstruction when obstructed');
 assert.ok(!obstructedLetter.disputeLetter.includes('obstruct'), 'Letter must omit obstruction entirely when obstructed');
-console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction and precedent claims verified.');
+
+// Verify UK dispute letter uses supplier responsibility wording
+const ukLetterResult = await evaluateExceptionsAndFormatLetter({
+  isEstimated: true,
+  isMeterObstructed: false,
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  regulation: ukCitation,
+  currency: '£',
+  lookbackMonths: 12,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-552109',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  noticeDate: '2026-10-15',
+  country: 'United Kingdom'
+});
+assert.ok(ukLetterResult.disputeLetter.includes("where the delay or error was the supplier's responsibility"), 'UK letter must include delay or error was the supplier\'s responsibility');
+assert.ok(!ukLetterResult.disputeLetter.includes('where the customer has not been previously billed'), 'UK letter must not include customer has not been previously billed');
+
+console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction, precedent, and UK rule wording verified.');
 
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');

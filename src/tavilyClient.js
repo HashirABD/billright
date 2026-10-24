@@ -10,7 +10,7 @@ export const BUILT_IN_CITATIONS = {
   'United Kingdom': {
     title: 'Ofgem Standard Licence Condition 21BA (Back-billing Principle)',
     clauseReference: 'SLC 21BA',
-    summary: 'Under Ofgem Standard Licence Condition 21BA, suppliers cannot demand payment for energy consumed more than 12 months prior to the bill date where the customer has not been previously billed.',
+    summary: 'Under Ofgem Standard Licence Condition 21BA, suppliers cannot demand payment for energy consumed more than 12 months prior to the bill date where the delay or error was the supplier\'s responsibility.',
     sourceUrl: 'https://www.ofgem.gov.uk/energy-policy-and-regulation/policy-and-regulatory-programmes/back-billing'
   },
   'Australia': {

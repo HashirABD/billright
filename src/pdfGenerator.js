@@ -252,7 +252,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       } else if (isTexas) {
         p2Statute = 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.';
       } else {
-        p2Statute = `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
+        p2Statute = `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the delay or error was the supplier's responsibility.`;
       }
 
       let p2Access = '';
@@ -296,7 +296,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#1e3a8a')
         .text('SUGGESTED RESPONSE DEADLINE & OMBUDSMAN PROTOCOL', leftMargin + 14, alertY + 8);
 
-      const alertMsg = `Please provide your written confirmation of bill review within a suggested 14-day timeframe. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, this dispute, together with the attached Schedule of Mathematical Evidence, will be formally submitted to the ${escalation.body} for independent determination.`;
+      const alertMsg = `Please provide your written confirmation of bill review within a suggested 14-day timeframe. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, this dispute, together with the attached Schedule of Mathematical Evidence, will be formally submitted to the ${escalation.body} for independent review.`;
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
         .text(alertMsg, leftMargin + 14, alertY + 22, { width: contentWidth - 28, lineGap: 2.5 });
@@ -470,7 +470,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       // Title Banner
       doc.rect(leftMargin, 42, contentWidth, 44).fill('#0f172a');
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#ffffff')
-        .text('ANNEXURE A: STATUTORY AUTHORITY & REGULATORY COMPLIANCE AUDIT', leftMargin + 16, 52);
+        .text('ANNEXURE A: STATUTORY AUTHORITY & REGULATORY RULE CHECK', leftMargin + 16, 52);
       doc.fontSize(8).font('Helvetica').fillColor('#94a3b8')
         .text('Statutory reference and retrieved sources', leftMargin + 16, 68);
 
@@ -570,16 +570,16 @@ A precise calendar audit against statutory utility standards indicates that ${fm
         nextY = itemY + itemH + 10;
       }
 
-      // Statutory Exception & Consumer Compliance Audit
+      // Statutory Exception & Consumer Rule Check
       const auditY = nextY;
       const auditH = isMeterObstructed ? 70 : 82;
       doc.roundedRect(leftMargin, auditY, contentWidth, auditH, 4).fillAndStroke('#f1f5f9', '#cbd5e1');
 
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a')
-        .text('STATUTORY EXCEPTION EVALUATION & CONSUMER COMPLIANCE AUDIT', leftMargin + 14, auditY + 10);
+        .text('STATUTORY EXCEPTION EVALUATION & CONSUMER RULE CHECK', leftMargin + 14, auditY + 10);
 
       const auditLines = [
-        ...(isMeterObstructed ? [] : ['• Physical Meter Obstruction: COMPLIANT: No obstruction; customer permitted physical access.']),
+        ...(isMeterObstructed ? [] : ['• Physical Meter Obstruction: NO OBSTRUCTION: Customer permitted physical access.']),
         `• Historical Billing Basis: ${isEstimated ? 'ESTIMATED: Previous bills were rendered on estimates; supports dispute regarding delayed actual meter readings.' : 'ACTUAL: Previous bills recorded normally.'}`,
         ...(meterEvidence ? [`• Meter Photo Evidence: Serial ${meterEvidence.serialNumber || 'Recorded'} (${meterEvidence.meterType || 'Physical meter'}). Physical reading ${meterEvidence.readingValue} ${meterEvidence.unit || 'kWh'} attached as supporting evidence.`] : []),
         `• Statutory Regulatory Standing: Consumer seeks resolution under ${regulation.clauseReference || 'statutory back-billing rules'}.`,
