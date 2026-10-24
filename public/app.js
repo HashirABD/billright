@@ -6,6 +6,7 @@
 
 import { renderTimeline } from './timeline.js';
 import { downloadCalendarEvent } from './calendarHelper.js';
+import { sanitizeDisputeLetter } from './letterSanitizer.js';
 
 // Preset definitions conforming to PRD specification and multi-jurisdiction rules
 // Preset definitions conforming to PRD specification and multi-jurisdiction rules
@@ -116,19 +117,8 @@ function isValidEmail(email) {
  */
 function cleanLetterText(text) {
   if (!text || typeof text !== 'string') return '';
-  let cleaned = text;
-  // Ombudsman website must be plain text www.energyombudsman.org with no Markdown link syntax like [text](url)
-  cleaned = cleaned.replace(/\[([^\]]+)\]\((?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)]*\)/gi, 'www.energyombudsman.org');
-  cleaned = cleaned.replace(/\[www\.energyombudsman\.org\]/gi, 'www.energyombudsman.org');
-  // Remove unverified claim
-  cleaned = cleaned.replace(/In accordance with published regulatory precedents,\s*the retailer bears responsibility for timely billing\./gi, '');
-  // Remove Additional Reference block if present in letter
-  cleaned = cleaned.replace(/\n*Additional Reference:[\s\S]*?(?=\n\n[A-Z]|\n*$)/gi, '');
-  cleaned = cleaned.replace(/Note: Retrieved by search, not verified/gi, '');
-  // Replace where the customer has not been previously billed with where the delay or error was the supplier's responsibility
-  cleaned = cleaned.replace(/where the customer has not been (?:previously )?billed(?: previously)?(?: and has not obstructed meter access)?/gi, "where the delay or error was the supplier's responsibility");
-  cleaned = cleaned.replace(/where previous accurate billing was not provided/gi, "where the delay or error was the supplier's responsibility");
-  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+  const isObstructed = (typeof inputObstructed !== 'undefined' && inputObstructed) ? inputObstructed.checked : false;
+  return sanitizeDisputeLetter(text, isObstructed);
 }
 
 // DOM references
@@ -1474,6 +1464,7 @@ function updateDisputeLetterEmail(newEmail) {
     const supplier = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
     letter = letter.replace(supplier, `${supplier}\nEmail: ${newEmail}`);
   }
+  letter = cleanLetterText(letter);
   currentAnalysisResult.disputeLetter = letter;
   if (letterContent) letterContent.textContent = letter;
   if (modalEmailBody) {
@@ -1490,6 +1481,7 @@ function openEmailDispatcherModal() {
     showToast('Please run an audit on a bill with disputable charges first.', 'warning');
     return;
   }
+  currentAnalysisResult.disputeLetter = cleanLetterText(currentAnalysisResult.disputeLetter);
 
   const contact = currentAnalysisResult.supplierContact || {};
   const supplierName = currentAnalysisResult.supplierName || (supplierNameInput ? supplierNameInput.value.trim() : 'Energy Supplier');
@@ -1703,7 +1695,8 @@ if (btnCopyModalSubject) {
 if (btnModalCopyLetterBody) {
   btnModalCopyLetterBody.addEventListener('click', async () => {
     if (!modalEmailBody) return;
-    await navigator.clipboard.writeText(modalEmailBody.value);
+    const cleaned = cleanLetterText(modalEmailBody.value);
+    await navigator.clipboard.writeText(cleaned);
     showToast('Full letter text copied!', 'success');
   });
 }
@@ -1718,7 +1711,7 @@ if (btnLaunchGmail) {
       return;
     }
     const sub = modalEmailSubject.value;
-    const fullText = modalEmailBody.value;
+    const fullText = cleanLetterText(modalEmailBody.value);
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
@@ -1744,7 +1737,7 @@ if (btnLaunchOutlook) {
       return;
     }
     const sub = modalEmailSubject.value;
-    const fullText = modalEmailBody.value;
+    const fullText = cleanLetterText(modalEmailBody.value);
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
@@ -1770,7 +1763,7 @@ if (btnLaunchMailto) {
       return;
     }
     const sub = modalEmailSubject.value;
-    const fullText = modalEmailBody.value;
+    const fullText = cleanLetterText(modalEmailBody.value);
 
     const clause = currentAnalysisResult.regulation?.clauseReference || 'Statutory Utility Code';
     const acc = currentAnalysisResult.accountNumber || 'Reference';
@@ -1791,7 +1784,7 @@ if (btnCopyAllEmail) {
   btnCopyAllEmail.addEventListener('click', async () => {
     const to = modalEmailTo.value;
     const sub = modalEmailSubject.value;
-    const body = modalEmailBody.value;
+    const body = cleanLetterText(modalEmailBody.value);
 
     const packet = `TO: ${to}\nSUBJECT: ${sub}\n\n---\n\n${body}`;
     try {

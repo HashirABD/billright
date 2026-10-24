@@ -11,7 +11,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'complaints@britishgas.co.uk',
     phone: '0333 202 9802',
     portalUrl: 'https://www.britishgas.co.uk/complaints',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'octopus energy': {
     name: 'Octopus Energy',
@@ -19,7 +19,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'complaints@octopus.energy',
     phone: '0808 164 1088',
     portalUrl: 'https://octopus.energy/unhappy',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'e.on': {
     name: 'E.ON Next',
@@ -27,7 +27,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'complaints@eonnext.com',
     phone: '0808 501 5200',
     portalUrl: 'https://www.eonnext.com/complaints',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'e.on next': {
     name: 'E.ON Next',
@@ -35,7 +35,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'complaints@eonnext.com',
     phone: '0808 501 5200',
     portalUrl: 'https://www.eonnext.com/complaints',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'scottish power': {
     name: 'ScottishPower',
@@ -43,7 +43,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'contactus@scottishpower.com',
     phone: '0800 027 0072',
     portalUrl: 'https://www.scottishpower.co.uk/complaints',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'edf': {
     name: 'EDF Energy',
@@ -51,7 +51,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'customer_complaints@edfenergy.com',
     phone: '0333 200 5100',
     portalUrl: 'https://www.edfenergy.com/for-home/help-support/complaints-process',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'edf energy': {
     name: 'EDF Energy',
@@ -59,7 +59,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'customer_complaints@edfenergy.com',
     phone: '0333 200 5100',
     portalUrl: 'https://www.edfenergy.com/for-home/help-support/complaints-process',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
   'ovo energy': {
     name: 'OVO Energy',
@@ -67,7 +67,7 @@ export const SUPPLIER_DIRECTORY = {
     email: 'complaints@ovoenergy.com',
     phone: '0330 303 5063',
     portalUrl: 'https://www.ovoenergy.com/feedback',
-    ombudsman: 'Energy Ombudsman (www.energyombudsman.org)'
+    ombudsman: 'Energy Ombudsman, www.energyombudsman.org'
   },
 
   // --- Australia (AER / EWON / EWOV regulated) ---
@@ -159,7 +159,7 @@ export function getOmbudsmanByCountry(country = 'United Kingdom', state = '') {
   }
   if (country.includes('California')) return 'California Public Utilities Commission (CPUC)';
   if (country.includes('Texas')) return 'Public Utility Commission of Texas (PUCT)';
-  return 'Energy Ombudsman (www.energyombudsman.org)';
+  return 'Energy Ombudsman, www.energyombudsman.org';
 }
 
 /**

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { getCutOffDate, getDaysBetween, calculateBackBilling } from './calculateBackBilling.js';
+import { sanitizeDisputeLetter } from './letterSanitizer.js';
 
 console.log('Testing back-billing calculation engine...');
 
@@ -453,7 +454,33 @@ const ukLetterResult = await evaluateExceptionsAndFormatLetter({
 assert.ok(ukLetterResult.disputeLetter.includes("where the delay or error was the supplier's responsibility"), 'UK letter must include delay or error was the supplier\'s responsibility');
 assert.ok(!ukLetterResult.disputeLetter.includes('where the customer has not been previously billed'), 'UK letter must not include customer has not been previously billed');
 
+// Verify markdown link syntax is completely removed and ombudsman appears as bare text www.energyombudsman.org
+assert.ok(!ukLetterResult.disputeLetter.includes(']('), 'Final letter must contain no Markdown link syntax "]("');
+assert.ok(!ukLetterResult.disputeLetter.includes('[www'), 'Final letter must contain no "[www" syntax');
+assert.ok(ukLetterResult.disputeLetter.includes('www.energyombudsman.org'), 'Final letter must contain bare text www.energyombudsman.org');
+assert.ok(!ukLetterResult.disputeLetter.includes('(www.energyombudsman.org)'), 'Final letter must contain no parentheses around www.energyombudsman.org');
+assert.ok(!ukLetterResult.disputeLetter.includes('https://www.energyombudsman.org'), 'Final letter must contain no https prefix before energyombudsman');
+
+// Verify shared sanitizeDisputeLetter function handles markdown links, double parens, and markdown artifacts
+const testMarkdownInput = `FORMAL NOTICE\n\nI reserve the right to escalate to the Energy Ombudsman ([www.energyombudsman.org](https://www.energyombudsman.org)).\n\nAlso check [Ofgem guidance](https://www.ofgem.gov.uk/rules) and [www.aer.gov.au](https://www.aer.gov.au).\n\n# Heading 1\n**Bold Text** and *Italic Text* and \`code snippet\`\nDouble parens: ((test value)).`;
+
+const sanitizedOutput = sanitizeDisputeLetter(testMarkdownInput);
+assert.ok(!sanitizedOutput.includes(']('), 'Sanitizer must eliminate all "](" link syntax');
+assert.ok(!sanitizedOutput.includes('[www'), 'Sanitizer must eliminate all "[www" syntax');
+assert.ok(sanitizedOutput.includes('www.energyombudsman.org'), 'Sanitizer must preserve bare ombudsman website');
+assert.ok(!sanitizedOutput.includes('(www.energyombudsman.org)'), 'Sanitizer must remove parens around ombudsman website');
+assert.ok(!sanitizedOutput.includes('https://www.energyombudsman.org'), 'Sanitizer must remove https prefix for ombudsman website');
+assert.ok(sanitizedOutput.includes('Ofgem guidance (https://www.ofgem.gov.uk/rules)'), 'Non-domain link text must format as text (url)');
+assert.ok(sanitizedOutput.includes('www.aer.gov.au') && !sanitizedOutput.includes('(https://www.aer.gov.au)'), 'Domain link text must format as plain domain');
+assert.ok(!sanitizedOutput.includes('((test value))'), 'Double parens must be simplified');
+assert.ok(sanitizedOutput.includes('(test value)'), 'Single parens must remain for non-ombudsman content');
+assert.ok(!sanitizedOutput.includes('# Heading 1') && sanitizedOutput.includes('Heading 1'), 'Headings must be stripped of #');
+assert.ok(!sanitizedOutput.includes('**Bold Text**') && sanitizedOutput.includes('Bold Text'), 'Bold asterisks must be stripped');
+assert.ok(!sanitizedOutput.includes('*Italic Text*') && sanitizedOutput.includes('Italic Text'), 'Italic asterisks must be stripped');
+assert.ok(!sanitizedOutput.includes('`code snippet`') && sanitizedOutput.includes('code snippet'), 'Backticks must be stripped');
+
 console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction, precedent, and UK rule wording verified.');
+console.log('✔ Markdown links, ombudsman bare text, double parentheses, and Markdown artifacts sanitization verified.');
 
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');

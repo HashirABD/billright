@@ -6,6 +6,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { getBuiltInCitation } from './tavilyClient.js';
+import { sanitizeDisputeLetter } from './letterSanitizer.js';
 
 /**
  * Localized statutory ombudsman escalation paths by jurisdiction.
@@ -29,7 +30,7 @@ function getEscalationPath(jurisdiction = '', state = '') {
     return 'Public Utility Commission of Texas (PUCT) Customer Protection Division under 16 TAC §25.28(d) / §25.480(e)';
   }
   if (jurisdiction === 'United Kingdom') {
-    return 'Energy Ombudsman (www.energyombudsman.org) after the standard 8-week period or upon receipt of a deadlock letter under Ofgem SLC 21BA';
+    return 'Energy Ombudsman, www.energyombudsman.org, after the standard 8-week period or upon receipt of a deadlock letter under Ofgem SLC 21BA';
   }
   return 'relevant statutory utility ombudsman or Public Utilities Commission';
 }
@@ -50,30 +51,6 @@ function formatDate(d) {
 function fmtMoney(amount, currency = '£') {
   const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
   return `${currency}${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/**
- * Sanitizes dispute letter text to ensure neutral regulatory standards and plain text format
- */
-function sanitizeDisputeLetter(text, isMeterObstructed) {
-  if (!text || typeof text !== 'string') return text;
-  let cleaned = text;
-  // Ombudsman website must be plain text www.energyombudsman.org with no Markdown link syntax like [text](url)
-  cleaned = cleaned.replace(/\[([^\]]+)\]\((?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)]*\)/gi, 'www.energyombudsman.org');
-  cleaned = cleaned.replace(/\[www\.energyombudsman\.org\]/gi, 'www.energyombudsman.org');
-  // Remove unverified legal precedents claim
-  cleaned = cleaned.replace(/In accordance with published regulatory precedents,\s*the retailer bears responsibility for timely billing\./gi, '');
-  // Remove Additional Reference block if present
-  cleaned = cleaned.replace(/\n*Additional Reference:[\s\S]*?(?=\n\n[A-Z]|\n*$)/gi, '');
-  cleaned = cleaned.replace(/Note: Retrieved by search, not verified/gi, '');
-  // When obstructed = Yes, omit obstruction sentence entirely and do not state anything about obstruction either way
-  if (isMeterObstructed) {
-    cleaned = cleaned.replace(/I (?:confirm|expressly confirm) that I have (?:not acted obstructively or |never )?prevented meter (?:reader )?access(?: at any time)?(?:, and (?:earlier|previous) (?:bills|statements) were based on estimated rather than actual readings)?\./gi, '');
-  }
-  // UK rule: replace where the customer has not been previously billed with where the delay or error was the supplier's responsibility
-  cleaned = cleaned.replace(/where the customer has not been (?:previously )?billed(?: previously)?(?: and has not obstructed meter access)?/gi, "where the delay or error was the supplier's responsibility");
-  cleaned = cleaned.replace(/where previous accurate billing was not provided/gi, "where the delay or error was the supplier's responsibility");
-  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
@@ -145,7 +122,7 @@ function generateDeterministicLetter({
     }
   }
 
-  return `${partyName}
+  const rawLetter = `${partyName}
 ${address}
 Account Reference: ${accNum}
 Date: ${letterDate}
@@ -177,6 +154,8 @@ Yours sincerely,
 
 ${partyName}
 Account Holder`;
+
+  return sanitizeDisputeLetter(rawLetter, isMeterObstructed);
 }
 
 /**

@@ -10,6 +10,7 @@
  */
 
 import PDFDocument from 'pdfkit';
+import { sanitizeDisputeLetter } from './letterSanitizer.js';
 
 /**
  * Returns ombudsman and regulatory escalation directory information.
@@ -240,7 +241,7 @@ I am writing to formally dispute the catch-up charges itemized on my recent ener
 
 A precise calendar audit against statutory utility standards indicates that ${fmtCurr(disputableTotal, currency)} of this billed balance relates exclusively to energy consumption accrued prior to ${cutOffDate}—exceeding the statutory ${lookbackMonths}-month lookback limitation prescribed by ${regulation.title || regulation.clauseReference || 'statutory back-billing regulations'}.`;
 
-      doc.text(p1, leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
+      doc.text(sanitizeDisputeLetter(p1, isMeterObstructed), leftMargin, bodyY, { width: contentWidth, lineGap: 3.5 });
 
       const p2Y = doc.y + 6;
       const isAustralia = Boolean(country === 'Australia' || (regulation.clauseReference && regulation.clauseReference.includes('NERR')));
@@ -272,7 +273,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
 
       const p2 = p2Access ? `${p2Statute}\n\n${p2Access}` : p2Statute;
 
-      doc.text(p2, leftMargin, p2Y, { width: contentWidth, lineGap: 3.5 });
+      doc.text(sanitizeDisputeLetter(p2, isMeterObstructed), leftMargin, p2Y, { width: contentWidth, lineGap: 3.5 });
 
       const remediesY = doc.y + 8;
       doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a')
@@ -299,7 +300,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       const alertMsg = `Please provide your written confirmation of bill review within a suggested 14-day timeframe. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, this dispute, together with the attached Schedule of Mathematical Evidence, will be formally submitted to the ${escalation.body} for independent review.`;
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
-        .text(alertMsg, leftMargin + 14, alertY + 22, { width: contentWidth - 28, lineGap: 2.5 });
+        .text(sanitizeDisputeLetter(alertMsg, isMeterObstructed), leftMargin + 14, alertY + 22, { width: contentWidth - 28, lineGap: 2.5 });
 
       // Sign-off
       const signY = alertY + alertH + 10;
@@ -459,7 +460,7 @@ A precise calendar audit against statutory utility standards indicates that ${fm
       doc.fontSize(7.5).font('Helvetica-Bold').fillColor('#334155')
         .text('DAILY PRO-RATA APPORTIONMENT METHODOLOGY:', leftMargin + 10, mathNoteY + 7);
       doc.fontSize(7).font('Helvetica').fillColor('#64748b')
-        .text('Where a billing period straddles the statutory lookback cut-off barrier, charges are apportioned on a uniform daily consumption basis: Disputable Charge = Total Period Charge * (Days Elapsed Prior to Cut-off / Total Days in Billing Period). This provides an equitable, deterministic partition compliant with regulatory principles.', leftMargin + 10, mathNoteY + 18, { width: contentWidth - 20, lineGap: 2 });
+        .text('Where a billing period straddles the statutory lookback cut-off barrier, charges are apportioned on a uniform daily consumption basis: Disputable Charge = Total Period Charge * (Days Elapsed Prior to Cut-off / Total Days in Billing Period). This provides a deterministic day-by-day split of each billing period around the cut-off date.', leftMargin + 10, mathNoteY + 18, { width: contentWidth - 20, lineGap: 2 });
 
       // =========================================================================
       // PAGE 3: STATUTORY AUTHORITY ANNEXURE
@@ -646,7 +647,7 @@ If the energy supplier fails to resolve this dispute within the standard 8-week 
           .text('CONSUMER ADVOCACY & EVIDENCE RECOMMENDATIONS', leftMargin + 14, guideY + 12);
 
         const guidancePoints = [
-          '1. Statutory Exception Principle: Across all covered jurisdictions (Ofgem SLC 21BA in the UK, NERR Rule 30 in Australia, and PG&E Electric Rule 17.1 (SCE/SDG&E equivalents) in California), statutory back-billing caps protect consumers from delayed billing errors. In the UK, exceptions under SLC 21BA include where the consumer was obstructive or manifestly unreasonable, or contracts under 12 months. Many back-billing rules contain exceptions; check the rule for your jurisdiction where the consumer unreasonably prevented or denied meter reading access.',
+          '1. Statutory Exception Principle: Across all covered jurisdictions (Ofgem SLC 21BA in the UK, NERR Rule 30 in Australia, and PG&E Electric Rule 17.1 (SCE/SDG&E equivalents) in California), statutory back-billing caps protect consumers from delayed billing errors. In the UK, exceptions under SLC 21BA include where the consumer was obstructive or manifestly unreasonable, or contracts under 12 months. Many back-billing rules contain exceptions, for example where a consumer prevented access to read the meter. Check the rule for your jurisdiction.',
           '2. Evidencing Exceptions: A supplier relying on an exception would normally be expected to evidence it; check your regulator\'s guidance. For unfulfilled appointments or failure to read without proof of attempted visits, check the regulator\'s guidance.',
           '3. What the Supplier Must Produce: If the retailer claims obstruction, request contemporaneous records: specific dates and times of alleged visits, meter reader GPS timestamps, logs of customer contact, and physical proof that notification was left.',
           '4. Preserving Your Legal Position: The accompanying formal dispute notice (Pages 1–3) disputes the unbilled back-billing sum without volunteering or admitting obstruction. Do not concede access issues in oral or written communications without verifying the supplier\'s logs.',
