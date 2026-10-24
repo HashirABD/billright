@@ -137,12 +137,7 @@ function cleanLetterText(text) {
   }
 
   // Fallback inline regex: convert square-bracket/round-bracket Markdown links to link text only
-  let cleaned = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, linkUrl) => {
-    const t = linkText.trim();
-    const u = linkUrl.trim();
-    if (/^https?:\/\//i.test(t) || /^www\./i.test(t)) return t;
-    return `${t} (${u})`;
-  });
+  let cleaned = text.replace(/\[([^\]]+)\]\(([^)]*)\)/g, '$1');
   // Clean ombudsman bare website and markdown artifacts
   cleaned = cleaned.replace(/Energy\s+Ombudsman\s*[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'Energy Ombudsman, www.energyombudsman.org');
   cleaned = cleaned.replace(/[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'www.energyombudsman.org');

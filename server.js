@@ -196,6 +196,8 @@ app.post('/api/analyze', async (req, res) => {
       state: australiaState
     });
 
+    console.log(`[/api/analyze] Dispute letter produced by: ${evaluation.letterSource || 'Template'}`);
+
     return res.json({
       verdict: evaluation.verdict,
       badgeType: evaluation.badgeType,
@@ -209,6 +211,7 @@ app.post('/api/analyze', async (req, res) => {
       exceptionTriggered: evaluation.exceptionTriggered,
       exceptionNotes: evaluation.exceptionNotes,
       disputeLetter: evaluation.disputeLetter ? sanitizeDisputeLetter(evaluation.disputeLetter, Boolean(isMeterObstructed)) : null,
+      letterSource: evaluation.letterSource || 'Template',
       consumerName,
       supplierName,
       accountNumber,

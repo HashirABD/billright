@@ -472,7 +472,8 @@ assert.ok(!sanitizedOutput.includes('[www'), 'Sanitizer must eliminate all "[www
 assert.ok(sanitizedOutput.includes('www.energyombudsman.org'), 'Sanitizer must preserve bare ombudsman website');
 assert.ok(!sanitizedOutput.includes('(www.energyombudsman.org)'), 'Sanitizer must remove parens around ombudsman website');
 assert.ok(!sanitizedOutput.includes('https://www.energyombudsman.org'), 'Sanitizer must remove https prefix for ombudsman website');
-assert.ok(sanitizedOutput.includes('Ofgem guidance (https://www.ofgem.gov.uk/rules)'), 'Non-domain link text must format as text (url)');
+assert.ok(sanitizedOutput.includes('Ofgem guidance'), 'Markdown link must be replaced with link text');
+assert.ok(!sanitizedOutput.includes('https://www.ofgem.gov.uk/rules'), 'Markdown link URL must be stripped');
 assert.ok(sanitizedOutput.includes('www.aer.gov.au') && !sanitizedOutput.includes('(https://www.aer.gov.au)'), 'Domain link text must format as plain domain');
 assert.ok(!sanitizedOutput.includes('((test value))'), 'Double parens must be simplified');
 assert.ok(sanitizedOutput.includes('(test value)'), 'Single parens must remain for non-ombudsman content');
@@ -484,7 +485,21 @@ assert.ok(!sanitizedOutput.includes('`code snippet`') && sanitizedOutput.include
 console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction, precedent, and UK rule wording verified.');
 console.log('✔ Markdown links, ombudsman bare text, double parentheses, and Markdown artifacts sanitization verified.');
 
-// Test exact sentence with markdown link through the full letter pipeline
+// Test exact Gemini-style sentence asserting "Energy Ombudsman, www.energyombudsman.org, after" and no "](" and no "[www"
+const geminiStyleSentence = 'to the Energy Ombudsman, [www.energyombudsman.org](https://www.energyombudsman.org), after the standard';
+const sanitizedGeminiSentence = sanitizeDisputeLetter(geminiStyleSentence);
+assert.ok(
+  sanitizedGeminiSentence.includes('Energy Ombudsman, www.energyombudsman.org, after'),
+  'Output must contain "Energy Ombudsman, www.energyombudsman.org, after"'
+);
+assert.ok(!sanitizedGeminiSentence.includes(']('), 'Output must contain no "]("');
+assert.ok(!sanitizedGeminiSentence.includes('[www'), 'Output must contain no "[www"');
+assert.strictEqual(
+  sanitizedGeminiSentence,
+  'to the Energy Ombudsman, www.energyombudsman.org, after the standard'
+);
+
+// Test exact full sentence with markdown link through the letter pipeline
 const exactTestSentence = 'Should we not reach an agreed resolution, I reserve the right to escalate this matter to the Energy Ombudsman, [www.energyombudsman.org](https://www.energyombudsman.org), after the standard 8-week period.';
 const sanitizedSentenceOutput = sanitizeDisputeLetter(exactTestSentence);
 assert.ok(sanitizedSentenceOutput.includes('www.energyombudsman.org'), 'Sanitized sentence must contain "www.energyombudsman.org"');

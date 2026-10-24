@@ -17,15 +17,9 @@ export function sanitizeDisputeLetter(text, isMeterObstructed = false) {
   if (!text || typeof text !== 'string') return '';
   let cleaned = text;
 
-  // 1. Convert markdown links: [text](url) -> 'text' (if text is URL/domain) or 'text (url)'
-  cleaned = cleaned.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, linkUrl) => {
-    const t = linkText.trim();
-    const u = linkUrl.trim();
-    if (isUrlOrDomain(t)) {
-      return t;
-    }
-    return `${t} (${u})`;
-  });
+  // 1. Plain regex replace of every Markdown link [text](url) with just the link text ($1)
+  cleaned = cleaned.replace(/\[([^\]]+)\]\(([^)]*)\)/g, '$1');
+
 
   // 2. Remove stray double parentheses ((...)) -> (...)
   while (/\(\s*\(([^\(\)]+)\)\s*\)/.test(cleaned)) {
