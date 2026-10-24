@@ -78,8 +78,12 @@ app.post('/api/extract-bill', async (req, res) => {
 
   } catch (err) {
     console.error('Error handling /api/extract-bill:', err.message);
-    return res.status(400).json({
-      error: err.message
+    const isQuota = Boolean(err.isQuota) || /busy|quota|429|RESOURCE_EXHAUSTED/i.test(err.message);
+    return res.status(isQuota ? 429 : 400).json({
+      error: isQuota
+        ? 'The AI reader is busy right now. Please try again later or enter the values manually.'
+        : (err.message || 'Could not read this file. Please enter the values manually.'),
+      isQuota
     });
   }
 });
@@ -99,8 +103,12 @@ app.post('/api/extract-meter', async (req, res) => {
 
   } catch (err) {
     console.error('Error handling /api/extract-meter:', err.message);
-    return res.status(400).json({
-      error: err.message
+    const isQuota = Boolean(err.isQuota) || /busy|quota|429|RESOURCE_EXHAUSTED/i.test(err.message);
+    return res.status(isQuota ? 429 : 400).json({
+      error: isQuota
+        ? 'The AI reader is busy right now. Please try again later or enter the values manually.'
+        : (err.message || 'Could not read this file. Please enter the values manually.'),
+      isQuota
     });
   }
 });

@@ -1,10 +1,11 @@
 /**
  * Physical Meter Dial / Display OCR & Discrepancy Verification Engine
- * Uses Gemini Vision to extract exact physical consumption indices
+ * Uses Gemini Vision with Model Fallback to extract exact physical consumption indices
  * from photographs of electric/gas meters (digital LCD or analog rotating dials).
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { executeWithModelFallback } from './geminiFallback.js';
 
 /**
  * Extracts meter reading and serial number from a physical meter photograph.
@@ -12,20 +13,19 @@ import { GoogleGenAI } from '@google/genai';
  * @param {Object} params
  * @param {string} params.fileData - Base64 data URL
  * @param {string} params.mimeType - e.g. 'image/jpeg', 'image/png'
+ * @param {Object} [params.aiInstance] - Optional injected GoogleGenAI instance (for unit testing)
  * @returns {Promise<Object>}
  */
-export async function extractMeterReading({ fileData, mimeType }) {
+export async function extractMeterReading({ fileData, mimeType, aiInstance } = {}) {
   if (!fileData) {
     throw new Error('fileData is required');
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey || apiKey === 'your_gemini_key_here') {
+  if (!aiInstance && (!apiKey || apiKey === 'your_gemini_key_here')) {
     throw new Error('GEMINI_API_KEY is not configured. Please enter the values manually.');
   }
-
-  const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
   // Strip Data URL prefix if present
   let base64Clean = fileData;
@@ -34,7 +34,7 @@ export async function extractMeterReading({ fileData, mimeType }) {
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = aiInstance || new GoogleGenAI({ apiKey });
 
     const prompt = `You are a utility meter inspection auditor. Analyze this photograph of an electric or gas utility meter.
 
@@ -56,33 +56,33 @@ Return ONLY a JSON object with this exact schema:
   "notes": "Observation details"
 }`;
 
-    const generatePromise = ai.models.generateContent({
-      model: modelName,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                data: base64Clean,
-                mimeType: mimeType || 'image/jpeg'
+    const { result: response } = await executeWithModelFallback({
+      isVision: true,
+      timeoutMs: 20000,
+      label: 'meterExtractor',
+      execute: (targetModel) => ai.models.generateContent({
+        model: targetModel,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  data: base64Clean,
+                  mimeType: mimeType || 'image/jpeg'
+                }
               }
-            }
-          ]
+            ]
+          }
+        ],
+        config: {
+          temperature: 0.0,
+          responseMimeType: 'application/json'
         }
-      ],
-      config: {
-        temperature: 0.0,
-        responseMimeType: 'application/json'
-      }
+      })
     });
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Meter OCR call timed out after 20 seconds')), 20000)
-    );
-
-    const response = await Promise.race([generatePromise, timeoutPromise]);
     const parsed = JSON.parse(response.text);
 
     const numValue = typeof parsed.readingValue === 'number'
@@ -104,6 +104,9 @@ Return ONLY a JSON object with this exact schema:
 
   } catch (err) {
     console.error('Gemini meter extraction failed:', err.message);
+    if (err.isQuota) {
+      throw err;
+    }
     throw new Error(err.message || 'Could not read this file. Please enter the values manually.');
   }
 }

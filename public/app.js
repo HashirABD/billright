@@ -2084,8 +2084,12 @@ async function processFile(file) {
     console.error('Extraction error:', err);
     resetDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
-    showToast('Could not read this file. Please enter the values manually.', 'error', 4000);
+    const isBusy = Boolean(err.isQuota) || (err.message && /busy|quota|429|RESOURCE_EXHAUSTED/i.test(err.message));
+    const msg = isBusy
+      ? 'The AI reader is busy right now. Please try again later or enter the values manually.'
+      : (err.message || 'Could not read this file. Please enter the values manually.');
+    validationErrorMsg.textContent = msg;
+    showToast(msg, 'error', 5000);
   }
 }
 
@@ -2256,7 +2260,12 @@ async function processMeterFile(file) {
     console.error('Meter OCR error:', err);
     resetMeterDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
+    const isBusy = Boolean(err.isQuota) || (err.message && /busy|quota|429|RESOURCE_EXHAUSTED/i.test(err.message));
+    const msg = isBusy
+      ? 'The AI reader is busy right now. Please try again later or enter the values manually.'
+      : (err.message || 'Could not read this file. Please enter the values manually.');
+    validationErrorMsg.textContent = msg;
+    showToast(msg, 'error', 5000);
   }
 }
 

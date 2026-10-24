@@ -7,6 +7,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { getBuiltInCitation } from './tavilyClient.js';
 import { sanitizeDisputeLetter } from './letterSanitizer.js';
+import { executeWithModelFallback } from './geminiFallback.js';
 
 /**
  * Localized statutory ombudsman escalation paths by jurisdiction.
@@ -61,7 +62,7 @@ function generateDeterministicLetter({
   totalBilled,
   billDate,
   cutOffDate,
-  regulation,
+  regulation = {},
   isEstimated,
   isMeterObstructed = false,
   currency = '£',
@@ -75,9 +76,10 @@ function generateDeterministicLetter({
   supplierContact,
   state = ''
 }) {
+  const reg = regulation || {};
   const formattedDisputable = fmtMoney(disputableTotal, currency);
   const formattedTotal = fmtMoney(totalBilled, currency);
-  const escalation = getEscalationPath(regulation.jurisdiction, state);
+  const escalation = getEscalationPath(reg.jurisdiction, state);
   const letterDate = formatDate(noticeDate);
 
   const partyName = consumerName || 'Account Holder';
@@ -95,8 +97,8 @@ function generateDeterministicLetter({
     emailLine = `Email: ${supplierContact.email}`;
   }
 
-  const isAustralia = Boolean(regulation.jurisdiction === 'Australia' || (regulation.clauseReference && regulation.clauseReference.includes('NERR')));
-  const isTexas = Boolean(regulation.clauseReference && (regulation.clauseReference.includes('§25.28') || regulation.clauseReference.includes('25.28')));
+  const isAustralia = Boolean(reg.jurisdiction === 'Australia' || (reg.clauseReference && reg.clauseReference.includes('NERR')));
+  const isTexas = Boolean(reg.clauseReference && (reg.clauseReference.includes('§25.28') || reg.clauseReference.includes('25.28')));
 
   let statutoryRuleText;
   if (isAustralia) {
@@ -104,7 +106,7 @@ function generateDeterministicLetter({
   } else if (isTexas) {
     statutoryRuleText = 'Under PUCT §25.28(d) for electric utilities, back-billing adjustments are limited to 6 months counted from the date the error was discovered. For retail electric providers, the limit under §25.480(e) must be verified with the PUCT.';
   } else {
-    statutoryRuleText = `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the delay or error was the supplier's responsibility.`;
+    statutoryRuleText = `Under ${reg.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the delay or error was the supplier's responsibility.`;
   }
 
   let meterReadingStatement = '';
@@ -130,7 +132,7 @@ Date: ${letterDate}
 Complaints Handling Team
 ${supplier}${emailLine ? '\n' + emailLine : ''}
 
-FORMAL COMPLAINT: Back-billing Dispute under ${regulation.clauseReference || 'Statutory Utility Code'}
+FORMAL COMPLAINT: Back-billing Dispute under ${reg.clauseReference || 'Statutory Utility Code'}
 
 Dear Complaints Team,
 
@@ -197,7 +199,8 @@ export async function evaluateExceptionsAndFormatLetter({
   country = 'United Kingdom',
   supplierEmail,
   supplierContact,
-  state = ''
+  state = '',
+  aiInstance
 }) {
   const partyName = consumerName || 'Account Holder';
   const supplier = supplierName || 'Energy Supplier';
@@ -301,9 +304,8 @@ export async function evaluateExceptionsAndFormatLetter({
 
   // Case D: Disputable charges exist under applicable statutory regulation
   const apiKey = process.env.GEMINI_API_KEY;
-  const modelName = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
-  if (!apiKey || apiKey === 'your_gemini_key_here') {
+  if (!aiInstance && (!apiKey || apiKey === 'your_gemini_key_here')) {
     console.warn('⚠️ GEMINI_API_KEY not configured. Generating standard dispute letter.');
     const letter = generateDeterministicLetter({
       disputableTotal,
@@ -336,7 +338,7 @@ export async function evaluateExceptionsAndFormatLetter({
   }
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = aiInstance || new GoogleGenAI({ apiKey });
     const escalation = getEscalationPath(activeReg.jurisdiction, state);
 
     const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplier && supplier.toLowerCase().includes('example'));
@@ -399,40 +401,21 @@ Return strictly a JSON object with this shape:
   "disputeLetter": "The complete formatted letter text..."
 }`;
 
-    let responseText = null;
-    let successfulModel = null;
-    const allCandidates = [modelName, 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
-    const candidateModels = [...new Set(allCandidates)];
-
-    for (const m of candidateModels) {
-      try {
-        const generatePromise = ai.models.generateContent({
-          model: m,
-          contents: prompt,
-          config: {
-            temperature: 0.0,
-            responseMimeType: 'application/json'
-          }
-        });
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`Gemini API call timed out after 8 seconds on model ${m}`)), 8000)
-        );
-        const res = await Promise.race([generatePromise, timeoutPromise]);
-        if (res && res.text) {
-          responseText = res.text;
-          successfulModel = m;
-          break;
+    const { result: response, model: successfulModel } = await executeWithModelFallback({
+      isVision: false,
+      timeoutMs: 12000,
+      label: 'llmClient',
+      execute: (targetModel) => ai.models.generateContent({
+        model: targetModel,
+        contents: prompt,
+        config: {
+          temperature: 0.0,
+          responseMimeType: 'application/json'
         }
-      } catch (callErr) {
-        console.warn(`Model ${m} call failed (${callErr.message}), trying next candidate...`);
-      }
-    }
+      })
+    });
 
-    if (!responseText) {
-      throw new Error('All candidate Gemini models failed or timed out.');
-    }
-
-    const parsed = JSON.parse(responseText);
+    const parsed = JSON.parse(response.text);
     const isGemini = Boolean(parsed.disputeLetter);
     console.log(`[llmClient] Dispute letter generated by: ${isGemini ? 'Gemini (' + successfulModel + ')' : 'Deterministic Template Fallback'}`);
 
@@ -441,7 +424,7 @@ Return strictly a JSON object with this shape:
       totalBilled,
       billDate,
       cutOffDate,
-      regulation,
+      regulation: activeReg,
       isEstimated,
       isMeterObstructed: false,
       currency,
@@ -498,7 +481,7 @@ Return strictly a JSON object with this shape:
       totalBilled,
       billDate,
       cutOffDate,
-      regulation,
+      regulation: activeReg,
       isEstimated,
       isMeterObstructed: false,
       currency,

@@ -3,6 +3,18 @@ import zlib from 'zlib';
 import { getCutOffDate, getDaysBetween, calculateBackBilling } from './calculateBackBilling.js';
 import { sanitizeDisputeLetter } from './letterSanitizer.js';
 import { generateLegalPacketPdf } from './pdfGenerator.js';
+import {
+  isVisionModel,
+  getModelList,
+  isQuotaOrTimeoutError,
+  isRetryableModelError,
+  executeWithModelFallback,
+  DEFAULT_PRIMARY_MODEL,
+  DEFAULT_FALLBACK_MODELS
+} from './geminiFallback.js';
+import { extractBillData } from './billExtractor.js';
+import { extractMeterReading } from './meterExtractor.js';
+import { evaluateExceptionsAndFormatLetter } from './llmClient.js';
 
 console.log('Testing back-billing calculation engine...');
 
@@ -140,7 +152,6 @@ assert.equal(yearEnd.day14Formatted, '8 January 2026', 'Dec 25 + 14 days crosses
 console.log('✔ Timezone edge and escalation date calculations verified.');
 
 // Test 10: Exception Toggles (Obstruction and Estimates)
-import { evaluateExceptionsAndFormatLetter } from './llmClient.js';
 const dummyReg = {
   jurisdiction: 'United Kingdom',
   title: 'SLC 21BA Back-billing Protection',
@@ -702,7 +713,236 @@ for (const [name, str] of [
 }
 console.log('✔ End-to-end letter pipeline (mocked Gemini markdown link) verified across preview, clipboard, email, and PDF.');
 
+// =========================================================================
+// Gemini Multi-Model Fallback & Quota Resiliency Unit Tests (Mocked Only)
+// (Verifies HTTP 429 / RESOURCE_EXHAUSTED fallback chain without live calls)
+// =========================================================================
+
+console.log('Testing Gemini multi-model fallback and quota resiliency...');
+
+// Test F1: isVisionModel filtering
+assert.equal(isVisionModel('gemini-3.8-flash'), true, 'gemini-3.8-flash must be recognized as vision model');
+assert.equal(isVisionModel('gemini-3-flash'), true, 'gemini-3-flash must be recognized as vision model');
+assert.equal(isVisionModel('gemini-3.1-flash-lite'), true, 'gemini-3.1-flash-lite must be recognized as vision model');
+assert.equal(isVisionModel('gemini-3.5-flash-lite'), true, 'gemini-3.5-flash-lite must be recognized as vision model');
+assert.equal(isVisionModel('gemma-4-31b-it'), false, 'gemma models must be excluded from vision extraction');
+assert.equal(isVisionModel('text-embedding-004'), false, 'embedding models must be excluded from vision extraction');
+assert.equal(isVisionModel('imagen-3.0-generate-002'), false, 'generation-only models must be excluded from vision extraction');
+assert.equal(isVisionModel('text-bison'), false, 'text-only legacy models must be excluded from vision extraction');
+console.log('✔ Vision capability model filtering verified.');
+
+// Test F2: getModelList deduplication and vision filtering
+const listText = getModelList({
+  isVision: false,
+  primaryModel: 'gemini-3.8-flash',
+  fallbackModels: 'gemini-3-flash,gemini-3.8-flash,gemma-4-31b-it,gemini-3.1-flash-lite'
+});
+assert.deepEqual(listText, ['gemini-3.8-flash', 'gemini-3-flash', 'gemma-4-31b-it', 'gemini-3.1-flash-lite']);
+
+const listVision = getModelList({
+  isVision: true,
+  primaryModel: 'gemini-3.8-flash',
+  fallbackModels: 'gemini-3-flash,gemma-4-31b-it,gemini-3.1-flash-lite'
+});
+assert.deepEqual(listVision, ['gemini-3.8-flash', 'gemini-3-flash', 'gemini-3.1-flash-lite'], 'Vision model list must skip non-vision gemma model');
+console.log('✔ getModelList sequence deduplication and vision filtering verified.');
+
+// Test F3: isQuotaOrTimeoutError & isRetryableModelError detection
+const quotaErr429 = { status: 429, message: 'Resource has been exhausted (e.g. check quota).' };
+const quotaErrCode = { code: 'RESOURCE_EXHAUSTED', message: 'Quota exceeded' };
+const timeoutErr = new Error('Call timed out after 20s');
+const badRequestErr = { status: 400, message: 'Invalid payload' };
+
+assert.equal(isQuotaOrTimeoutError(quotaErr429), true);
+assert.equal(isQuotaOrTimeoutError(quotaErrCode), true);
+assert.equal(isQuotaOrTimeoutError(timeoutErr), true);
+assert.equal(isQuotaOrTimeoutError(badRequestErr), false);
+assert.equal(isRetryableModelError(badRequestErr), false);
+console.log('✔ Quota, timeout, and retryable error classification verified.');
+
+// Test F4: executeWithModelFallback simulates 429 on model 1 and success on model 2
+const fallbackAttemptSequence = [];
+const fallbackResult = await executeWithModelFallback({
+  label: 'mockFallbackTest',
+  overrideModels: ['gemini-mock-1', 'gemini-mock-2', 'gemini-mock-3'],
+  timeoutMs: 2000,
+  execute: async (targetModel) => {
+    fallbackAttemptSequence.push(targetModel);
+    if (targetModel === 'gemini-mock-1') {
+      const err = new Error('HTTP 429: Rate limit exceeded');
+      err.status = 429;
+      throw err;
+    }
+    return { success: true, text: '{"served": true}' };
+  }
+});
+assert.deepEqual(fallbackAttemptSequence, ['gemini-mock-1', 'gemini-mock-2'], 'Must retry on model 2 and stop upon success');
+assert.equal(fallbackResult.model, 'gemini-mock-2');
+assert.equal(fallbackResult.result.success, true);
+console.log('✔ Fallback execution on HTTP 429 to next model verified.');
+
+// Test F5: executeWithModelFallback stops after list exhausted (no loop) and formats clear quota message
+const exhaustedSequence = [];
+await assert.rejects(async () => {
+  await executeWithModelFallback({
+    label: 'mockExhaustedTest',
+    overrideModels: ['gemini-mock-1', 'gemini-mock-2'],
+    timeoutMs: 2000,
+    execute: async (targetModel) => {
+      exhaustedSequence.push(targetModel);
+      const err = new Error('RESOURCE_EXHAUSTED');
+      err.status = 429;
+      throw err;
+    }
+  });
+}, (err) => {
+  assert.equal(err.isQuota, true);
+  assert.equal(err.message, 'The AI reader is busy right now. Please try again later or enter the values manually.');
+  return true;
+});
+assert.deepEqual(exhaustedSequence, ['gemini-mock-1', 'gemini-mock-2'], 'Must visit each model once and stop without looping');
+console.log('✔ Exhausted quota behavior and clear user message verified.');
+
+// Test F6: extractBillData with mocked AI fallback (429 on model 1 -> success on model 2)
+const billAttemptedModels = [];
+const mockBillAi = {
+  models: {
+    generateContent: async ({ model }) => {
+      billAttemptedModels.push(model);
+      if (model === DEFAULT_PRIMARY_MODEL) {
+        const err = new Error('RESOURCE_EXHAUSTED: 20 requests per day per model reached');
+        err.status = 429;
+        throw err;
+      }
+      return {
+        text: JSON.stringify({
+          billDate: '2026-10-01',
+          isEstimated: false,
+          currency: '£',
+          supplierName: 'Mock Energy Ltd',
+          accountNumber: 'ACC-8899',
+          billingPeriods: [
+            { startDate: '2024-10-01', endDate: '2025-09-30', amount: 850.00 }
+          ]
+        })
+      };
+    }
+  }
+};
+const billExtractionResult = await extractBillData({
+  fileData: 'data:application/pdf;base64,mockPdfData',
+  mimeType: 'application/pdf',
+  aiInstance: mockBillAi
+});
+assert.equal(billAttemptedModels[0], DEFAULT_PRIMARY_MODEL);
+assert.equal(billAttemptedModels[1], 'gemini-3-flash');
+assert.equal(billExtractionResult.billDate, '2026-10-01');
+assert.equal(billExtractionResult.supplierName, 'Mock Energy Ltd');
+assert.equal(billExtractionResult.billingPeriods[0].amount, 850.00);
+console.log('✔ extractBillData mocked fallback from 429 verified.');
+
+// Test F7: extractMeterReading with mocked AI fallback (429 on model 1 -> success on model 2)
+const meterAttemptedModels = [];
+const mockMeterAi = {
+  models: {
+    generateContent: async ({ model }) => {
+      meterAttemptedModels.push(model);
+      if (model === DEFAULT_PRIMARY_MODEL) {
+        const err = new Error('HTTP 429 Quota Exceeded');
+        err.status = 429;
+        throw err;
+      }
+      return {
+        text: JSON.stringify({
+          meterType: 'Digital LCD Display',
+          readingValue: 35420,
+          unit: 'kWh',
+          serialNumber: 'MSN-554433',
+          confidence: 'high',
+          notes: 'Clear digital meter display.'
+        })
+      };
+    }
+  }
+};
+const meterExtractionResult = await extractMeterReading({
+  fileData: 'data:image/jpeg;base64,mockMeterData',
+  mimeType: 'image/jpeg',
+  aiInstance: mockMeterAi
+});
+assert.equal(meterAttemptedModels[0], DEFAULT_PRIMARY_MODEL);
+assert.equal(meterAttemptedModels[1], 'gemini-3-flash');
+assert.equal(meterExtractionResult.readingValue, 35420);
+assert.equal(meterExtractionResult.serialNumber, 'MSN-554433');
+console.log('✔ extractMeterReading mocked fallback from 429 verified.');
+
+// Test F8: evaluateExceptionsAndFormatLetter mocked fallback (429 on model 1 -> success on model 2)
+const letterAttemptedModels = [];
+const mockLetterAi = {
+  models: {
+    generateContent: async ({ model }) => {
+      letterAttemptedModels.push(model);
+      if (model === DEFAULT_PRIMARY_MODEL) {
+        const err = new Error('HTTP 429 RESOURCE_EXHAUSTED');
+        err.status = 429;
+        throw err;
+      }
+      return {
+        text: JSON.stringify({
+          verdict: 'Likely Disputable Amount',
+          disputeLetter: 'Formal complaint dispute letter generated by fallback model gemini-3-flash.'
+        })
+      };
+    }
+  }
+};
+const letterFallbackResult = await evaluateExceptionsAndFormatLetter({
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
+  supplyAddress: '1 Example Street',
+  noticeDate: '2026-10-24',
+  aiInstance: mockLetterAi
+});
+assert.equal(letterAttemptedModels[0], DEFAULT_PRIMARY_MODEL);
+assert.equal(letterAttemptedModels[1], 'gemini-3-flash');
+assert.equal(letterFallbackResult.letterSource, 'Gemini');
+assert.ok(letterFallbackResult.disputeLetter.includes('gemini-3-flash'));
+console.log('✔ evaluateExceptionsAndFormatLetter mocked fallback from 429 verified.');
+
+// Test F9: evaluateExceptionsAndFormatLetter when all models fail falls back to template
+const allFailingAi = {
+  models: {
+    generateContent: async () => {
+      const err = new Error('RESOURCE_EXHAUSTED: daily limit exhausted for all models');
+      err.status = 429;
+      throw err;
+    }
+  }
+};
+const templateFallbackResult = await evaluateExceptionsAndFormatLetter({
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
+  supplyAddress: '1 Example Street',
+  noticeDate: '2026-10-24',
+  aiInstance: allFailingAi
+});
+assert.equal(templateFallbackResult.letterSource, 'Template');
+assert.ok(templateFallbackResult.disputeLetter.includes('FORMAL COMPLAINT'));
+assert.ok(templateFallbackResult.disputeLetter.includes('£1,000.00'));
+console.log('✔ evaluateExceptionsAndFormatLetter clean deterministic template fallback verified when all models exhausted.');
+
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');
+
 
 

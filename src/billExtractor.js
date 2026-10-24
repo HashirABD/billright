@@ -1,10 +1,11 @@
 /**
- * Multimodal Bill Extractor using Gemini Vision.
+ * Multimodal Bill Extractor using Gemini Vision with Model Fallback.
  * Extracts bill issue date, billing periods, amounts, and reading types
  * from electricity bill PDFs and images.
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { executeWithModelFallback } from './geminiFallback.js';
 
 /**
  * Extracts structured bill metadata and line items from a base64 encoded document.
@@ -12,9 +13,10 @@ import { GoogleGenAI } from '@google/genai';
  * @param {Object} params
  * @param {string} params.fileData - Base64 encoded file string
  * @param {string} params.mimeType - MIME type (e.g. 'application/pdf', 'image/png', 'image/jpeg')
+ * @param {Object} [params.aiInstance] - Optional injected GoogleGenAI instance (for unit testing)
  * @returns {Promise<Object>} Extracted bill information
  */
-export async function extractBillData({ fileData, mimeType }) {
+export async function extractBillData({ fileData, mimeType, aiInstance } = {}) {
   if (!fileData) {
     throw new Error('fileData (base64 string) is required');
   }
@@ -24,11 +26,9 @@ export async function extractBillData({ fileData, mimeType }) {
 
   const apiKey = process.env.GEMINI_API_KEY;
 
-  if (!apiKey || apiKey === 'your_gemini_key_here') {
+  if (!aiInstance && (!apiKey || apiKey === 'your_gemini_key_here')) {
     throw new Error('GEMINI_API_KEY is not configured. Please enter the values manually.');
   }
-
-  const modelName = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 
   const prompt = `You are a forensic utility bill extraction assistant.
 Analyze this energy/electricity bill document (PDF or image).
@@ -62,33 +62,32 @@ STRICT JSON OUTPUT FORMAT:
 }`;
 
   try {
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = aiInstance || new GoogleGenAI({ apiKey });
 
     // Clean base64 data prefix if present (e.g., data:image/png;base64,...)
     const cleanBase64 = fileData.replace(/^data:[^;]+;base64,/, '');
 
-    const generatePromise = ai.models.generateContent({
-      model: modelName,
-      contents: [
-        {
-          inlineData: {
-            mimeType: mimeType,
-            data: cleanBase64
-          }
-        },
-        prompt
-      ],
-      config: {
-        temperature: 0.0,
-        responseMimeType: 'application/json'
-      }
+    const { result: response } = await executeWithModelFallback({
+      isVision: true,
+      timeoutMs: 20000,
+      label: 'billExtractor',
+      execute: (targetModel) => ai.models.generateContent({
+        model: targetModel,
+        contents: [
+          {
+            inlineData: {
+              mimeType: mimeType,
+              data: cleanBase64
+            }
+          },
+          prompt
+        ],
+        config: {
+          temperature: 0.0,
+          responseMimeType: 'application/json'
+        }
+      })
     });
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Gemini Vision API call timed out after 20 seconds')), 20000)
-    );
-
-    const response = await Promise.race([generatePromise, timeoutPromise]);
 
     const parsed = JSON.parse(response.text);
 
@@ -118,6 +117,9 @@ STRICT JSON OUTPUT FORMAT:
 
   } catch (err) {
     console.error('Gemini Vision extraction call failed:', err.message);
+    if (err.isQuota) {
+      throw err;
+    }
     throw new Error(err.message || 'Could not read this file. Please enter the values manually.');
   }
 }
