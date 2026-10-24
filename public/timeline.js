@@ -293,7 +293,7 @@ export function renderTimeline({
 
   // Axis Labels
   // Text-anchor to 'end' when within 90px of right edge to prevent clipping
-  const billDateAlign = (billDateX >= (padLeft + chartWidth - 90)) ? 'end' : 'middle';
+  const billDateAlign = (svgWidth - billDateX <= 90 || billDateX >= (padLeft + chartWidth - 90)) ? 'end' : 'middle';
   const labels = [
     { text: `Bill Date: ${billDate}`, x: billDateX, align: billDateAlign }
   ];

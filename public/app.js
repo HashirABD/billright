@@ -1934,14 +1934,14 @@ async function processFile(file) {
     dropzoneProcessing.style.display = 'none';
     dropzoneSuccess.style.display = 'flex';
     successFilename.textContent = file.name;
-    successSummary.innerHTML = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. <span class="trust-badge trust-ai">Read by AI, please verify</span>`;
+    successSummary.innerHTML = `Extracted ${data.billingPeriods.length} billing periods from ${data.supplierName || 'statement'}. Please verify these values against your document. <span class="trust-badge trust-ai">Read by AI, please verify</span>`;
 
   } catch (err) {
     console.error('Extraction error:', err);
     resetDropzone();
     validationErrorBanner.classList.add('visible');
-    validationErrorMsg.textContent = 'Could not read this file, please enter the values manually.';
-    showToast('Could not read this file, please enter the values manually.', 'error', 4000);
+    validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
+    showToast('Could not read this file. Please enter the values manually.', 'error', 4000);
   }
 }
 
@@ -2017,8 +2017,8 @@ function setupDropzone() {
         console.error('Sample bill load error:', err);
         resetDropzone();
         validationErrorBanner.classList.add('visible');
-        validationErrorMsg.textContent = 'Could not read this file, please enter the values manually.';
-        showToast('Could not read this file, please enter the values manually.', 'error', 4000);
+        validationErrorMsg.textContent = 'Could not read this file. Please enter the values manually.';
+        showToast('Could not read this file. Please enter the values manually.', 'error', 4000);
       }
     });
   }
@@ -2086,7 +2086,7 @@ async function processMeterFile(file) {
     if (meterDropzoneProcessing) meterDropzoneProcessing.style.display = 'none';
     if (meterDropzoneSuccess) meterDropzoneSuccess.style.display = 'flex';
     if (meterSuccessFilename) meterSuccessFilename.textContent = file.name;
-    if (meterSuccessSummary) meterSuccessSummary.textContent = `Meter reading extracted: ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}). Please check it against your photo.`;
+    if (meterSuccessSummary) meterSuccessSummary.textContent = `Meter reading extracted: ${data.readingValue} ${data.unit || 'kWh'} (${data.meterType || 'Physical meter'}). Please verify these values against your document.`;
 
     // Render Evidence Card
     if (meterEvidenceContainer) meterEvidenceContainer.style.display = 'block';
