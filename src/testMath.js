@@ -482,6 +482,28 @@ assert.ok(!sanitizedOutput.includes('`code snippet`') && sanitizedOutput.include
 console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction, precedent, and UK rule wording verified.');
 console.log('✔ Markdown links, ombudsman bare text, double parentheses, and Markdown artifacts sanitization verified.');
 
+// Test exact sentence with markdown link through the full letter pipeline
+const exactTestSentence = 'Should we not reach an agreed resolution, I reserve the right to escalate this matter to the Energy Ombudsman, [www.energyombudsman.org](https://www.energyombudsman.org), after the standard 8-week period.';
+const sanitizedSentenceOutput = sanitizeDisputeLetter(exactTestSentence);
+assert.ok(sanitizedSentenceOutput.includes('www.energyombudsman.org'), 'Sanitized sentence must contain "www.energyombudsman.org"');
+assert.ok(!sanitizedSentenceOutput.includes(']('), 'Sanitized sentence must not contain "]("');
+assert.ok(!sanitizedSentenceOutput.includes('[www'), 'Sanitized sentence must not contain "[www"');
+assert.strictEqual(
+  sanitizedSentenceOutput,
+  'Should we not reach an agreed resolution, I reserve the right to escalate this matter to the Energy Ombudsman, www.energyombudsman.org, after the standard 8-week period.'
+);
+
+const exactPhrase = 'escalate this matter to the Energy Ombudsman, [www.energyombudsman.org](https://www.energyombudsman.org), after the standard 8-week period';
+const sanitizedPhraseOutput = sanitizeDisputeLetter(exactPhrase);
+assert.ok(sanitizedPhraseOutput.includes('www.energyombudsman.org'), 'Sanitized phrase must contain "www.energyombudsman.org"');
+assert.ok(!sanitizedPhraseOutput.includes(']('), 'Sanitized phrase must not contain "]("');
+assert.ok(!sanitizedPhraseOutput.includes('[www'), 'Sanitized phrase must not contain "[www"');
+assert.strictEqual(
+  sanitizedPhraseOutput,
+  'escalate this matter to the Energy Ombudsman, www.energyombudsman.org, after the standard 8-week period'
+);
+console.log('✔ Exact Energy Ombudsman markdown link sentence verified through letter pipeline.');
+
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');
 

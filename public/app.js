@@ -113,13 +113,41 @@ function isValidEmail(email) {
 }
 
 /**
- * Sanitizes dispute letter text to ensure neutral regulatory standards and plain text format
+ * Sanitizes dispute letter text to ensure neutral regulatory standards and plain text format.
+ * If sanitizeDisputeLetter is missing at runtime, falls back to an inline regex.
  */
 function cleanLetterText(text) {
   if (!text || typeof text !== 'string') return '';
-  const isObstructed = (typeof inputObstructed !== 'undefined' && inputObstructed) ? inputObstructed.checked : false;
-  return sanitizeDisputeLetter(text, isObstructed);
+  const isObstructed = (typeof inputObstructed !== 'undefined' && inputObstructed) ? Boolean(inputObstructed.checked) : false;
+
+  const fn = (typeof sanitizeDisputeLetter === 'function')
+    ? sanitizeDisputeLetter
+    : (typeof window !== 'undefined' && typeof window.sanitizeDisputeLetter === 'function')
+      ? window.sanitizeDisputeLetter
+      : (typeof globalThis !== 'undefined' && typeof globalThis.sanitizeDisputeLetter === 'function')
+        ? globalThis.sanitizeDisputeLetter
+        : null;
+
+  if (fn) {
+    try {
+      return fn(text, isObstructed);
+    } catch (err) {
+      console.warn('sanitizeDisputeLetter threw an error, falling back to inline regex:', err);
+    }
+  }
+
+  // Fallback inline regex: convert square-bracket/round-bracket Markdown links to link text only
+  let cleaned = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // Clean ombudsman bare website and markdown artifacts
+  cleaned = cleaned.replace(/Energy\s+Ombudsman\s*[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'Energy Ombudsman, www.energyombudsman.org');
+  cleaned = cleaned.replace(/[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/(?:https?:\/\/)?(?:www\.)?energyombudsman\.org(?:\/[^\s\)\],.]*)?/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/[\(\[]\s*www\.energyombudsman\.org\s*[\)\]]/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/Energy\s+Ombudsman\s*,?\s*www\.energyombudsman\.org/gi, 'Energy Ombudsman, www.energyombudsman.org');
+  cleaned = cleaned.replace(/,\s*,/g, ',');
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
 }
+
 
 // DOM references
 const billForm = document.getElementById('bill-form');
@@ -853,6 +881,11 @@ function updatePlainLanguageResultCard(data, currency, lookbackMonths) {
  * Renders the returned analysis results into the DOM
  */
 function renderResults(data) {
+  if (data && data.disputeLetter) {
+    data.disputeLetter = cleanLetterText(data.disputeLetter);
+  }
+  currentAnalysisResult = data;
+
   const currency = data.currency || getCurrencySymbol(countrySelect.value);
   const lookbackMonths = data.lookbackMonths || 12;
 
@@ -1359,6 +1392,9 @@ billForm.addEventListener('submit', async (e) => {
     }
 
     const data = await response.json();
+    if (data && data.disputeLetter) {
+      data.disputeLetter = cleanLetterText(data.disputeLetter);
+    }
     renderResults(data);
 
   } catch (err) {

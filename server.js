@@ -10,6 +10,7 @@ import { extractBillData } from './src/billExtractor.js';
 import { generateLegalPacketPdf } from './src/pdfGenerator.js';
 import { getSupplierContact } from './src/supplierDirectory.js';
 import { extractMeterReading } from './src/meterExtractor.js';
+import { sanitizeDisputeLetter } from './src/letterSanitizer.js';
 
 dotenv.config();
 
@@ -207,7 +208,7 @@ app.post('/api/analyze', async (req, res) => {
       regulation,
       exceptionTriggered: evaluation.exceptionTriggered,
       exceptionNotes: evaluation.exceptionNotes,
-      disputeLetter: evaluation.disputeLetter,
+      disputeLetter: evaluation.disputeLetter ? sanitizeDisputeLetter(evaluation.disputeLetter, Boolean(isMeterObstructed)) : null,
       consumerName,
       supplierName,
       accountNumber,
@@ -287,7 +288,7 @@ app.post('/api/generate-pdf', async (req, res) => {
       regulation,
       isEstimated,
       isMeterObstructed,
-      disputeLetter,
+      disputeLetter: disputeLetter ? sanitizeDisputeLetter(disputeLetter, Boolean(isMeterObstructed)) : '',
       meterEvidence,
       supplierEmail: resolvedEmail,
       supplierContact

@@ -74,3 +74,11 @@ export function sanitizeDisputeLetter(text, isMeterObstructed = false) {
 
   return cleaned;
 }
+
+if (typeof window !== 'undefined') {
+  window.sanitizeDisputeLetter = sanitizeDisputeLetter;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.sanitizeDisputeLetter = sanitizeDisputeLetter;
+}
+
