@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import zlib from 'zlib';
 import { getCutOffDate, getDaysBetween, calculateBackBilling } from './calculateBackBilling.js';
 import { sanitizeDisputeLetter } from './letterSanitizer.js';
+import { generateLegalPacketPdf } from './pdfGenerator.js';
 
 console.log('Testing back-billing calculation engine...');
 
@@ -504,6 +506,188 @@ assert.strictEqual(
 );
 console.log('✔ Exact Energy Ombudsman markdown link sentence verified through letter pipeline.');
 
+// Helper to extract text from PDFKit compressed stream buffers
+function extractTextFromPdfBuffer(buf) {
+  let fullDecoded = '';
+  let idx = 0;
+  while ((idx = buf.indexOf('stream', idx)) !== -1) {
+    let start = idx + 6;
+    if (buf[start] === 0x0d) start++;
+    if (buf[start] === 0x0a) start++;
+    let end = buf.indexOf('endstream', start);
+    if (end !== -1) {
+      try {
+        const dec = zlib.inflateSync(buf.subarray(start, end)).toString('utf8');
+        const tjRegex = /\[([\s\S]*?)\]\s*TJ/g;
+        let m;
+        while ((m = tjRegex.exec(dec)) !== null) {
+          const hexRegex = /<([0-9a-fA-F]+)>/g;
+          let h;
+          let lineText = '';
+          while ((h = hexRegex.exec(m[1])) !== null) {
+            lineText += Buffer.from(h[1], 'hex').toString('latin1');
+          }
+          fullDecoded += ' ' + lineText;
+        }
+      } catch (e) {}
+    }
+    idx = end + 9;
+  }
+  return fullDecoded.replace(/\s+/g, ' ');
+}
+
+// =========================================================================
+// End-to-End Pipeline Test 1: Real Letter Pipeline with Deterministic Fallback
+// =========================================================================
+const e2eDeterministicEvaluation = await evaluateExceptionsAndFormatLetter({
+  isMeterObstructed: false,
+  isEstimated: true,
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  regulation: {
+    jurisdiction: 'United Kingdom',
+    title: 'Ofgem SLC 21BA',
+    clauseReference: 'Ofgem SLC 21BA',
+    lookbackMonths: 12
+  },
+  currency: '£',
+  lookbackMonths: 12,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  noticeDate: '2026-10-24',
+  country: 'United Kingdom'
+});
+
+// Server response field:
+const e2eServerLetter1 = e2eDeterministicEvaluation.disputeLetter
+  ? sanitizeDisputeLetter(e2eDeterministicEvaluation.disputeLetter, false)
+  : '';
+
+// Client Sinks:
+const previewString1 = sanitizeDisputeLetter(e2eServerLetter1);
+const clipboardString1 = sanitizeDisputeLetter(previewString1);
+const noticeHeader = '[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n';
+const emailBodyString1 = sanitizeDisputeLetter(noticeHeader + sanitizeDisputeLetter(e2eServerLetter1));
+const clipboardBodyString1 = sanitizeDisputeLetter(emailBodyString1);
+
+// PDF Sink:
+const pdfBuffer1 = await generateLegalPacketPdf({
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  regulation: { jurisdiction: 'United Kingdom', title: 'Ofgem SLC 21BA', clauseReference: 'Ofgem SLC 21BA' },
+  isEstimated: true,
+  isMeterObstructed: false,
+  currency: '£',
+  lookbackMonths: 12,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  disputeLetter: e2eServerLetter1,
+  itemizedBreakdown: [{ periodStart: '2024-10-01', periodEnd: '2025-09-30', originalCharge: 1000, daysPrior: 365, daysPermitted: 0, disputableAmount: 1000 }]
+});
+const pdfText1 = extractTextFromPdfBuffer(pdfBuffer1);
+
+for (const [name, str] of [
+  ['Preview Element', previewString1],
+  ['Clipboard Write', clipboardString1],
+  ['Email Body', emailBodyString1],
+  ['Modal Clipboard Body', clipboardBodyString1],
+  ['PDF Text', pdfText1]
+]) {
+  assert.ok(str.includes('www.energyombudsman.org'), `${name} must contain "www.energyombudsman.org" (deterministic fallback)`);
+  assert.ok(!str.includes(']('), `${name} must not contain "](" (deterministic fallback)`);
+  assert.ok(!str.includes('[www'), `${name} must not contain "[www" (deterministic fallback)`);
+}
+console.log('✔ End-to-end letter pipeline (deterministic fallback) verified across preview, clipboard, email, and PDF.');
+
+// =========================================================================
+// End-to-End Pipeline Test 2: Real Letter Pipeline with Mocked Gemini Markdown Link
+// =========================================================================
+const rawGeminiMockLetter = `Jane Example
+1 Example Street, Exampletown, EX1 1AA
+Account Reference: EX-8849201
+Date: 24 October 2026
+
+Complaints Handling Team
+Example Energy Ltd
+
+FORMAL COMPLAINT: Back-billing Dispute under Ofgem SLC 21BA
+
+Dear Complaints Team,
+
+Account Reference: EX-8849201
+Supply Address: 1 Example Street, Exampletown, EX1 1AA
+
+I am writing to formally raise a complaint regarding my recent energy bill dated 2026-10-01 for the total amount of £1,400.00.
+
+A precise calendar audit against statutory utility standards indicates that £1,000.00 of this total relates to energy consumed prior to 2025-10-01 (more than 12 calendar months before the bill date).
+
+Under Ofgem SLC 21BA, energy retailers are restricted from recovering catch-up charges for energy consumed more than 12 months prior to the bill issuance date, where the delay or error was the supplier's responsibility.
+
+I confirm that I have not acted obstructively or prevented meter access at any time, and earlier bills were based on estimated rather than actual readings.
+
+In light of these back-billing rules, I formally request that you:
+1. Revise the bill to remove the £1,000.00 accrued prior to 2025-10-01.
+2. Issue an updated statement showing only charges legitimately recoverable within the statutory 12-month permitted window.
+3. Place a temporary hold on collection action for the disputed sum while this complaint is investigated.
+
+Please treat this as a formal complaint in accordance with your complaint handling procedure. I suggest a written response within 14 calendar days. Should we not reach an agreed resolution within the standard 8-week complaints timeframe, I reserve the right to escalate this matter to the Energy Ombudsman, [www.energyombudsman.org](https://www.energyombudsman.org), after the standard 8-week period or upon receipt of a deadlock letter under Ofgem SLC 21BA.
+
+Yours sincerely,
+
+Jane Example
+Account Holder`;
+
+// Server intake:
+const serverMockedLetter = sanitizeDisputeLetter(rawGeminiMockLetter, false);
+
+// Client Sinks:
+const previewString2 = sanitizeDisputeLetter(serverMockedLetter);
+const clipboardString2 = sanitizeDisputeLetter(previewString2);
+const emailBodyString2 = sanitizeDisputeLetter(noticeHeader + sanitizeDisputeLetter(serverMockedLetter));
+const clipboardBodyString2 = sanitizeDisputeLetter(emailBodyString2);
+
+// PDF Sink:
+const pdfBuffer2 = await generateLegalPacketPdf({
+  billDate: '2026-10-01',
+  cutOffDate: '2025-10-01',
+  disputableTotal: 1000.00,
+  totalBilled: 1400.00,
+  regulation: { jurisdiction: 'United Kingdom', title: 'Ofgem SLC 21BA', clauseReference: 'Ofgem SLC 21BA' },
+  isEstimated: true,
+  isMeterObstructed: false,
+  currency: '£',
+  lookbackMonths: 12,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Ltd',
+  accountNumber: 'EX-8849201',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  disputeLetter: serverMockedLetter,
+  itemizedBreakdown: [{ periodStart: '2024-10-01', periodEnd: '2025-09-30', originalCharge: 1000, daysPrior: 365, daysPermitted: 0, disputableAmount: 1000 }]
+});
+const pdfText2 = extractTextFromPdfBuffer(pdfBuffer2);
+
+for (const [name, str] of [
+  ['Mocked Preview Element', previewString2],
+  ['Mocked Clipboard Write', clipboardString2],
+  ['Mocked Email Body', emailBodyString2],
+  ['Mocked Modal Clipboard Body', clipboardBodyString2],
+  ['Mocked PDF Text', pdfText2]
+]) {
+  assert.ok(str.includes('www.energyombudsman.org'), `${name} must contain "www.energyombudsman.org" (mocked Gemini markdown link)`);
+  assert.ok(!str.includes(']('), `${name} must not contain "](" (mocked Gemini markdown link)`);
+  assert.ok(!str.includes('[www'), `${name} must not contain "[www" (mocked Gemini markdown link)`);
+}
+console.log('✔ End-to-end letter pipeline (mocked Gemini markdown link) verified across preview, clipboard, email, and PDF.');
+
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');
+
 

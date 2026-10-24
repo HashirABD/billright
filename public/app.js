@@ -137,11 +137,16 @@ function cleanLetterText(text) {
   }
 
   // Fallback inline regex: convert square-bracket/round-bracket Markdown links to link text only
-  let cleaned = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  let cleaned = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, linkUrl) => {
+    const t = linkText.trim();
+    const u = linkUrl.trim();
+    if (/^https?:\/\//i.test(t) || /^www\./i.test(t)) return t;
+    return `${t} (${u})`;
+  });
   // Clean ombudsman bare website and markdown artifacts
   cleaned = cleaned.replace(/Energy\s+Ombudsman\s*[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'Energy Ombudsman, www.energyombudsman.org');
   cleaned = cleaned.replace(/[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'www.energyombudsman.org');
-  cleaned = cleaned.replace(/(?:https?:\/\/)?(?:www\.)?energyombudsman\.org(?:\/[^\s\)\],.]*)?/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/(?:https?:\/\/)(?:www\.)?energyombudsman\.org(?:\/[^\s\)\],.]*)?/gi, 'www.energyombudsman.org');
   cleaned = cleaned.replace(/[\(\[]\s*www\.energyombudsman\.org\s*[\)\]]/gi, 'www.energyombudsman.org');
   cleaned = cleaned.replace(/Energy\s+Ombudsman\s*,?\s*www\.energyombudsman\.org/gi, 'Energy Ombudsman, www.energyombudsman.org');
   cleaned = cleaned.replace(/,\s*,/g, ',');
@@ -1457,7 +1462,7 @@ if (btnCopyLetter) {
   btnCopyLetter.addEventListener('click', async () => {
     const text = cleanLetterText(letterContent.textContent);
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(cleanLetterText(text));
       copyFeedback.classList.add('visible');
       showToast('Dispute letter copied to clipboard!', 'success');
       setTimeout(() => {
@@ -1502,10 +1507,10 @@ function updateDisputeLetterEmail(newEmail) {
   }
   letter = cleanLetterText(letter);
   currentAnalysisResult.disputeLetter = letter;
-  if (letterContent) letterContent.textContent = letter;
+  if (letterContent) letterContent.textContent = cleanLetterText(letter);
   if (modalEmailBody) {
     const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n`;
-    modalEmailBody.value = noticeHeader + letter;
+    modalEmailBody.value = cleanLetterText(noticeHeader + cleanLetterText(letter));
   }
 }
 
@@ -1545,7 +1550,7 @@ function openEmailDispatcherModal() {
 
   const subject = `FORMAL DISPUTE: Back-billing catch-up charges (${clause}) - Account ${accNum}`;
   const noticeHeader = `[NOTICE TO COMPLAINTS TEAM: Please find our complete 3-Page Schedule of Mathematical Evidence & Dispute Packet (draft) attached as a PDF.]\n\n`;
-  const fullBody = noticeHeader + currentAnalysisResult.disputeLetter;
+  const fullBody = cleanLetterText(noticeHeader + cleanLetterText(currentAnalysisResult.disputeLetter));
 
   const modalEmailToLabel = document.getElementById('modal-email-to-label');
   if (modalEmailTo) {
@@ -1732,7 +1737,7 @@ if (btnModalCopyLetterBody) {
   btnModalCopyLetterBody.addEventListener('click', async () => {
     if (!modalEmailBody) return;
     const cleaned = cleanLetterText(modalEmailBody.value);
-    await navigator.clipboard.writeText(cleaned);
+    await navigator.clipboard.writeText(cleanLetterText(cleaned));
     showToast('Full letter text copied!', 'success');
   });
 }
@@ -1754,7 +1759,7 @@ if (btnLaunchGmail) {
     const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter and Schedule of Evidence copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
-      await navigator.clipboard.writeText(fullText);
+      await navigator.clipboard.writeText(cleanLetterText(fullText));
     } catch (_) {}
 
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
@@ -1780,7 +1785,7 @@ if (btnLaunchOutlook) {
     const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Full 3-Page Dispute Letter copied to your clipboard. Paste into this email or attach Dispute Packet (draft).]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
-      await navigator.clipboard.writeText(fullText);
+      await navigator.clipboard.writeText(cleanLetterText(fullText));
     } catch (_) {}
 
     const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
@@ -1806,7 +1811,7 @@ if (btnLaunchMailto) {
     const conciseBody = `Dear Complaints Department,\n\nPlease find our formal dispute notice regarding back-billing charges that appear to exceed the statutory limit under ${clause} (Account ${acc}).\n\n[Complete Dispute Packet (draft) copied to clipboard. Paste below or attach PDF.]\n\nKind regards,\n${currentAnalysisResult.consumerName || 'Consumer'}`;
 
     try {
-      await navigator.clipboard.writeText(fullText);
+      await navigator.clipboard.writeText(cleanLetterText(fullText));
     } catch (_) {}
 
     const safeMailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(conciseBody)}`;
@@ -1822,9 +1827,9 @@ if (btnCopyAllEmail) {
     const sub = modalEmailSubject.value;
     const body = cleanLetterText(modalEmailBody.value);
 
-    const packet = `TO: ${to}\nSUBJECT: ${sub}\n\n---\n\n${body}`;
+    const packet = cleanLetterText(`TO: ${to}\nSUBJECT: ${sub}\n\n---\n\n${body}`);
     try {
-      await navigator.clipboard.writeText(packet);
+      await navigator.clipboard.writeText(cleanLetterText(packet));
       showToast('Complete dispute packet (draft) copied to clipboard!', 'success', 3500);
     } catch (err) {
       showToast('Could not access clipboard.', 'error');

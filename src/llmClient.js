@@ -388,7 +388,7 @@ INSTRUCTIONS:
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
    - Do NOT include the sentence "In accordance with published regulatory precedents, the retailer bears responsibility for timely billing." or any similar unverified claim.
    - Do NOT include any "Additional Reference" block or retrieved sources in the letter. Retrieved sources are only presented in the application interface and the statutory annexure.
-   - The ombudsman website must be plain text "www.energyombudsman.org" with no Markdown link syntax like [text](url).
+   - The ombudsman website must appear strictly as bare plain text "www.energyombudsman.org". Do not format as a hyperlink or markdown link. Do not use square brackets, round brackets, parentheses, or https.
    - The sentence "I confirm that I have not acted obstructively or prevented meter access at any time" must appear in the letter ONLY when meter access was not obstructed. Do not state anything about obstruction if obstruction occurred.
    - For UK rules, state that charges are unrecoverable beyond 12 months where the delay or error was the supplier's responsibility (do not use "where the customer has not been previously billed").
 

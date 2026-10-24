@@ -142,6 +142,7 @@ export async function generateLegalPacketPdf(data) {
         state = ''
       } = data;
 
+      const sanitizedDisputeLetter = disputeLetter ? sanitizeDisputeLetter(disputeLetter, isMeterObstructed) : '';
       const resolvedState = australiaState || state;
       const escalation = getEscalationDirectory(regulation.jurisdiction || country, resolvedState);
       const totalPages = isMeterObstructed ? 4 : 3;

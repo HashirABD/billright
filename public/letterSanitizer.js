@@ -1,5 +1,5 @@
 /**
- * Shared dispute letter sanitizer for BillRight.
+ * Shared dispute letter sanitizer for BillRight (Client / Browser runtime).
  * Applied across all output paths: Gemini-generated letters, template fallback letters,
  * UI preview, clipboard copy, mailto/Gmail/Outlook compose bodies, and PDFKit rendering.
  */
@@ -36,7 +36,7 @@ export function sanitizeDisputeLetter(text, isMeterObstructed = false) {
   // 3. Ombudsman website must appear only as bare text www.energyombudsman.org with no brackets, no parentheses and no https prefix
   cleaned = cleaned.replace(/Energy\s+Ombudsman\s*[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'Energy Ombudsman, www.energyombudsman.org');
   cleaned = cleaned.replace(/[\(\[]\s*(?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)\]]*[\)\]]/gi, 'www.energyombudsman.org');
-  cleaned = cleaned.replace(/(?:https?:\/\/)?(?:www\.)?energyombudsman\.org(?:\/[^\s\)\],.]*)?/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/(?:https?:\/\/)(?:www\.)?energyombudsman\.org(?:\/[^\s\)\],.]*)?/gi, 'www.energyombudsman.org');
   cleaned = cleaned.replace(/[\(\[]\s*www\.energyombudsman\.org\s*[\)\]]/gi, 'www.energyombudsman.org');
 
   // 4. Strip other Markdown artifacts (bold, italic, # headings, backticks)
@@ -81,4 +81,3 @@ if (typeof window !== 'undefined') {
 if (typeof globalThis !== 'undefined') {
   globalThis.sanitizeDisputeLetter = sanitizeDisputeLetter;
 }
-
