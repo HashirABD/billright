@@ -111,6 +111,23 @@ function isValidEmail(email) {
   return typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+/**
+ * Sanitizes dispute letter text to ensure regulatory compliance and plain text standards
+ */
+function cleanLetterText(text) {
+  if (!text || typeof text !== 'string') return '';
+  let cleaned = text;
+  // Ombudsman website must be plain text www.energyombudsman.org with no Markdown link syntax like [text](url)
+  cleaned = cleaned.replace(/\[([^\]]+)\]\((?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)]*\)/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/\[www\.energyombudsman\.org\]/gi, 'www.energyombudsman.org');
+  // Remove unverified claim
+  cleaned = cleaned.replace(/In accordance with published regulatory precedents,\s*the retailer bears responsibility for timely billing\./gi, '');
+  // Remove Additional Reference block if present in letter
+  cleaned = cleaned.replace(/\n*Additional Reference:[\s\S]*?(?=\n\n[A-Z]|\n*$)/gi, '');
+  cleaned = cleaned.replace(/Note: Retrieved by search, not verified/gi, '');
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // DOM references
 const billForm = document.getElementById('bill-form');
 const countrySelect = document.getElementById('input-country');
@@ -597,6 +614,8 @@ function resetForm() {
 
   const currencyHeader = document.getElementById('currency-symbol-header');
   if (currencyHeader) currencyHeader.textContent = '£';
+  const countryMismatchWarning = document.getElementById('country-mismatch-warning');
+  if (countryMismatchWarning) countryMismatchWarning.style.display = 'none';
 
   // Clear OCR review highlights
   document.querySelectorAll('.ocr-highlight').forEach(el => el.classList.remove('ocr-highlight'));
@@ -1037,6 +1056,7 @@ function renderResults(data) {
 
   // 5. Dispute Letter Box & Action Buttons
   if (data.disputeLetter) {
+    data.disputeLetter = cleanLetterText(data.disputeLetter);
     letterContent.textContent = data.disputeLetter;
     btnCopyLetter.disabled = false;
     btnCopyLetter.style.display = 'inline-flex';
@@ -1340,7 +1360,7 @@ function showToast(message, type = 'success', duration = 3200) {
 // Copy letter button handler
 if (btnCopyLetter) {
   btnCopyLetter.addEventListener('click', async () => {
-    const text = letterContent.textContent;
+    const text = cleanLetterText(letterContent.textContent);
     try {
       await navigator.clipboard.writeText(text);
       copyFeedback.classList.add('visible');
@@ -1824,6 +1844,8 @@ function resetDropzone() {
   if (dropzonePrompt) dropzonePrompt.style.display = 'block';
   if (dropzoneProcessing) dropzoneProcessing.style.display = 'none';
   if (dropzoneSuccess) dropzoneSuccess.style.display = 'none';
+  const countryMismatchWarning = document.getElementById('country-mismatch-warning');
+  if (countryMismatchWarning) countryMismatchWarning.style.display = 'none';
 }
 
 async function processFile(file) {
@@ -1896,11 +1918,35 @@ async function processFile(file) {
       setToggleValue(groupEstimated, inputEstimated, data.isEstimated);
     }
 
-    // Auto-select jurisdiction if currency gives a clear cue
-    if (data.currency === 'A$' || (data.notes && data.notes.includes('Australia'))) {
-      countrySelect.value = 'Australia';
-    } else if (data.currency === '$' && countrySelect.value === 'United Kingdom') {
-      countrySelect.value = 'United States (California)';
+    // Check if extracted currency or country conflicts with selected jurisdiction
+    const currentJurisdiction = countrySelect.value;
+    let isCountryConflict = false;
+    if (data.currency) {
+      if (currentJurisdiction === 'United Kingdom' && (data.currency === '$' || data.currency === 'A$')) {
+        isCountryConflict = true;
+      } else if (currentJurisdiction === 'Australia' && data.currency === '£') {
+        isCountryConflict = true;
+      } else if (currentJurisdiction.includes('United States') && (data.currency === '£' || data.currency === 'A$')) {
+        isCountryConflict = true;
+      }
+    }
+    if (data.country) {
+      if (data.country === 'UK' && currentJurisdiction !== 'United Kingdom') isCountryConflict = true;
+      if (data.country === 'Australia' && currentJurisdiction !== 'Australia') isCountryConflict = true;
+      if (data.country === 'US' && !currentJurisdiction.includes('United States')) isCountryConflict = true;
+    }
+
+    const countryMismatchWarning = document.getElementById('country-mismatch-warning');
+    if (isCountryConflict) {
+      if (countryMismatchWarning) {
+        countryMismatchWarning.textContent = 'This bill looks like it is from a different country than the one selected. Please check.';
+        countryMismatchWarning.style.display = 'block';
+      }
+      showToast('This bill looks like it is from a different country than the one selected. Please check.', 'warning', 6000);
+    } else {
+      if (countryMismatchWarning) {
+        countryMismatchWarning.style.display = 'none';
+      }
     }
 
     // Update header currency
@@ -1999,6 +2045,15 @@ function setupDropzone() {
   if (btnTrySampleBill) {
     btnTrySampleBill.addEventListener('click', async (e) => {
       e.stopPropagation();
+      // Set jurisdiction to United Kingdom (reset/hide Australian state selector, currency £)
+      countrySelect.value = 'United Kingdom';
+      if (inputAustraliaState) inputAustraliaState.value = 'NSW';
+      updateAustraliaStateVisibility();
+      const currencyHeader = document.getElementById('currency-symbol-header');
+      if (currencyHeader) currencyHeader.textContent = '£';
+      const countryMismatchWarning = document.getElementById('country-mismatch-warning');
+      if (countryMismatchWarning) countryMismatchWarning.style.display = 'none';
+
       validationErrorBanner.classList.remove('visible');
       dropzonePrompt.style.display = 'none';
       dropzoneSuccess.style.display = 'none';

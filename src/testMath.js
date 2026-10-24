@@ -404,12 +404,32 @@ const letterWithSource = await evaluateExceptionsAndFormatLetter({
   state: 'NSW'
 });
 
-assert.ok(letterWithSource.disputeLetter.includes('Additional Reference:'), 'Letter must include Additional Reference header');
-assert.ok(letterWithSource.disputeLetter.includes('Host: aer.gov.au'), 'Letter must include host name');
-assert.ok(letterWithSource.disputeLetter.includes('URL: https://www.aer.gov.au/consumers/billing-disputes'), 'Letter must include URL');
-assert.ok(letterWithSource.disputeLetter.includes('Retrieved by search, not verified'), 'Letter must include verification disclaimer note');
-assert.ok(!letterWithSource.disputeLetter.includes('LLM generated excerpt that must NOT appear'), 'Letter must not contain raw LLM excerpt');
-console.log('✔ Additional source letter formatting verified (title, host, URL, and note without LLM summary).');
+assert.ok(!letterWithSource.disputeLetter.includes('Additional Reference:'), 'Supplier-facing dispute letter must NOT include Additional Reference header');
+assert.ok(!letterWithSource.disputeLetter.includes('Retrieved by search, not verified'), 'Supplier-facing dispute letter must NOT include Retrieved by search disclaimer');
+assert.ok(!letterWithSource.disputeLetter.includes('In accordance with published regulatory precedents'), 'Letter must not contain unverified precedents sentence');
+assert.ok(letterWithSource.disputeLetter.includes('I confirm that I have not acted obstructively or prevented meter access at any time'), 'Letter must confirm non-obstruction when unobstructed');
+
+const obstructedLetter = await evaluateExceptionsAndFormatLetter({
+  isEstimated: true,
+  isMeterObstructed: true,
+  disputableTotal: 900.00,
+  totalBilled: 1800.00,
+  billDate: '2026-10-01',
+  cutOffDate: '2026-01-01',
+  regulation: regWithAdditional,
+  currency: 'A$',
+  lookbackMonths: 9,
+  consumerName: 'Jane Example',
+  supplierName: 'Example Energy Pty Ltd',
+  accountNumber: 'EX-AU-992140',
+  supplyAddress: '1 Example Street, Exampletown, EX1 1AA',
+  noticeDate: '2026-10-15',
+  country: 'Australia',
+  state: 'NSW'
+});
+assert.ok(!obstructedLetter.disputeLetter.includes('I confirm that I have not acted obstructively'), 'Letter must NOT state non-obstruction when obstructed');
+assert.ok(!obstructedLetter.disputeLetter.includes('obstruct'), 'Letter must omit obstruction entirely when obstructed');
+console.log('✔ Additional source omitted from letter (UI/annexure only), obstruction and precedent claims verified.');
 
 console.log('✔ All validation assertions passed.');
 console.log('All mathematical engine tests passed successfully!');

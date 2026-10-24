@@ -53,6 +53,27 @@ function fmtMoney(amount, currency = '£') {
 }
 
 /**
+ * Sanitizes dispute letter text to ensure regulatory compliance and plain text standards
+ */
+function sanitizeDisputeLetter(text, isMeterObstructed) {
+  if (!text || typeof text !== 'string') return text;
+  let cleaned = text;
+  // Ombudsman website must be plain text www.energyombudsman.org with no Markdown link syntax like [text](url)
+  cleaned = cleaned.replace(/\[([^\]]+)\]\((?:https?:\/\/)?(?:www\.)?energyombudsman\.org[^\)]*\)/gi, 'www.energyombudsman.org');
+  cleaned = cleaned.replace(/\[www\.energyombudsman\.org\]/gi, 'www.energyombudsman.org');
+  // Remove unverified legal precedents claim
+  cleaned = cleaned.replace(/In accordance with published regulatory precedents,\s*the retailer bears responsibility for timely billing\./gi, '');
+  // Remove Additional Reference block if present
+  cleaned = cleaned.replace(/\n*Additional Reference:[\s\S]*?(?=\n\n[A-Z]|\n*$)/gi, '');
+  cleaned = cleaned.replace(/Note: Retrieved by search, not verified/gi, '');
+  // When obstructed = Yes, omit obstruction sentence entirely and do not state anything about obstruction either way
+  if (isMeterObstructed) {
+    cleaned = cleaned.replace(/I (?:confirm|expressly confirm) that I have (?:not acted obstructively or |never )?prevented meter (?:reader )?access(?: at any time)?(?:, and (?:earlier|previous) (?:bills|statements) were based on estimated rather than actual readings)?\./gi, '');
+  }
+  return cleaned.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
  * Deterministic fallback letter generator if AI API is unavailable.
  */
 function generateDeterministicLetter({
@@ -106,32 +127,19 @@ function generateDeterministicLetter({
     statutoryRuleText = `Under ${regulation.title || 'statutory back-billing regulations'}, energy retailers are restricted from recovering catch-up charges for energy consumed more than ${lookbackMonths} months prior to the bill issuance date, where the customer has not been billed previously and has not obstructed meter access.`;
   }
 
-  let meterReadingStatement;
-  if (isMeterObstructed) {
+  let meterReadingStatement = '';
+  if (!isMeterObstructed) {
     if (isEstimated) {
-      meterReadingStatement = 'Previous statements were rendered on estimated rather than actual meter readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time, and earlier bills were based on estimated rather than actual readings.';
     } else {
-      meterReadingStatement = 'In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time.';
     }
   } else {
     if (isEstimated) {
-      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time, and earlier bills were based on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+      meterReadingStatement = 'Previous statements were rendered on estimated rather than actual meter readings.';
     } else {
-      meterReadingStatement = 'I confirm that I have not acted obstructively or prevented meter access at any time. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+      meterReadingStatement = '';
     }
-  }
-
-  let additionalSourceSection = '';
-  if (regulation.additionalSource && regulation.additionalSource.url) {
-    const add = regulation.additionalSource;
-    const host = add.host || (() => {
-      try { return new URL(add.url).hostname.replace(/^www\./, ''); } catch { return ''; }
-    })();
-    additionalSourceSection = `\n\nAdditional Reference:
-Title: ${add.title || 'Regulatory Documentation'}
-Host: ${host}
-URL: ${add.url}
-Note: Retrieved by search, not verified`;
   }
 
   return `${partyName}
@@ -153,9 +161,7 @@ I am writing to formally raise a complaint regarding my recent energy bill dated
 
 A precise calendar audit against statutory utility standards indicates that ${formattedDisputable} of this total relates to energy consumed prior to ${cutOffDate} (more than ${lookbackMonths} calendar months before the bill date).
 
-${statutoryRuleText}
-
-${meterReadingStatement}
+${statutoryRuleText}${meterReadingStatement ? '\n\n' + meterReadingStatement : ''}
 
 In light of these back-billing rules, I formally request that you:
 1. Revise the bill to remove the ${formattedDisputable} accrued prior to ${cutOffDate}.
@@ -167,7 +173,7 @@ Please treat this as a formal complaint in accordance with your complaint handli
 Yours sincerely,
 
 ${partyName}
-Account Holder${additionalSourceSection}`;
+Account Holder`;
 }
 
 /**
@@ -398,7 +404,10 @@ INSTRUCTIONS:
    - Do NOT claim the supplier is statutorily bound to pause debt collection or that non-response constitutes regulatory non-compliance.
    - If Texas (§25.28(d)/§25.480(e)): for electric utilities under §25.28(d), note the 6-month limit is counted from the date the error was discovered; for retail electric providers, state that the limit under §25.480(e) must be verified with the PUCT.
    - Frame it as an unrecoverable back-billing charge under the statutory rule.
-   - If citing an additional retrieved source, show ONLY its title, host name and URL, plus the note "Retrieved by search, not verified". Do NOT include an LLM summary of the retrieved source.
+   - Do NOT include the sentence "In accordance with published regulatory precedents, the retailer bears responsibility for timely billing." or any similar unverified claim.
+   - Do NOT include any "Additional Reference" block or retrieved sources in the letter. Retrieved sources are only presented in the application interface and the statutory annexure.
+   - The ombudsman website must be plain text "www.energyombudsman.org" with no Markdown link syntax like [text](url).
+   - The sentence "I confirm that I have not acted obstructively or prevented meter access at any time" must appear in the letter ONLY when meter access was not obstructed. Do not state anything about obstruction if obstruction occurred.
 
 Return strictly a JSON object with this shape:
 {
@@ -422,28 +431,30 @@ Return strictly a JSON object with this shape:
     const response = await Promise.race([generatePromise, timeoutPromise]);
     const parsed = JSON.parse(response.text);
 
+    const rawLetter = parsed.disputeLetter || generateDeterministicLetter({
+      disputableTotal,
+      totalBilled,
+      billDate,
+      cutOffDate,
+      regulation,
+      isEstimated,
+      isMeterObstructed: false,
+      currency,
+      lookbackMonths,
+      consumerName: partyName,
+      supplierName: supplier,
+      accountNumber: accNum,
+      supplyAddress: address,
+      noticeDate: letterDate,
+      state
+    });
+
     return {
       verdict: parsed.verdict || 'Likely Disputable Amount',
       badgeType: 'consumer_protected',
       exceptionTriggered: false,
       exceptionNotes: isEstimated ? 'Prior bills based on estimates: supports dispute because supplier delayed actual meter inspection.' : null,
-      disputeLetter: parsed.disputeLetter || generateDeterministicLetter({
-        disputableTotal,
-        totalBilled,
-        billDate,
-        cutOffDate,
-        regulation,
-        isEstimated,
-        isMeterObstructed: false,
-        currency,
-        lookbackMonths,
-        consumerName: partyName,
-        supplierName: supplier,
-        accountNumber: accNum,
-        supplyAddress: address,
-        noticeDate: letterDate,
-        state
-      }),
+      disputeLetter: sanitizeDisputeLetter(rawLetter, false),
       noticeDate: letterDate
     };
 
@@ -471,7 +482,7 @@ Return strictly a JSON object with this shape:
       badgeType: 'consumer_protected',
       exceptionTriggered: false,
       exceptionNotes: isEstimated ? 'Prior bills based on estimates: supports dispute because supplier delayed actual meter inspection.' : null,
-      disputeLetter: letter,
+      disputeLetter: sanitizeDisputeLetter(letter, false),
       noticeDate: letterDate
     };
   }

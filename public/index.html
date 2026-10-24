@@ -116,7 +116,7 @@
         <button type="button" class="preset-btn" id="preset-c" data-preset="C" role="radio" aria-checked="false" tabindex="-1">
           <span class="preset-badge incomplete">⚠️ Case C: Missing Data</span>
           <span class="preset-name">Incomplete Period</span>
-          <span class="preset-desc">Missing dates trigger statutory evidence request.</span>
+          <span class="preset-desc">Missing start date: the app asks you to complete the data before auditing.</span>
         </button>
       </div>
     </section>
@@ -200,6 +200,7 @@
           </button>
           <span class="sample-bill-hint">Loads synthetic UK utility bill straddling the 12-month limit (real API extraction)</span>
         </div>
+        <div id="country-mismatch-warning" class="warning-banner-callout" style="display: none; background: #fffbeb; border-color: #fde68a; color: #92400e; margin-top: 0.75rem;" role="alert">This bill looks like it is from a different country than the one selected. Please check.</div>
       </div>
 
       <!-- Tab Pane 2: Physical Meter Photo Dropzone -->
@@ -566,8 +567,17 @@
           </div>
         </div>
 
-        <div class="timeline-container" id="timeline-container">
-          <!-- Dynamically generated SVG timeline -->
+        <div class="timeline-scroll-wrapper">
+          <div class="timeline-scroll-hint" id="timeline-scroll-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="13 17 18 12 13 7"></polyline>
+              <polyline points="6 17 11 12 6 7"></polyline>
+            </svg>
+            Scroll horizontally to view complete timeline
+          </div>
+          <div class="timeline-container" id="timeline-container">
+            <!-- Dynamically generated SVG timeline -->
+          </div>
         </div>
 
         <div class="timeline-tooltip" id="timeline-tooltip" role="tooltip" aria-hidden="true"></div>

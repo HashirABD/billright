@@ -53,7 +53,7 @@ function getEscalationDirectory(jurisdiction = '', state = '') {
   return {
     body: 'Energy Ombudsman (Ombudsman Services: Energy)',
     timeline: 'Standard 8-week complaints timeframe or immediately upon receipt of a deadlock letter',
-    statute: 'Ofgem Standard Licence Condition 21BA (Exceptions: consumer obstructive or manifestly unreasonable; contract under 12 months)',
+    statute: 'Ofgem Standard Licence Condition 21BA',
     website: 'www.energyombudsman.org / 0330 440 1624'
   };
 }
@@ -210,15 +210,15 @@ export async function generateLegalPacketPdf(data) {
       let emailText = '';
       const isDemo = supplierContact?.isDemo || supplierEmail === 'complaints@example.com' || supplierContact?.email === 'complaints@example.com' || (supplierName && supplierName.toLowerCase().includes('example'));
       if (isDemo) {
-        emailText = 'Email: complaints@example.com (demo address)';
+        emailText = 'complaints@example.com (demo address)';
       } else if (supplierEmail) {
-        emailText = `Email: ${supplierEmail}`;
+        emailText = supplierEmail;
       } else if (supplierContact?.email) {
-        emailText = `Email: ${supplierContact.email}`;
+        emailText = supplierContact.email;
       }
 
       doc.fontSize(7.5).font('Helvetica').fillColor('#334155')
-        .text(emailText ? `Complaints: ${emailText}` : 'Complaints Handling Team', col2X, partyBoxY + 36, { width: colWidth });
+        .text(emailText ? `Complaints Email: ${emailText}` : 'Complaints Handling Team', col2X, partyBoxY + 36, { width: colWidth });
       doc.fontSize(7.5).font('Helvetica').fillColor('#475569')
         .text(`Notice Date: ${formattedNoticeDate}`, col2X, partyBoxY + 49);
       doc.fontSize(8).font('Helvetica-Bold').fillColor('#047857')
@@ -255,22 +255,22 @@ A precise calendar audit against statutory utility standards indicates that ${fm
         p2Statute = `Under statutory regulatory rules, licensed energy retailers are prohibited from seeking to recover catch-up charges for energy consumed more than ${lookbackMonths} months prior to the date of the bill, where the consumer has not previously received an accurate bill for that consumption.`;
       }
 
-      let p2Access;
+      let p2Access = '';
       if (isMeterObstructed) {
         if (isEstimated) {
-          p2Access = 'Previous statements were rendered on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+          p2Access = 'Previous statements were rendered on estimated rather than actual readings.';
         } else {
-          p2Access = 'In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+          p2Access = '';
         }
       } else {
         if (isEstimated) {
-          p2Access = 'I expressly confirm that I have never obstructed or prevented meter reader access, and previous statements were rendered on estimated rather than actual readings. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+          p2Access = 'I confirm that I have not acted obstructively or prevented meter access at any time, and previous statements were rendered on estimated rather than actual readings.';
         } else {
-          p2Access = 'I expressly confirm that I have never obstructed or prevented meter reader access. In accordance with published regulatory precedents, the retailer bears responsibility for timely billing.';
+          p2Access = 'I confirm that I have not acted obstructively or prevented meter access at any time.';
         }
       }
 
-      const p2 = `${p2Statute}\n\n${p2Access}`;
+      const p2 = p2Access ? `${p2Statute}\n\n${p2Access}` : p2Statute;
 
       doc.text(p2, leftMargin, p2Y, { width: contentWidth, lineGap: 3.5 });
 
@@ -646,8 +646,8 @@ If the energy supplier fails to resolve this dispute within the standard 8-week 
           .text('CONSUMER ADVOCACY & EVIDENCE RECOMMENDATIONS', leftMargin + 14, guideY + 12);
 
         const guidancePoints = [
-          '1. Statutory Exception Principle: Across all covered jurisdictions (Ofgem SLC 21BA in the UK, NERR Rule 30 in Australia, and CPUC Electric Rule 17.1 in California), statutory back-billing caps protect consumers from delayed billing errors. However, statutory rules contain an express exception where the consumer unreasonably prevented or denied meter reading access.',
-          '2. Burden of Proof on Retailer: The legal burden rests on the energy supplier to prove that access was unreasonably prevented. Mere unfulfilled appointments or failure to read without proof of attempted visits with calling cards do not automatically forfeit consumer protection.',
+          '1. Statutory Exception Principle: Across all covered jurisdictions (Ofgem SLC 21BA in the UK, NERR Rule 30 in Australia, and PG&E Electric Rule 17.1 (SCE/SDG&E equivalents) in California), statutory back-billing caps protect consumers from delayed billing errors. In the UK, exceptions under SLC 21BA include where the consumer was obstructive or manifestly unreasonable, or contracts under 12 months. Many back-billing rules contain exceptions; check the rule for your jurisdiction where the consumer unreasonably prevented or denied meter reading access.',
+          '2. Evidencing Exceptions: A supplier relying on an exception would normally be expected to evidence it; check your regulator\'s guidance. For unfulfilled appointments or failure to read without proof of attempted visits, check the regulator\'s guidance.',
           '3. What the Supplier Must Produce: If the retailer claims obstruction, request contemporaneous records: specific dates and times of alleged visits, meter reader GPS timestamps, logs of customer contact, and physical proof that notification was left.',
           '4. Preserving Your Legal Position: The accompanying formal dispute notice (Pages 1–3) disputes the unbilled back-billing sum without volunteering or admitting obstruction. Do not concede access issues in oral or written communications without verifying the supplier\'s logs.',
           '5. Independent Escalation: If the supplier produces credible evidence of obstruction, consult your statutory ombudsman (' + escalation.body + ') or a certified consumer advice service before proceeding to formal arbitration.'
