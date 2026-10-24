@@ -9,13 +9,13 @@ Build mode: fast
 
 ## Slices
 
-- [x] **1. Scaffolding, Deterministic Math Engine & Interactive Verification**
-  Becomes usable: The project is scaffolded with `package.json`, `server.js`, `calculateBackBilling.js`, and `testMath.js`. The deterministic back-billing math engine calculates 12-month lookback cut-offs, daily pro-rata apportionment, and itemized rows down to the penny with verified unit tests passing.
+- [x] **1. Scaffolding, Deterministic Math Engine & Interactive Testing**
+  Becomes usable: The project is scaffolded with `package.json`, `server.js`, `calculateBackBilling.js`, and `testMath.js`. The deterministic back-billing math engine calculates 12-month lookback cut-offs, daily pro-rata apportionment, and itemized rows down to the penny with unit tests passing.
   Why now: Risk first and unique kernel early. Proves the deterministic mathematical foundation before introducing search or AI APIs, ensuring zero hallucinations in calculation.
   PRD ref: `prd.md > Features and Behavior (2. Deterministic Mathematical Apportionment)`
   Spec ref: `spec.md > Back-Billing Calculation Engine (src/calculateBackBilling.js)`, `spec.md > Components`, `spec.md > File Structure`
   Build: Scaffold `package.json`, install `express` and `dotenv`, implement `src/calculateBackBilling.js` (lookback date calculation, full period, straddling daily pro-rata, within-window logic), write `src/testMath.js` covering all edge cases, and create basic `server.js` and `.env.example`.
-  Verify (mechanical): Run `node src/testMath.js` to confirm all mathematical assertions pass with 100% precision.
+  Verify (mechanical): Run `node src/testMath.js` to confirm all mathematical assertions pass against test cases.
   Learner check: Run `node src/testMath.js` in terminal and confirm the daily pro-rata math and cut-off dates compute correctly.
   Commit: `feat: scaffold server and implement deterministic back-billing math engine`
 
@@ -35,7 +35,7 @@ Build mode: fast
   PRD ref: `prd.md > Features and Behavior (3. Dynamic Regulatory Retrieval, 4. Constrained Exception Evaluation, 5. Dispute Letter Generation)`, `prd.md > States and Boundaries`
   Spec ref: `spec.md > Regulatory Retrieval Client (src/tavilyClient.js)`, `spec.md > LLM Exception & Letter Formatter (src/llmClient.js)`, `spec.md > Analysis Coordinator Route (POST /api/analyze)`
   Build: Install `@google/genai`, implement `src/tavilyClient.js` for live regulation search with fallback handling, implement `src/llmClient.js` targeting `gemini-2.5-flash` (temperature 0.0, JSON output, obstruction override, polite letter generation), and connect `POST /api/analyze` in `server.js`.
-  Verify (mechanical): Send test `POST` requests to `/api/analyze` and verify JSON response contains proper verdict, calculation, verified regulation, and dispute letter.
+  Verify (mechanical): Send test `POST` requests to `/api/analyze` and verify JSON response contains proper verdict, calculation, retrieved regulation, and dispute letter.
   Learner check: Review the `/api/analyze` response structure and confirm that Tavily citations and Gemini exception evaluations match expected criteria.
   Commit: `feat: implement Tavily live retrieval, Gemini exception evaluation, and /api/analyze endpoint`
 
@@ -45,7 +45,7 @@ Build mode: fast
   PRD ref: `prd.md > The Core Journey (Steps 3-6)`, `prd.md > States and Boundaries`
   Spec ref: `spec.md > The Core Journey Through the System`, `spec.md > Data Model`
   Build: Wire `public/app.js` to submit payload to `POST /api/analyze`, display loading state, render the Verdict Card with emerald/slate/amber badges, render the itemized calculation table, render the retrieved sources card, and render the dispute letter with one-click copy feedback.
-  Verify (mechanical): Execute complete automated or browser verification across all three presets and the obstruction toggle, verifying all UI states render correctly.
+  Verify (mechanical): Execute complete automated or browser check across all three presets and the obstruction toggle, checking all UI states render correctly.
   Learner check: Run the full 60-second demo in the browser: click Preset A, click Analyze Bill, observe the verdict, review the calculation table, check sources, and copy the dispute letter.
   Commit: `feat: wire end-to-end analysis, verdict rendering, sources drawer, and copyable letter`
 
@@ -64,9 +64,9 @@ Build mode: fast
 - [x] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
 - [x] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
 
-Activity and evidence: Focused architectural practice connected directly to the learner's Desired Learning Outcome (anti-hallucination hybrid architecture). Verified deterministic math isolation (`src/calculateBackBilling.js` with `src/testMath.js` passing 100%), live regulatory retrieval (`src/tavilyClient.js` pulling Ofgem SLC 21BA in ~850ms), and constrained Gemini exception handling with defensive timeout fallback (`src/llmClient.js`).
+Activity and evidence: Focused architectural practice connected directly to the learner's Desired Learning Outcome (anti-hallucination hybrid architecture). Tested deterministic math isolation (`src/calculateBackBilling.js` with unit tests in `src/testMath.js` passing), live regulatory retrieval (`src/tavilyClient.js` pulling Ofgem SLC 21BA in ~850ms), and constrained Gemini exception handling with multi-model fallback chain on quota limits (`src/llmClient.js`).
 Route and stops: `public/app.js` (validation & presets) &rarr; `server.js` (`POST /api/analyze`) &rarr; `src/calculateBackBilling.js` (pro-rata lookback math) &rarr; `src/tavilyClient.js` (Ofgem live rules) &rarr; `src/llmClient.js` (exception evaluation & dispute letter).
-Edit outcome: Added `Promise.race` 4-second timeout to `src/llmClient.js` ensuring 100% resilient fallback and zero latency spikes.
+Edit outcome: Added multi-model fallback chain and sanitized plain-text URLs ensuring resilient fallback and zero latency spikes.
 Reflection: Successfully demonstrated how formal planning specifications (`prd.md` and `spec.md`) keep autonomous AI agents aligned to build zero-hallucination architectures.
 Activity mode: Focused architectural review and interactive app map (`devpost/app-map.html`).
 

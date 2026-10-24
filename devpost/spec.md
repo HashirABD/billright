@@ -34,15 +34,15 @@ The browser receives the combined result and updates the page: displaying a clea
 - **Frontend Core**: Vanilla HTML5, modern CSS3, and modern Vanilla JavaScript (ES6+).
   - *Rationale*: Maximum performance, zero framework bundle weight, complete styling control with native CSS custom properties and `tabular-nums`.
   - *Doc*: [MDN Web Docs](https://developer.mozilla.org/)
-- **AI / LLM SDK**: Official Google Gen AI SDK (`@google/genai` or `@google/generative-ai`), targeting `gemini-2.5-flash` on the free tier.
-  - *Rationale*: Low latency, zero-cost development tier, strict JSON schema output mode, and robust prompt adherence.
+- **AI / LLM SDK**: Official Google Gen AI SDK (`@google/genai`), targeting `GEMINI_MODEL` (default: `gemini-3.8-flash`) with fallback chain across `GEMINI_FALLBACK_MODELS` (default: `gemini-3-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite`) to handle quota limits.
+  - *Rationale*: Low latency, free tier access, strict JSON schema output mode, and resilient multi-model failover.
   - *Doc*: [Google Gen AI SDK](https://github.com/google-gemini/generative-ai-js)
 - **Search Retrieval API**: Tavily Search API (`@tavily/core` or direct REST `fetch`).
   - *Rationale*: Purpose-built search engine for LLMs that returns clean, official Markdown excerpts and authoritative URLs.
   - *Doc*: [Tavily API Documentation](https://docs.tavily.com/)
 - **Configuration & Utilities**: `dotenv` (`^16.4.5`) for environment secrets management.
   - *Doc*: [dotenv](https://github.com/motdotla/dotenv)
-- **Testing**: Built-in Node.js test runner (`node:test`) or lightweight test script for verifying mathematical edge cases.
+- **Testing**: Lightweight test script for checking mathematical edge cases.
 
 ## Where It Runs and How Someone Tries It
 - **Runtime Environment**: Local Node.js environment on Windows/macOS/Linux.
@@ -50,6 +50,8 @@ The browser receives the combined result and updates the page: displaying a clea
   ```env
   PORT=3000
   GEMINI_API_KEY=your_gemini_api_key_here
+  GEMINI_MODEL=gemini-3.8-flash
+  GEMINI_FALLBACK_MODELS=gemini-3-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite
   TAVILY_API_KEY=your_tavily_api_key_here
   ```
   A sanitized template is provided as [`.env.example`](file:///.env.example).
@@ -59,7 +61,7 @@ The browser receives the combined result and updates the page: displaying a clea
   npm start
   ```
 - **Access URL**: Open `http://localhost:3000` in any modern web browser.
-- **Demo Recording Verification**: Reviewer can click "Preset A" and "Analyze Bill" to observe end-to-end execution in under 5 seconds.
+- **Demo Recording Check**: Reviewer can click "Preset A" and "Analyze Bill" to observe end-to-end execution in under 5 seconds.
 
 ## Look and Feel
 Carried forward directly from `prd.md > Look and Feel`:
@@ -105,7 +107,7 @@ Calls Tavily Search API with queries targeted at national energy regulators (e.g
 - *Implements `prd.md > Features and Behavior (3. Dynamic Regulatory Retrieval)`*
 
 ### LLM Exception & Letter Formatter (`src/llmClient.js`)
-Interacts with Gemini 2.5 Flash via `@google/genai` with temperature 0.0 and JSON schema mode.
+Interacts with Gemini via `@google/genai` with temperature 0.0 and multi-model fallback (`gemini-3.8-flash`, `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.5-flash-lite`). Falls back cleanly to deterministic template when quota is exhausted. Sanitizes Markdown links in letters to plain-text bare URLs.
 - Evaluates whether the factual obstruction condition overrides the rule.
 - If obstructed: returns verdict override `"Rule does not apply"` with the statutory exception reason and suppresses the dispute letter.
 - If unobstructed and disputable sum > 0: returns verdict `"Likely not recoverable under the rule"` and formats the formal complaint letter with the two-step escalation ladder (supplier -> Energy Ombudsman).
@@ -190,7 +192,7 @@ billright/
 │   ├── calculateBackBilling.js    # Pure deterministic mathematical engine
 │   ├── tavilyClient.js            # Live regulatory search client
 │   ├── llmClient.js               # Gemini exception evaluator & letter formatter
-│   └── testMath.js                # Unit verification script for back-billing math
+│   └── testMath.js                # Mathematical unit test script
 ├── public/
 │   ├── index.html                 # Single page markup & layout
 │   ├── styles.css                 # Clean editorial stylesheet & design system
@@ -208,10 +210,10 @@ billright/
 
 ## External Services and Dependencies
 1. **Google Gemini API**:
-   - Endpoint: `gemini-2.5-flash` via `@google/genai` SDK
+   - Endpoint: `GEMINI_MODEL` (default: `gemini-3.8-flash`) with fallback chain via `@google/genai` SDK
    - Auth: Bearer API Key via `GEMINI_API_KEY`
-   - Purpose: Strict exception condition verification and complaint letter template formatting.
-   - Cost / Limits: Free tier within hackathon rate limits (15 RPM).
+   - Purpose: Exception condition evaluation and complaint letter template formatting.
+   - Cost / Limits: Free tier with multi-model fallback on HTTP 429 quota exhaustion.
 2. **Tavily Search API**:
    - Endpoint: `https://api.tavily.com/search`
    - Auth: API Key via `TAVILY_API_KEY`

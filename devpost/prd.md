@@ -5,7 +5,7 @@ status: approved
 
 # BillRight — Product Requirements Document
 
-An AI-assisted energy bill verification web app that helps consumers and microbusiness owners determine whether electricity catch-up charges exceed statutory back-billing limits, calculating the exact disputable sum and providing an actionable dispute letter.
+An AI-assisted energy bill rule-check prototype that helps consumers and microbusiness owners check whether electricity catch-up charges appear to fall outside statutory back-billing limits, calculating the exact disputable sum and providing an actionable dispute letter.
 Source: `scope.md > BillRight`
 
 ## The Core Journey
@@ -41,7 +41,7 @@ A focused, responsive single-page application arranged in a clean vertical stack
 - **Results View (rendered below input upon analysis)**:
   - **Verdict Card**: Prominent badge, summary statement, and exception notes if triggered.
   - **Calculation Breakdown Table**: Itemized rows with cut-off dates, pro-rata apportionment math, and total disputable amount.
-  - **Retrieved Regulatory Sources Card**: Regulation title, clause citation, excerpt, and verified hyperlink.
+  - **Retrieved Regulatory Sources Card**: Regulation title, clause citation, excerpt, and official hyperlink.
   - **Dispute Letter Container**: Distinct clean text container with an instant "Copy Letter" button and escalation ladder guidance.
 
 ## Look and Feel
@@ -99,12 +99,14 @@ Source: `scope.md > Inspiration & Identity`
 
 ### 4. Constrained Exception Evaluation (Gemini)
 - Evaluates specific statutory exceptions (specifically consumer obstructive conduct / refusing meter access).
-- If the meter obstruction toggle is **Yes**, Gemini confirms the statutory exception applies.
+- Retries across configured Gemini fallback models on HTTP 429 quota exhaustion, falling back cleanly to a built-in deterministic letter template if all models are busy.
+- If the meter obstruction toggle is **Yes**, confirms the statutory exception applies.
 - Overrides any calculation verdict to *"Rule does not apply"*, displays the statutory exception explanation, and suppresses the dispute letter.
 
 ### 5. Dispute Letter Generation
-- Generates a courteous, legally sound dispute letter.
+- Generates a courteous, structured dispute letter draft.
 - Automatically inserts the supplier name (or placeholder), account/reference placeholder, exact calculated disputed sum, and official regulatory clause citation.
+- Sanitizes all Markdown links to bare plain-text URLs (e.g., bare www.energyombudsman.org without square/round brackets).
 - Explicitly outlines the required UK dispute escalation path:
   1. Formal complaint submission to the supplier's internal complaints team (with standard 8-week complaints timeframe).
   2. Subsequent escalation to the Energy Ombudsman if unresolved.
@@ -117,14 +119,14 @@ Source: `scope.md > Inspiration & Identity`
 - **Success State — Disputable Charges Found**: Emerald badge (*"Likely not recoverable under the rule"*), itemized table showing exact disputed calculation, live regulatory citations, and active dispute letter.
 - **Success State — Charges Valid**: Cool slate badge (*"Rule does not apply"*), itemized table showing £0.00 disputable charges, polite note explaining charges fall within the statutory 12-month window.
 - **Exception Triggered State (Meter Obstruction)**: Slate badge (*"Rule does not apply"*), itemized table annotated with exception warning, dispute letter suppressed and replaced with objective guidance on meter access responsibilities.
-- **Fallback State (Search / Network Failure or Unindexed Country)**: Amber badge (*"More evidence needed"*), banner explaining live regulatory rules could not be retrieved, calculation displayed for reference only, citations marked unverified, dispute letter disabled.
+- **Fallback State (Search / Network Failure or Unindexed Country)**: Amber badge (*"More evidence needed"*), banner explaining live regulatory rules could not be retrieved, calculation displayed for reference only, citations marked provisional, dispute letter disabled.
 - **Validation Error State**: Client-side inline red indicators for reversed dates ("End date must be after start date") or non-positive amounts ("Amount must be a positive number"); "Analyze Bill" button disabled.
 
 ## Product Decisions
 - **Pro-rata Daily Apportionment**: The learner chose an exact calendar-day pro-rata calculation for periods straddling the cut-off date to ensure mathematical accuracy and eliminate estimation errors.
 - **Suppression of Dispute Letter on Obstruction**: If meter access was obstructed, the dispute letter is suppressed entirely rather than generating a flawed challenge, protecting consumer credibility and avoiding frivolous disputes.
 - **Stateless Operation**: No database or user session storage to ensure privacy and eliminate backend complexity.
-- **Separation of Concerns**: Deterministic code handles 100% of the mathematical calculation; Tavily handles regulatory retrieval; Gemini evaluates only qualitative exception conditions.
+- **Separation of Concerns**: Deterministic code handles all mathematical calculations; Tavily handles regulatory retrieval; Gemini evaluates only qualitative exception conditions.
 
 Source: `scope.md > The Unique Kernel` and `scope.md > The POC Boundary`
 

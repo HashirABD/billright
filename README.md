@@ -1,8 +1,8 @@
 # BillRight ⚡
 
-> An AI-assisted consumer protection web utility that verifies whether utility catch-up bills violate statutory back-billing limits across multiple jurisdictions (UK, Australia, US), armed with multimodal bill & physical meter dial OCR, interactive SVG timeline visualization, deterministic pro-rata math, direct supplier email dispatch, statutory escalation calendar reminders (.ics), dynamic party personalization, and multi-page vector legal dispute packet generation (.pdf).
+> An AI-assisted consumer rule-check web utility that checks whether a utility catch-up bill appears to fall outside the back-billing window set by the rules it covers across multiple jurisdictions (UK, Australia, US), featuring multimodal bill & physical meter dial OCR, interactive SVG timeline visualization, deterministic pro-rata math, direct supplier email dispatch, escalation calendar reminders (.ics), dynamic party personalization, and multi-page vector dispute packet generation (.pdf).
 
-![BillRight](https://img.shields.io/badge/status-production--ready-emerald)
+![BillRight](https://img.shields.io/badge/status-hackathon%20prototype-orange)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-blue)
 ![Architecture](https://img.shields.io/badge/Architecture-Anti--Hallucination%20Hybrid-purple)
 ![Multimodal](https://img.shields.io/badge/Multimodal-Gemini%20Vision%20OCR-orange)
@@ -17,7 +17,7 @@
 ## What BillRight Does
 
 In many countries and states, energy utility regulators legally restrict how far back suppliers can bill consumers for historical energy consumption:
-- **United Kingdom**: Under **Ofgem Standard Licence Condition 21BA**, energy suppliers cannot demand payment for energy consumed more than **12 months** prior to the bill date.
+- **United Kingdom**: Under **Ofgem Standard Licence Condition 21BA**, energy suppliers cannot demand payment for energy consumed more than **12 months** prior to the bill date. However, Ofgem SLC 21BA has exceptions (for example where the customer has obstructed the supplier), so the result is a rule check, not a final answer.
 - **Australia**: Under **NERR Rule 30** (National Energy Retail Rules for participating states such as NSW, QLD, SA; Victoria maintains separate local rules), retailers recovering historical undercharges are strictly capped at a maximum of **9 months** before the customer was notified.
 - **United States (California)**: Under **PG&E Electric Rule 17.1** (and equivalent CPUC tariff rules for SCE/SDG&E), adjustment of residential bills for billing errors where the customer was not at fault is restricted to **3 months**.
 - **United States (Texas)**: Under **PUCT §25.28(d)** for electric utilities, back-billing adjustments are limited to **6 months** from error discovery; for retail electric providers, the limit under **§25.480(e)** must be verified with the PUCT.
@@ -128,6 +128,7 @@ Edit `.env`:
 PORT=3000
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL=gemini-3.8-flash
+GEMINI_FALLBACK_MODELS=gemini-3-flash,gemini-3.1-flash-lite,gemini-3.5-flash-lite
 TAVILY_API_KEY=your_tavily_api_key_here
 ```
 *(Get a free Gemini API key from [Google AI Studio](https://aistudio.google.com/) and a free Tavily API key from [Tavily](https://tavily.com/).)*
@@ -140,13 +141,13 @@ Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 ---
 
-## Testing & Verification
+## Testing
 
 Run the deterministic mathematical unit test suite:
 ```bash
 npm run test:math
 ```
-Verifies cut-off dates, calendar day counting, multi-period composite math, straddling pro-rata formulas, leap year clamps, timezone edge calculations, obstruction/estimate handling, and multi-jurisdiction lookback windows with 100% precision.
+The unit tests check the date and apportionment math against fixed example cases (cut-off dates, calendar day counting, multi-period composite math, straddling pro-rata formulas, leap year clamps, timezone edge calculations, obstruction/estimate handling, and multi-model quota fallback). The tests check that the code runs as intended; they do not prove that the legal rules or regulatory interpretations are correct.
 
 ---
 
@@ -157,15 +158,23 @@ BillRight was developed following the structured **Build With AI: Basics** metho
 1. **`1-start`**: Established the learner profile, project conventions, and the flipped-interaction workflow, ensuring the agent interviews the builder to uncover core requirements.
 2. **`2-scope`**: Interrogated the problem space to isolate a high-impact proof of concept: helping consumers dispute back-billing without hallucinations. Defined the non-negotiable boundary: AI handles extraction and text formatting, but pure code handles math.
 3. **`3-prd`**: Authored a complete product requirements document covering user journeys, multimodal inputs, edge cases (leap years, meter obstructions, estimated bills), and multi-jurisdiction statutory rules without premature code discussion.
-4. **`4-spec`**: Drafted the technical blueprint: Express.js server, vanilla CSS/JS frontend, zero-dependency math engine (`calculateBackBilling.js`), Gemini Vision for multimodal OCR, Tavily for live citation grounding, and PDFKit for vector legal packets.
-5. **`5-build`**: Executed vertical slices step-by-step: Slice 1 (deterministic math), Slice 2 (form UI and SVG timeline), Slice 3 (multimodal bill and meter dial OCR), and Slice 4 (PDF export, email launcher, and calendar integration), verifying each milestone with unit tests.
-6. **`6-ship`**: Conducted end-to-end verification, verified test suites, resolved regulatory citations, eliminated hardcoded mock data, secured credentials, and deployed live to Vercel.
+4. **`4-spec`**: Drafted the technical blueprint: Express.js server, vanilla CSS/JS frontend, zero-dependency math engine (`calculateBackBilling.js`), Gemini Vision for multimodal OCR, Tavily for live citation grounding, and PDFKit for vector dispute packets.
+5. **`5-build`**: Executed vertical slices step-by-step: Slice 1 (deterministic math), Slice 2 (form UI and SVG timeline), Slice 3 (multimodal bill and meter dial OCR), and Slice 4 (PDF export, email launcher, and calendar integration), checking each milestone with unit tests.
+6. **`6-ship`**: Conducted end-to-end testing, ran test suites, resolved regulatory citations, eliminated hardcoded mock data, secured credentials, and deployed live to Vercel.
 
 ---
 
 ## Data Privacy & File Handling
 
 BillRight does not store your files. They are sent to Google Gemini for reading and are subject to Google's data policy.
+
+---
+
+## Known Limits
+
+- **AI Quota & Fallbacks**: The AI reader and letter wording use the Google Gemini free tier, which has a small daily request limit per model. The app tries fallback models (`GEMINI_FALLBACK_MODELS`) and, if all are exhausted, shows a "busy" message for bill reading and falls back to a built-in dispute letter template.
+- **Jurisdiction Coverage**: The rule check covers only the jurisdictions in the table above. All other regions fall back to an unverified provisional benchmark.
+- **Draft Output, Not Legal Advice**: Output is a draft for the user to review, not legal advice or a formal ruling.
 
 ---
 

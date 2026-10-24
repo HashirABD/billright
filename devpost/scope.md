@@ -5,7 +5,7 @@ status: approved
 
 # BillRight
 
-An AI-assisted energy bill verification tool that checks whether electricity catch-up charges violate regulatory back-billing limits and arms consumers with an exact disputed calculation and ready-to-send dispute letter.
+An AI-assisted energy bill rule-check prototype that checks whether electricity catch-up charges appear to fall outside regulatory back-billing limits and equips consumers with an exact disputed calculation and ready-to-send dispute letter.
 
 ## The Unique Kernel
 BillRight replaces blind AI advice with a three-layer hybrid architecture: live regulatory retrieval (via Tavily) grounds the analysis in actual official rules rather than training memory, deterministic math functions calculate the lookback dates and disputed sums with mathematical certainty, and a constrained LLM (Gemini) evaluates only factual exception criteria. It never guesses the law or the math.
@@ -49,6 +49,6 @@ In a 60-second browser demo:
 
 ## Explicitly Cut
 - **User authentication & database storage**: Cut to keep the app completely stateless, client-focused, and privacy-first.
-- **Automated email transmission**: Cut to avoid email-relay vulnerabilities and compliance overhead; users copy the text.
+- **Automated email transmission**: Cut to avoid email-relay vulnerabilities and administrative overhead; users copy the text.
 - **Tariff & kWh meter recalculation**: Cut to prevent complex rate-modeling errors; math focuses strictly on line-item billing periods relative to lookback dates.
 - **Declaring charges "illegal"**: Cut as a strict safety guardrail; the app strictly frames results as informational assessments under published regulations.
