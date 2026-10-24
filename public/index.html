@@ -82,39 +82,57 @@
     <!-- Sample Presets Section (Radio Group Semantics) -->
     <section class="presets-card" aria-labelledby="presets-heading">
       <div class="presets-header-row">
-        <h2 id="presets-heading" class="presets-title">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-          Select Benchmark Regulatory Case:
-        </h2>
+        <div class="presets-header-text">
+          <h2 id="presets-heading" class="presets-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+              <line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            Choose a demo case for your country
+          </h2>
+          <p class="presets-subtitle">Pick the card that matches where you live. Using your own bill instead? Upload it below and choose your country in step 1.</p>
+        </div>
         <div id="demo-data-note" class="demo-data-note">Demo data loaded. Edit it or upload your own bill.</div>
       </div>
-      <div class="presets-grid" role="radiogroup" aria-label="Benchmark cases">
+      <div class="presets-grid" role="radiogroup" aria-label="Demo cases by country">
         <button type="button" class="preset-btn active" id="preset-a" data-preset="A" role="radio" aria-checked="true" tabindex="0">
-          <span class="preset-badge protected">🇬🇧 UK: Exceeds 12 Mos</span>
+          <span class="preset-badge protected">
+            <span class="preset-badge-country">United Kingdom</span>
+            <span class="preset-badge-sub">Exceeds 12 months</span>
+          </span>
           <span class="preset-name">£1,400 Catch-up Bill</span>
           <span class="preset-desc">£1,000 accrued beyond permitted 12-month limit. Protected by Ofgem SLC 21BA.</span>
         </button>
         <button type="button" class="preset-btn" id="preset-b" data-preset="B" role="radio" aria-checked="false" tabindex="-1">
-          <span class="preset-badge valid">🇬🇧 UK: Within 12 Mos</span>
+          <span class="preset-badge valid">
+            <span class="preset-badge-country">United Kingdom</span>
+            <span class="preset-badge-sub">Within 12 months</span>
+          </span>
           <span class="preset-name">£650 Recent Charge</span>
           <span class="preset-desc">Charges accrued within permitted statutory 12-month lookback window.</span>
         </button>
         <button type="button" class="preset-btn" id="preset-d" data-preset="D" role="radio" aria-checked="false" tabindex="-1">
-          <span class="preset-badge protected">🇦🇺 Australia (NERR Rule 30, 9 Mos)</span>
+          <span class="preset-badge protected">
+            <span class="preset-badge-country">Australia</span>
+            <span class="preset-badge-sub">NERR Rule 30 (9 months)</span>
+          </span>
           <span class="preset-name">A$1,800 Catch-up Bill</span>
           <span class="preset-desc">A$900 older than statutory 9 months. Protected by NERR Rule 30 (NERR participating states: NSW, QLD, SA; Victoria not covered).</span>
         </button>
         <button type="button" class="preset-btn" id="preset-e" data-preset="E" role="radio" aria-checked="false" tabindex="-1">
-          <span class="preset-badge protected">🇺🇸 United States - California (PG&E Rule 17.1, 3 Mos)</span>
+          <span class="preset-badge protected">
+            <span class="preset-badge-country">United States (California)</span>
+            <span class="preset-badge-sub">PG&E Rule 17.1 (3 months)</span>
+          </span>
           <span class="preset-name">$900 Undercharge</span>
           <span class="preset-desc">$600 older than strict 3-month window. Protected by PG&E Rule 17.1 (residential billing errors).</span>
         </button>
         <button type="button" class="preset-btn" id="preset-c" data-preset="C" role="radio" aria-checked="false" tabindex="-1">
-          <span class="preset-badge incomplete">⚠️ Case C: Missing Data</span>
+          <span class="preset-badge incomplete">
+            <span class="preset-badge-country">Any country</span>
+            <span class="preset-badge-sub">Incomplete data demo</span>
+          </span>
           <span class="preset-name">Incomplete Period</span>
           <span class="preset-desc">Missing start date: the app asks you to complete the data before auditing.</span>
         </button>
