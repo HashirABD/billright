@@ -329,7 +329,7 @@ body {
 .brand-logo-img {
   width: 44px;
   height: 44px;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid var(--border-subtle);
@@ -2273,7 +2273,7 @@ input[type="date"].form-input {
 .footer-logo-img {
   width: 26px;
   height: 26px;
-  border-radius: var(--radius-xs);
+  border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
   border: 1px solid var(--border-subtle);
