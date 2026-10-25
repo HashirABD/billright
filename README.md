@@ -1,4 +1,4 @@
-<h1 align="center"><img src="public/logo.jpg" alt="BillRight logo" width="56" height="56" align="absmiddle">&nbsp;BillRight</h1>
+<h1>BillRight&nbsp;<img src="public/logo.jpg" alt="BillRight logo" width="56" height="56" align="absmiddle"></h1>
 
 > An AI-assisted consumer rule-check web utility that checks whether a utility catch-up bill appears to fall outside the back-billing window set by the rules it covers across multiple jurisdictions (UK, Australia, US), featuring multimodal bill & physical meter dial OCR, interactive SVG timeline visualization, deterministic pro-rata math, direct supplier email dispatch, escalation calendar reminders (.ics), dynamic party personalization, and multi-page vector dispute packet generation (.pdf).
 
