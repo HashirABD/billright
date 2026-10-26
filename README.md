@@ -11,7 +11,8 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 🌐 **Live Demo**: [https://billright-zeta.vercel.app](https://billright-zeta.vercel.app)  
-📺 **Demo Video**: [https://youtu.be/loW62sx7xaM](https://youtu.be/loW62sx7xaM)
+📺 **Demo Video**: [https://youtu.be/loW62sx7xaM](https://youtu.be/loW62sx7xaM)  
+📋 **Planning Docs**: [scope.md](devpost/scope.md) • [prd.md](devpost/prd.md) • [spec.md](devpost/spec.md) • [checklist.md](devpost/checklist.md)
 
 ---
 
@@ -162,6 +163,12 @@ BillRight was developed following the structured **Build With AI: Basics** metho
 4. **`4-spec`**: Drafted the technical blueprint: Express.js server, vanilla CSS/JS frontend, zero-dependency math engine (`calculateBackBilling.js`), Gemini Vision for multimodal OCR, Tavily for live citation grounding, and PDFKit for vector dispute packets.
 5. **`5-build`**: Executed vertical slices step-by-step: Slice 1 (deterministic math), Slice 2 (form UI and SVG timeline), Slice 3 (multimodal bill and meter dial OCR), and Slice 4 (PDF export, email launcher, and calendar integration), checking each milestone with unit tests.
 6. **`6-ship`**: Conducted end-to-end testing, ran test suites, resolved regulatory citations, eliminated hardcoded mock data, secured credentials, and deployed live to Vercel.
+
+### Planning Docs
+- [`devpost/scope.md`](devpost/scope.md) — Proof of concept boundary and scope definition
+- [`devpost/prd.md`](devpost/prd.md) — Core user journey, behavioral requirements, and edge cases
+- [`devpost/spec.md`](devpost/spec.md) — Technical blueprint, deterministic math engine, and multimodal architecture
+- [`devpost/checklist.md`](devpost/checklist.md) — Verification checklist and shipping criteria
 
 ---
 
