@@ -10,7 +10,8 @@
 ![Calendar Engine](https://img.shields.io/badge/Calendar-RFC%205545%20.ics-teal)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-🌐 **Live Demo**: [https://billright-zeta.vercel.app](https://billright-zeta.vercel.app)
+🌐 **Live Demo**: [https://billright-zeta.vercel.app](https://billright-zeta.vercel.app)  
+📺 **Demo Video**: [https://youtu.be/loW62sx7xaM](https://youtu.be/loW62sx7xaM)
 
 ---
 
